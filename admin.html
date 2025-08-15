@@ -1,1 +1,154 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painel Admin - O Esquimó</title>
+
+  <link rel="stylesheet" href="assets/style.css?v=3.0"/>
+
+  <!-- Admin App -->
+  <script type="module" defer src="assets/admin.js?v=3.0"></script>
+</head>
+<body>
+  <main class="container">
+    <h1>Painel Administrativo</h1>
+
+    <!-- Login simples via PIN salvo no Firestore -->
+    <section id="loginSection" class="step">
+      <h2 class="step-title"><span>🔐</span> Acesso</h2>
+      <label for="adminPin">PIN do Administrador</label>
+      <input type="password" id="adminPin" placeholder="Digite seu PIN"/>
+      <button id="btnLogin" class="final-button"><span>Entrar</span></button>
+      <p id="loginMsg" style="margin-top:8px;color:#e74c3c;"></p>
+    </section>
+
+    <section id="adminContent" style="display:none;">
+
+      <!-- Configurações do Site -->
+      <section class="step">
+        <h2 class="step-title"><span>1</span>Configurações do Site</h2>
+        <label>Nome da Empresa</label>
+        <input type="text" id="cfgCompanyName" placeholder="Ex: O Esquimó"/>
+
+        <label>Descrição</label>
+        <input type="text" id="cfgCompanyDesc" placeholder="Breve descrição para a home"/>
+
+        <label>URL da Imagem de Topo (Hero)</label>
+        <input type="text" id="cfgHeroUrl" placeholder="https://..."/>
+
+        <label>Número do WhatsApp (somente dígitos, com DDI e DDD)</label>
+        <input type="text" id="cfgWhats" placeholder="5581983259341"/>
+
+        <label>Meses para lembrete de Limpeza (ex: 12)</label>
+        <input type="number" id="cfgReminderMonths" min="1" value="12"/>
+
+        <button id="btnSaveSite" class="final-button"><span>Salvar Configurações</span></button>
+        <p id="siteMsg" style="margin-top:8px;color:#2ecc71;"></p>
+      </section>
+
+      <!-- Catálogo de Serviços (categorias) -->
+      <section class="step">
+        <h2 class="step-title"><span>2</span>Serviços Oferecidos</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label>Nome da Categoria</label>
+            <input type="text" id="srvName" placeholder="Ex: Limpeza"/>
+          </div>
+          <div>
+            <label>Ícone/Imagem (URL)</label>
+            <input type="text" id="srvIcon" placeholder="https://..."/>
+          </div>
+        </div>
+
+        <button id="btnAddSrv" class="final-button" style="margin-top:12px;"><span>Adicionar Categoria</span></button>
+        <p id="srvMsg" style="margin-top:8px;color:#2ecc71;"></p>
+
+        <h3 style="margin-top:20px;">Categorias Atuais</h3>
+        <ul id="srvList" style="list-style:none;padding:0;margin-top:10px;"></ul>
+      </section>
+
+      <!-- Tabela de Preços (dinâmica) -->
+      <section class="step">
+        <h2 class="step-title"><span>3</span>Tabela de Preços</h2>
+
+        <p>Edite os preços por BTU para <b>Instalação</b> e <b>Limpeza</b>. Reparo fica “Sob análise”.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0;">
+          <div><b>9000</b></div><div><b>12000</b></div><div><b>18000</b></div><div><b>24000</b></div><div><b>30000</b></div>
+        </div>
+
+        <h4>Instalação</h4>
+        <div id="priceInstalacao" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;"></div>
+
+        <h4 style="margin-top:16px;">Limpeza</h4>
+        <div id="priceLimpeza" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;"></div>
+
+        <button id="btnSavePrices" class="final-button" style="margin-top:12px;"><span>Salvar Preços</span></button>
+        <p id="priceMsg" style="margin-top:8px;color:#2ecc71;"></p>
+      </section>
+
+      <!-- Agendamentos Manuais (para serviços feitos fora do site) -->
+      <section class="step">
+        <h2 class="step-title"><span>4</span>Cadastrar Serviço Realizado</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label>Cliente</label>
+            <input type="text" id="mNome" placeholder="Nome do cliente"/>
+          </div>
+          <div>
+            <label>Telefone</label>
+            <input type="text" id="mFone" placeholder="5581..."/>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Endereço</label>
+            <input type="text" id="mEndereco" placeholder="Rua, número, bairro e cidade"/>
+          </div>
+
+          <div>
+            <label>Serviço</label>
+            <select id="mServico"></select>
+          </div>
+          <div>
+            <label>BTUs (se aplicável)</label>
+            <select id="mBtus">
+              <option value="">—</option>
+              <option value="9000">9.000</option>
+              <option value="12000">12.000</option>
+              <option value="18000">18.000</option>
+              <option value="24000">24.000</option>
+              <option value="30000">30.000+</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label>Observações</label>
+            <textarea id="mObs" rows="2"></textarea>
+          </div>
+          <div>
+            <label>Data</label>
+            <input type="date" id="mData"/>
+          </div>
+          <div>
+            <label>Hora</label>
+            <input type="time" id="mHora"/>
+          </div>
+        </div>
+
+        <button id="btnSalvarManual" class="final-button" style="margin-top:12px;"><span>Salvar no Banco</span></button>
+        <p id="manualMsg" style="margin-top:8px;color:#2ecc71;"></p>
+      </section>
+
+      <!-- Lembretes de Limpeza -->
+      <section class="step">
+        <h2 class="step-title"><span>5</span>Lembretes de Limpeza</h2>
+        <p>Envia mensagem via WhatsApp para clientes cuja <b>Limpeza</b> “faz aniversário” de acordo com <b>Meses para Lembrete</b> configurado.</p>
+        <button id="btnRodarLembretes" class="final-button"><span>Enviar Lembretes Agora</span></button>
+        <ul id="reminderLog" style="margin-top:10px;list-style:none;padding:0;"></ul>
+      </section>
+
+    </section>
+  </main>
+</body>
+</html>
