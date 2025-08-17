@@ -1,25 +1,18 @@
-
 /**
  * Painel Admin
- * - Login por PIN salvo em Firestore (config/admin { pin })
- * - Editar site (config/site)
- * - Editar serviços (collection services)
- * - Editar preços (config/prices)
- * - Cadastrar serviço manual (collection agendamentos)
- * - Rodar lembretes (WhatsApp) para Limpeza conforme meses configurados
+ * - Login por E-mail/Senha (Firebase Auth)
+ * - Gerenciamento completo do site
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, deleteDoc, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  getAuth, signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"; // <-- ADICIONE ESTE BLOCO
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-
-// ============== Firebase (CONFIG EXISTENTE) ==============
+// ============== Firebase ==============
 const firebaseConfig = {
   apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
   authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -31,22 +24,15 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app); // <-- ADICIONE ESTA LINHA
+const auth = getAuth(app);
 
-
-// ============== Refs ==============
-const docAdmin   = doc(db, "config", "admin");   // { pin: "123456" }
-const docSite    = doc(db, "config", "site");    // { companyName, description, heroUrl, whatsappNumber, reminderMonths, btusOptions }
-const docPrices  = doc(db, "config", "prices");  // { instalacao:{...}, limpeza:{...} }
-const colServices = collection(db, "services");  // [{ name, iconUrl }]
-const colAgend   = collection(db, "agendamentos");
-
+// ============== Mapeamento DOM ==============
 const loginSection = document.getElementById("loginSection");
 const adminContent = document.getElementById("adminContent");
-const adminPin = document.getElementById("adminPin");
+const adminEmail = document.getElementById("adminEmail");
+const adminPassword = document.getElementById("adminPassword");
 const btnLogin = document.getElementById("btnLogin");
 const loginMsg = document.getElementById("loginMsg");
-
 const cfgCompanyName = document.getElementById("cfgCompanyName");
 const cfgCompanyDesc = document.getElementById("cfgCompanyDesc");
 const cfgHeroUrl = document.getElementById("cfgHeroUrl");
@@ -54,18 +40,15 @@ const cfgWhats = document.getElementById("cfgWhats");
 const cfgReminderMonths = document.getElementById("cfgReminderMonths");
 const siteMsg = document.getElementById("siteMsg");
 const btnSaveSite = document.getElementById("btnSaveSite");
-
 const srvName = document.getElementById("srvName");
 const srvIcon = document.getElementById("srvIcon");
 const btnAddSrv = document.getElementById("btnAddSrv");
 const srvList = document.getElementById("srvList");
 const srvMsg  = document.getElementById("srvMsg");
-
 const priceInstalacao = document.getElementById("priceInstalacao");
 const priceLimpeza = document.getElementById("priceLimpeza");
 const btnSavePrices = document.getElementById("btnSavePrices");
 const priceMsg = document.getElementById("priceMsg");
-
 const mNome = document.getElementById("mNome");
 const mFone = document.getElementById("mFone");
 const mEndereco = document.getElementById("mEndereco");
@@ -76,12 +59,10 @@ const mData = document.getElementById("mData");
 const mHora = document.getElementById("mHora");
 const btnSalvarManual = document.getElementById("btnSalvarManual");
 const manualMsg = document.getElementById("manualMsg");
-
 const btnRodarLembretes = document.getElementById("btnRodarLembretes");
 const reminderLog = document.getElementById("reminderLog");
 
 // ============== Estado ==============
-let authed = false;
 let priceState = {
   instalacao: { "9000": 500, "12000":600, "18000":700, "24000":800, "30000":900 },
   limpeza:    { "9000": 180, "12000":230, "18000":280, "24000":330, "30000":380 }
@@ -95,10 +76,23 @@ let siteState = {
   btusOptions: ["9000","12000","18000","24000","30000"]
 };
 
-// ============== Login (E-mail/Senha) ==============
-const adminEmail = document.getElementById("adminEmail");
-const adminPassword = document.getElementById("adminPassword");
+// ============== Lógica Principal ==============
 
+// Verifica o estado do login assim que a página carrega
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Usuário está logado, mostra o painel
+    loginSection.style.display = "none";
+    adminContent.style.display = "block";
+    loadAll(); // Carrega todos os dados do admin
+  } else {
+    // Usuário não está logado, mostra a tela de login
+    loginSection.style.display = "block";
+    adminContent.style.display = "none";
+  }
+});
+
+// Lógica do botão de login
 btnLogin.addEventListener("click", async () => {
   loginMsg.textContent = "";
   const email = adminEmail.value.trim();
@@ -111,12 +105,8 @@ btnLogin.addEventListener("click", async () => {
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // Se o login for bem-sucedido, o código abaixo será executado
-    loginSection.style.display = "none";
-    adminContent.style.display = "block";
-    await loadAll();
+    // Se o login for bem-sucedido, o onAuthStateChanged acima cuidará de mostrar o painel.
   } catch (error) {
-    // Se o login falhar, o Firebase retornará um erro
     if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
       loginMsg.textContent = "E-mail ou senha incorretos.";
     } else {
@@ -126,13 +116,13 @@ btnLogin.addEventListener("click", async () => {
   }
 });
 
-
-
-
-
 // ============== Loaders ==============
+async function loadAll(){
+  await Promise.all([ loadSite(), loadPrices() ]);
+}
+
 async function loadSite(){
-  const s = await getDoc(docSite);
+  const s = await getDoc(doc(db, "config", "site"));
   if(s.exists()){
     const d = s.data();
     siteState = { ...siteState, ...d };
@@ -142,17 +132,12 @@ async function loadSite(){
   cfgHeroUrl.value = siteState.heroUrl || "";
   cfgWhats.value = siteState.whatsappNumber || "";
   cfgReminderMonths.value = siteState.reminderMonths || 12;
-
-  // Popular serviços no select do cadastro manual
   await loadServicesIntoUI();
 }
 
 async function loadServicesIntoUI(){
-  // lista na UI (de gerenciamento)
   await renderServiceList();
-
-  // select do cadastro manual
-  const snap = await getDocs(colServices);
+  const snap = await getDocs(collection(db, "services"));
   let items = snap.docs.map(d=> ({ id:d.id, ...d.data() }));
   if(items.length===0){
     items = [{ name:"Instalação" },{ name:"Limpeza" },{ name:"Reparo" }];
@@ -167,12 +152,11 @@ async function loadServicesIntoUI(){
 
 async function renderServiceList(){
   srvList.innerHTML = "";
-  const snap = await getDocs(colServices);
+  const snap = await getDocs(collection(db, "services"));
   let items = snap.docs.map(d=> ({ id:d.id, ...d.data() }));
   if(items.length===0){
-    // mostre placeholder
     const li = document.createElement("li");
-    li.textContent = "Sem categorias cadastradas. As padrões (Instalação/Limpeza/Reparo) serão usadas no site.";
+    li.textContent = "Sem categorias cadastradas.";
     srvList.appendChild(li);
     return;
   }
@@ -203,7 +187,7 @@ async function renderServiceList(){
 }
 
 async function loadPrices(){
-  const p = await getDoc(docPrices);
+  const p = await getDoc(doc(db, "config", "prices"));
   if(p.exists()){
     const d = p.data();
     if(d.instalacao) priceState.instalacao = d.instalacao;
@@ -229,20 +213,16 @@ function renderPriceGrid(){
   });
 }
 
-async function loadAll(){
-  await Promise.all([ loadSite(), loadPrices() ]);
-}
-
-// ============== Ações: Site ==============
+// ============== Ações ==============
 btnSaveSite.addEventListener("click", async ()=>{
   try{
-    await setDoc(docSite, {
+    await setDoc(doc(db, "config", "site"), {
       companyName: cfgCompanyName.value.trim(),
       description: cfgCompanyDesc.value.trim(),
       heroUrl: cfgHeroUrl.value.trim(),
       whatsappNumber: String(cfgWhats.value.trim() || ""),
       reminderMonths: Number(cfgReminderMonths.value || 12),
-      btusOptions: siteState.btusOptions // mantém padrão; você pode adicionar UI depois para editar
+      btusOptions: siteState.btusOptions
     }, { merge:true });
     siteMsg.textContent = "Configurações salvas!";
     setTimeout(()=> siteMsg.textContent="", 2000);
@@ -252,18 +232,16 @@ btnSaveSite.addEventListener("click", async ()=>{
   }
 });
 
-// ============== Ações: Serviços (categorias) ==============
 btnAddSrv.addEventListener("click", async ()=>{
   const name = srvName.value.trim();
   const icon = srvIcon.value.trim();
   if(!name){ srvMsg.textContent = "Informe um nome para a categoria."; return; }
   try{
-    // evitar duplicidade por nome
-    const qy = query(colServices, where("name","==",name));
+    const qy = query(collection(db, "services"), where("name","==",name));
     const qs = await getDocs(qy);
     if(!qs.empty){ srvMsg.textContent = "Categoria já existe."; return; }
 
-    await addDoc(colServices, { name, iconUrl: icon || "" });
+    await addDoc(collection(db, "services"), { name, iconUrl: icon || "" });
     srvName.value=""; srvIcon.value="";
     srvMsg.textContent = "Categoria adicionada!";
     await renderServiceList();
@@ -275,10 +253,9 @@ btnAddSrv.addEventListener("click", async ()=>{
   }
 });
 
-// ============== Ações: Preços ==============
 btnSavePrices.addEventListener("click", async ()=>{
   try{
-    await setDoc(docPrices, {
+    await setDoc(doc(db, "config", "prices"), {
       instalacao: priceState.instalacao,
       limpeza: priceState.limpeza
     }, { merge:true });
@@ -290,29 +267,27 @@ btnSavePrices.addEventListener("click", async ()=>{
   }
 });
 
-// ============== Cadastrar Serviço Manual ==============
 btnSalvarManual.addEventListener("click", async ()=>{
   manualMsg.textContent = "";
   try{
     if(!mNome.value.trim() || !mFone.value.trim() || !mEndereco.value.trim() || !mServico.value || !mData.value || !mHora.value){
-      manualMsg.textContent = "Preencha os campos obrigatórios (cliente, fone, endereço, serviço, data e hora).";
+      manualMsg.textContent = "Preencha os campos obrigatórios.";
       return;
     }
-    const dataSelecionada = mData.value.split("-").reverse().join("/"); // dd/mm/yyyy
-    const horaSelecionada = mHora.value; // hh:mm
+    const dataSelecionada = mData.value.split("-").reverse().join("/");
+    const horaSelecionada = mHora.value;
     const dataHora = new Date(`${mData.value}T${horaSelecionada}`);
 
-    // Checar duplicidade simples: mesmo cliente+data+hora
-    const qy = query(colAgend, where("nomeCliente","==",mNome.value.trim()), where("dataAgendamento","==",dataSelecionada), where("horaAgendamento","==",horaSelecionada));
+    const qy = query(collection(db, "agendamentos"), where("nomeCliente","==",mNome.value.trim()), where("dataAgendamento","==",dataSelecionada), where("horaAgendamento","==",horaSelecionada));
     const qs = await getDocs(qy);
     if(!qs.empty){
       manualMsg.textContent = "Já existe um serviço para este cliente nesse dia/horário.";
       return;
     }
 
-    await addDoc(colAgend, {
+    await addDoc(collection(db, "agendamentos"), {
       servico: mServico.value,
-      valor: 0, // orçamento não calculado aqui
+      valor: 0,
       nomeCliente: mNome.value.trim(),
       enderecoCliente: mEndereco.value.trim(),
       telefoneCliente: mFone.value.trim(),
@@ -323,7 +298,7 @@ btnSalvarManual.addEventListener("click", async ()=>{
       formaPagamento: "N/A",
       observacoes: mObs.value.trim() || "Nenhuma",
       timestamp: dataHora.getTime(),
-      status: "Concluído" // cadastro manual costuma ser de serviço já realizado
+      status: "Concluído"
     });
 
     manualMsg.textContent = "Serviço cadastrado!";
@@ -336,27 +311,22 @@ btnSalvarManual.addEventListener("click", async ()=>{
   }
 });
 
-// ============== Lembretes (Limpeza) ==============
 btnRodarLembretes.addEventListener("click", async ()=>{
   reminderLog.innerHTML = "";
   try{
-    const s = await getDoc(docSite);
+    const s = await getDoc(doc(db, "config", "site"));
     const months = (s.exists() && s.data().reminderMonths) ? Number(s.data().reminderMonths) : 12;
-    const whats = (s.exists() && s.data().whatsappNumber) ? String(s.data().whatsappNumber) : "5581983259341";
-
-    // janela: hoje - months (considerado “aniversário”)
+    
     const today = new Date();
     const target = new Date(today);
     target.setMonth(target.getMonth() - months);
 
-    // converte target para dd/mm/yyyy p/ comparar com campo dataAgendamento (string)
     const dd = String(target.getDate()).padStart(2,"0");
     const mm = String(target.getMonth()+1).padStart(2,"0");
     const yyyy = target.getFullYear();
     const alvo = `${dd}/${mm}/${yyyy}`;
 
-    // Busca LIMPEZA nesta data
-    const qy = query(colAgend, where("servico","==","Limpeza"), where("dataAgendamento","==",alvo));
+    const qy = query(collection(db, "agendamentos"), where("servico","==","Limpeza"), where("dataAgendamento","==",alvo));
     const qs = await getDocs(qy);
 
     if(qs.empty){
@@ -366,17 +336,9 @@ btnRodarLembretes.addEventListener("click", async ()=>{
 
     qs.forEach(docSnap=>{
       const d = docSnap.data();
-      const msg =
-`🔔 *Lembrete de Limpeza* 
-Olá, ${d.nomeCliente}! Tudo bem?
-Faz ${months} meses desde sua última *Limpeza* de ar-condicionado.
-Deseja agendar uma nova visita para manter a eficiência e a saúde do equipamento?
-
-📍 Endereço: ${d.enderecoCliente}
-📞 Contato: ${d.telefoneCliente}`;
-
+      const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Tudo bem?\nFaz ${months} meses desde sua última *Limpeza* de ar-condicionado.\nDeseja agendar uma nova visita?`;
       const url = `https://wa.me/${d.telefoneCliente.replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`;
-      addLog(`Abrindo WhatsApp para ${d.nomeCliente} — ${d.telefoneCliente}`);
+      addLog(`Abrindo WhatsApp para ${d.nomeCliente}`);
       window.open(url,"_blank");
     });
 
