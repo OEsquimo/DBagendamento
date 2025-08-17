@@ -11,8 +11,13 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
+  import {
   getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, deleteDoc, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"; // <-- ADICIONE ESTE BLOCO
+
 
 // ============== Firebase (CONFIG EXISTENTE) ==============
 const firebaseConfig = {
@@ -26,6 +31,8 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // <-- ADICIONE ESTA LINHA
+
 
 // ============== Refs ==============
 const docAdmin   = doc(db, "config", "admin");   // { pin: "123456" }
