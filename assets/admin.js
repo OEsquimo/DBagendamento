@@ -95,32 +95,40 @@ let siteState = {
   btusOptions: ["9000","12000","18000","24000","30000"]
 };
 
-// ============== Login (PIN) ==============
-btnLogin.addEventListener("click", async ()=>{
+// ============== Login (E-mail/Senha) ==============
+const adminEmail = document.getElementById("adminEmail");
+const adminPassword = document.getElementById("adminPassword");
+
+btnLogin.addEventListener("click", async () => {
   loginMsg.textContent = "";
-  const pin = adminPin.value.trim();
-  if(!pin){ loginMsg.textContent = "Informe o PIN."; return; }
-  try{
-    const snap = await getDoc(docAdmin);
-    if(!snap.exists()){
-      await setDoc(docAdmin, { pin: "123456" }); // default inicial
-      loginMsg.textContent = "PIN não encontrado. Um PIN padrão (123456) foi criado.";
-      return;
+  const email = adminEmail.value.trim();
+  const password = adminPassword.value.trim();
+
+  if (!email || !password) {
+    loginMsg.textContent = "Por favor, informe o e-mail e a senha.";
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    // Se o login for bem-sucedido, o código abaixo será executado
+    loginSection.style.display = "none";
+    adminContent.style.display = "block";
+    await loadAll();
+  } catch (error) {
+    // Se o login falhar, o Firebase retornará um erro
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      loginMsg.textContent = "E-mail ou senha incorretos.";
+    } else {
+      loginMsg.textContent = "Ocorreu um erro ao tentar fazer o login.";
+      console.error("Erro de autenticação:", error);
     }
-    const real = String(snap.data().pin || "");
-    if(pin === real){
-      authed = true;
-      loginSection.style.display = "none";
-      adminContent.style.display = "block";
-      await loadAll();
-    }else{
-      loginMsg.textContent = "PIN incorreto.";
-    }
-  }catch(e){
-    loginMsg.textContent = "Erro ao validar PIN.";
-    console.error(e);
   }
 });
+
+
+
+
 
 // ============== Loaders ==============
 async function loadSite(){
