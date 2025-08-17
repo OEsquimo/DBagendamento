@@ -60,7 +60,7 @@ body{
 .servico:hover{transform:translateY(-5px);box-shadow:var(--sombra-media);border-color:var(--cor-primaria)}
 .servico.selecionado{border-color:var(--cor-primaria);background:#f0f7ff;box-shadow:0 0 0 3px rgba(52,152,219,.3)}
 .servico img{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover}
-.servico p{margin:8px 10px 10px;font-size:clamp(14px,1vw + 1rem,20px);font-weight:600;color:var(--cor-secundaria);text-align:center}
+.servico p{margin:8px 10px 10px;font-size:clamp(12px,1vw + 0.8rem,16px);font-weight:600;color:var(--cor-secundaria);text-align:center}
 
 label{display:block;margin-bottom:8px;font-weight:500;color:var(--cor-secundaria)}
 input[type="text"],input[type="tel"],input[type="password"],input[type="date"],input[type="time"],select,textarea{
