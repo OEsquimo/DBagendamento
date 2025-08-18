@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- Mapeamento DOM ---
+// --- Mapeamento DOM (sem alterações) ---
 const siteTitle = document.getElementById("siteTitle"),
       heroImage = document.getElementById("heroImage"),
       companyNameEl = document.getElementById("companyName"),
@@ -35,16 +35,16 @@ const siteTitle = document.getElementById("siteTitle"),
       btnFinalizar = document.getElementById("btn_finalizar"),
       btnFinalizarTexto = document.getElementById("btn_finalizar_texto");
 
-// --- Estado da Aplicação ---
+// --- Estado da Aplicação (sem alterações) ---
 const appState = {
     servicoSelecionado: null,
     valorOrcamento: 0,
-    whatsappNumber: "5581000000000", // Padrão, será substituído
+    whatsappNumber: "5581000000000",
     configSite: {},
     servicos: []
 };
 
-// --- Helpers ---
+// --- Helpers (sem alterações) ---
 const maskPhone = (e) => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
     if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
@@ -53,7 +53,7 @@ const maskPhone = (e) => {
 };
 whatsappInput.addEventListener("input", maskPhone);
 
-// --- Lógica Principal ---
+// --- Lógica Principal (sem alterações) ---
 document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([loadSiteConfig(), loadServices()]);
     initCalendar();
@@ -145,7 +145,6 @@ function validarFormulario() {
     const { showBudget, showSchedule } = appState.servicoSelecionado;
     let isFormValid = true;
 
-    // CORRIGIDO: Validação simplificada sem o campo "serviço desejado"
     const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect];
     for (const field of fields) {
         if (!field.value) {
@@ -195,22 +194,23 @@ function initCalendar() {
         locale: "pt",
         minDate: "today",
         dateFormat: "d/m/Y",
-        disable: [(date) => date.getDay() === 0], // Desabilita Domingos
-        onChange: (selectedDates) => {
+        disable: [(date) => date.getDay() === 0],
+        onChange: (selectedDates, dateStr) => { // Usar o segundo argumento (dateStr)
             if (selectedDates.length > 0) {
-                atualizarHorariosDisponiveis(calendario.input.value);
+                atualizarHorariosDisponiveis(dateStr); // Passa a data formatada
             }
         }
     });
 }
 
-// CORRIGIDO: Lógica de horários com tratamento de erro robusto
-async function atualizarHorariosDisponiveis(data) {
+// CORRIGIDO: Lógica de consulta de horários restaurada para a versão funcional
+async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.disabled = true;
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
     try {
         const horariosBase = ["08:00", "10:00", "13:00", "15:00", "17:00"];
-        const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", data));
+        // A consulta funciona perfeitamente com o campo de texto 'dataAgendamento'
+        const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
         const querySnapshot = await getDocs(q);
         const ocupados = querySnapshot.docs.map(d => d.data().horaAgendamento);
         const livres = horariosBase.filter(h => !ocupados.includes(h));
@@ -238,18 +238,27 @@ form.addEventListener("submit", async (e) => {
     btnFinalizar.disabled = true;
     btnFinalizarTexto.textContent = "Salvando...";
 
+    // CORRIGIDO: Garante que a data e o timestamp sejam salvos corretamente
+    const dataSelecionada = dataAgendamentoInput.value;
+    const horaSelecionada = horarioAgendamentoSelect.value;
+    let timestamp = new Date().getTime();
+    if (dataSelecionada && horaSelecionada) {
+        const [dia, mes, ano] = dataSelecionada.split('/');
+        timestamp = new Date(`${ano}-${mes}-${dia}T${horaSelecionada}`).getTime();
+    }
+
     const dadosAgendamento = {
-        servico: appState.servicoSelecionado.name, // Pega o nome do serviço selecionado
+        servico: appState.servicoSelecionado.name,
         valor: appState.valorOrcamento,
         nomeCliente: nomeInput.value.trim(),
         telefoneCliente: whatsappInput.value.replace(/\D/g, ""),
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
-        timestamp: new Date().getTime(),
+        timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
-        dataAgendamento: dataAgendamentoInput.value || null,
-        horaAgendamento: horarioAgendamentoSelect.value || null,
+        dataAgendamento: dataSelecionada || null,
+        horaAgendamento: horaSelecionada || null,
         formaPagamento: formaPagamentoSelect.value || null
     };
 
@@ -286,19 +295,4 @@ function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
     msg += `📞 *Contato:* ${dados.telefoneCliente}\n`;
-    msg += `🛠️ *Serviço Selecionado:* ${dados.servico}\n`; // Nome do serviço clicado
-    msg += `🔧 *Tipo de Equipamento:* ${dados.tipoEquipamento}\n`;
-    msg += `❄️ *Capacidade:* ${dados.capacidadeBtus} BTUs\n`;
-
-    if (appState.servicoSelecionado.showBudget) {
-        const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Análise";
-        msg += `💰 *Valor do Orçamento:* ${valorTxt}\n`;
-    }
-    if (appState.servicoSelecionado.showSchedule) {
-        msg += `🗓️ *Data:* ${dados.dataAgendamento}\n`;
-        msg += `⏰ *Hora:* ${dados.horaAgendamento}\n`;
-        msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
-    }
-    msg += `📝 *Observações:* ${dados.observacoes}`;
-    return msg;
-}
+    msg += `🛠️ *Servi
