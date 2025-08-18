@@ -33,13 +33,13 @@ const siteTitle = document.getElementById("siteTitle"),
       horarioAgendamentoSelect = document.getElementById("horario_agendamento"),
       formaPagamentoSelect = document.getElementById("forma_pagamento"),
       btnFinalizar = document.getElementById("btn_finalizar"),
-      btnFinalizarTexto = document.getElementById("btn_finalizar_texto");
+      btnFinalizarTexto = btnFinalizar.querySelector("span"),
+      ultimaAtualizacaoEl = document.getElementById("ultima-atualizacao");
 
 // --- Estado da Aplicação ---
 const appState = {
     servicoSelecionado: null,
     valorOrcamento: 0,
-    whatsappNumber: "5581000000000",
     configSite: {},
     servicos: []
 };
@@ -51,7 +51,7 @@ const maskPhone = (e) => {
     if (v.length > 9) v = `${v.substring(0, 9)}-${v.substring(9)}`;
     e.target.value = v;
 };
-whatsappInput.addEventListener("input", maskPhone);
+whatsappInput.addEventListener('input', maskPhone);
 
 // --- Lógica Principal ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -67,11 +67,12 @@ async function loadSiteConfig() {
         const docSnap = await getDoc(doc(db, "config", "site"));
         if (docSnap.exists()) {
             appState.configSite = docSnap.data();
-            companyNameEl.textContent = appState.configSite.companyName || "Nome da Empresa";
-            siteTitle.textContent = `${appState.configSite.companyName || "Serviços"} - Agendamento`;
-            companyDescEl.textContent = appState.configSite.description || "Descrição dos serviços.";
-            if (appState.configSite.heroUrl) heroImage.src = appState.configSite.heroUrl;
-            if (appState.configSite.whatsappNumber) appState.whatsappNumber = appState.configSite.whatsappNumber;
+            siteTitle.textContent = appState.configSite.companyName || "Agendamento de Serviço";
+            companyNameEl.textContent = appState.configSite.companyName || "Sua Empresa";
+            companyDescEl.textContent = appState.configSite.description || "Serviços de qualidade para você.";
+            if (appState.configSite.heroUrl) {
+                heroImage.src = appState.configSite.heroUrl;
+            }
         }
     } catch (error) {
         console.error("Erro ao carregar configurações do site:", error);
@@ -85,7 +86,6 @@ async function loadServices() {
         appState.servicos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Erro ao carregar serviços:", error);
-        servicosGrid.innerHTML = "<p>Não foi possível carregar os serviços. Tente novamente mais tarde.</p>";
     }
 }
 
@@ -95,30 +95,26 @@ function renderServices() {
         servicosGrid.innerHTML = "<p>Nenhum serviço disponível no momento.</p>";
         return;
     }
-    appState.servicos.forEach(service => {
+    appState.servicos.forEach(servico => {
         const div = document.createElement("div");
         div.className = "servico";
-        div.dataset.serviceId = service.id;
-        div.innerHTML = `
-            <img src="${service.imageUrl || 'assets/imagens/placeholder.jpg'}" alt="${service.name}"/>
-            <p>${service.name}</p>
-        `;
-        div.addEventListener("click", () => handleServiceSelection(service.id));
+        div.innerHTML = `<img src="${servico.imageUrl}" alt="${servico.name}"/><p>${servico.name}</p>`;
+        div.addEventListener("click", () => handleServiceSelection(servico));
         servicosGrid.appendChild(div);
     });
 }
 
-function handleServiceSelection(serviceId) {
-    appState.servicoSelecionado = appState.servicos.find(s => s.id === serviceId);
-    
-    if (appState.servicoSelecionado && appState.servicoSelecionado.externalLink) {
-        window.open(appState.servicoSelecionado.externalLink, '_blank');
-        return; 
+function handleServiceSelection(servico) {
+    if (servico.externalLink) {
+        window.open(servico.externalLink, '_blank');
+        return;
     }
-    
-    document.querySelectorAll(".servico").forEach(el => el.classList.remove("selecionado"));
-    document.querySelector(`[data-service-id="${serviceId}"]`).classList.add("selecionado");
-
+    document.querySelectorAll(".servico").forEach(s => s.classList.remove("selecionado"));
+    const clickedElement = Array.from(servicosGrid.children).find(el => el.querySelector('p').textContent === servico.name);
+    if (clickedElement) {
+        clickedElement.classList.add("selecionado");
+    }
+    appState.servicoSelecionado = servico;
     detalhesWrapper.style.display = "block";
     if (window.innerWidth < 768) {
         detalhesWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -127,78 +123,55 @@ function handleServiceSelection(serviceId) {
     validarFormulario();
 }
 
-function calcularOrcamento() {
-    if (!appState.servicoSelecionado || !appState.servicoSelecionado.prices) return 0;
-    const btu = capacidadeBtusSelect.value;
-    return appState.servicoSelecionado.prices[btu] || 0;
-}
-
-function gerarHtmlOrcamento() {
-    appState.valorOrcamento = calcularOrcamento();
-    const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Análise";
-    const observacoes = observacoesTextarea.value.trim();
-    
-    let html = `
-        <div class="orcamento-item"><strong>Serviço:</strong><span>${appState.servicoSelecionado.name}</span></div>
-        <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
-        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text}</span></div>
-    `;
-
-    if (observacoes) {
-        html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoes}</span></div>`;
-    }
-
-    html += `<div class="orcamento-total"><strong>Valor Total:</strong><span>${valorTexto}</span></div>`;
-    
-    return html;
-}
-
 function validarFormulario() {
     if (!appState.servicoSelecionado) return;
 
-    const { showBudget, showSchedule } = appState.servicoSelecionado;
-    let isFormValid = true;
+    const nomeValido = nomeInput.value.trim().length > 2;
+    const whatsappValido = whatsappInput.value.replace(/\D/g, "").length === 11;
+    const tipoEquipamentoValido = tipoEquipamentoSelect.value !== "";
+    const capacidadeValida = capacidadeBtusSelect.value !== "";
+    const dadosBasicosValidos = nomeValido && whatsappValido && tipoEquipamentoValido && capacidadeValida;
 
-    const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect];
-    for (const field of fields) {
-        if (!field.value) {
-            isFormValid = false;
-            break;
-        }
-    }
-    if (whatsappInput.value.replace(/\D/g, "").length < 10) isFormValid = false;
+    orcamentoWrapper.style.display = dadosBasicosValidos && appState.servicoSelecionado.showBudget ? "block" : "none";
+    agendamentoWrapper.style.display = dadosBasicosValidos && appState.servicoSelecionado.showSchedule ? "block" : "none";
 
-    if (isFormValid && showBudget) {
-        orcamentoWrapper.style.display = 'block';
-        relatorioOrcamentoDiv.innerHTML = gerarHtmlOrcamento();
-    } else {
-        orcamentoWrapper.style.display = 'none';
+    if (orcamentoWrapper.style.display === "block") {
+        gerarHtmlOrcamento();
     }
 
-    if (isFormValid && showSchedule) {
-        agendamentoWrapper.style.display = 'block';
-    } else {
-        agendamentoWrapper.style.display = 'none';
+    let agendamentoValido = true;
+    if (agendamentoWrapper.style.display === "block") {
+        const dataValida = dataAgendamentoInput.value !== "";
+        const horarioValido = horarioAgendamentoSelect.value !== "" && !horarioAgendamentoSelect.disabled;
+        const pagamentoValido = formaPagamentoSelect.value !== "";
+        agendamentoValido = dataValida && horarioValido && pagamentoValido;
     }
 
-    let isButtonEnabled = isFormValid;
-    if (showSchedule && isFormValid) {
-        if (!dataAgendamentoInput.value || !horarioAgendamentoSelect.value || !formaPagamentoSelect.value) {
-            isButtonEnabled = false;
-        }
-    }
+    btnFinalizar.disabled = !(dadosBasicosValidos && (orcamentoWrapper.style.display === "block" || agendamentoWrapper.style.display === "block") && agendamentoValido);
+}
+
+function calcularValorOrcamento() {
+    if (!appState.servicoSelecionado || !appState.servicoSelecionado.prices) return 0;
+    const btuSelecionado = capacidadeBtusSelect.value;
+    return appState.servicoSelecionado.prices[btuSelecionado] || 0;
+}
+
+function gerarHtmlOrcamento() {
+    appState.valorOrcamento = calcularValorOrcamento();
+    const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Consulta";
+    const observacoesTexto = observacoesTextarea.value.trim();
+
+    let html = `
+        <div class="orcamento-item"><strong>Serviço:</strong><span>${appState.servicoSelecionado.name}</span></div>
+        <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
+        <div class="orcamento-item"><strong>Equipamento:</strong><span>${tipoEquipamentoSelect.value}</span></div>
+        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.value} BTUs</span></div>
+        <div class="orcamento-total"><strong>Valor Total:</strong><span>${valorTexto}</span></div>`;
     
-    btnFinalizar.disabled = !isButtonEnabled;
-    
-    if (!isFormValid) {
-        btnFinalizarTexto.textContent = "Preencha os dados para continuar";
-    } else if (showSchedule && !dataAgendamentoInput.value) {
-        btnFinalizarTexto.textContent = "Escolha uma data";
-    } else if (showSchedule && !horarioAgendamentoSelect.value) {
-        btnFinalizarTexto.textContent = "Escolha um horário";
-    } else {
-        btnFinalizarTexto.textContent = showSchedule ? "Finalizar Agendamento" : "Solicitar Orçamento";
+    if (observacoesTexto) {
+        html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoesTexto}</span></div>`;
     }
+    relatorioOrcamentoDiv.innerHTML = html;
 }
 
 // --- Calendário e Horários ---
@@ -222,32 +195,38 @@ async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
     
     try {
-        const maxTime = appState.configSite.maxTime || "23:59";
-        const interval = appState.configSite.interval || 120;
-
-        const horariosBase = [];
-        let currentTime = new Date(`1970-01-01T08:00:00`);
-        const maxDateTime = new Date(`1970-01-01T${maxTime}:00`);
-
-        while (currentTime <= maxDateTime) {
-            horariosBase.push(currentTime.toTimeString().substring(0, 5));
-            currentTime.setMinutes(currentTime.getMinutes() + interval);
+        const scheduleDoc = await getDoc(doc(db, "config", "schedule"));
+        if (!scheduleDoc.exists() || !scheduleDoc.data().slots) {
+            horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário configurado</option>';
+            return;
         }
-        
+        const gradeDeHorarios = scheduleDoc.data().slots.sort((a, b) => a.time.localeCompare(b.time));
+
         const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
         const querySnapshot = await getDocs(q);
-        const horariosOcupados = querySnapshot.docs.map(doc => doc.data().horaAgendamento);
         
-        const horariosLivres = horariosBase.filter(h => !horariosOcupados.includes(h));
+        const agendamentosPorHora = {};
+        querySnapshot.forEach(doc => {
+            const hora = doc.data().horaAgendamento;
+            if (!agendamentosPorHora[hora]) {
+                agendamentosPorHora[hora] = 0;
+            }
+            agendamentosPorHora[hora]++;
+        });
+
+        const horariosLivres = gradeDeHorarios.filter(slot => {
+            const agendados = agendamentosPorHora[slot.time] || 0;
+            return agendados < slot.vacancies;
+        });
 
         if (horariosLivres.length > 0) {
             horarioAgendamentoSelect.innerHTML = '<option value="">Selecione um horário</option>';
-            horariosLivres.forEach(h => {
+            horariosLivres.forEach(slot => {
                 const option = document.createElement('option');
-                option.value = h;
-                option.textContent = h;
+                option.value = slot.time;
+                option.textContent = slot.time;
                 horarioAgendamentoSelect.appendChild(option);
-            });
+});
             horarioAgendamentoSelect.disabled = false;
         } else {
             horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário disponível</option>';
@@ -268,12 +247,6 @@ form.addEventListener("submit", async (e) => {
     btnFinalizar.disabled = true;
     btnFinalizarTexto.textContent = "Salvando...";
 
-    let timestamp = new Date().getTime();
-    if (dataAgendamentoInput.value && horarioAgendamentoSelect.value) {
-        const [dia, mes, ano] = dataAgendamentoInput.value.split('/');
-        timestamp = new Date(`${ano}-${mes}-${dia}T${horarioAgendamentoSelect.value}`).getTime();
-    }
-
     const dadosAgendamento = {
         servico: appState.servicoSelecionado.name,
         valor: appState.valorOrcamento,
@@ -282,32 +255,24 @@ form.addEventListener("submit", async (e) => {
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
-        timestamp: timestamp,
-        status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
-        dataAgendamento: dataAgendamentoInput.value || null,
-        horaAgendamento: horarioAgendamentoSelect.value || null,
-        formaPagamento: formaPagamentoSelect.value || null,
-        whatsappStatus: 'pending'
+        timestamp: new Date().getTime(),
+        status: "Agendado",
+        whatsappStatus: "pending" // Para controle de back-end
     };
 
+    if (appState.servicoSelecionado.showSchedule) {
+        dadosAgendamento.dataAgendamento = dataAgendamentoInput.value;
+        dadosAgendamento.horaAgendamento = horarioAgendamentoSelect.value;
+        dadosAgendamento.formaPagamento = formaPagamentoSelect.value;
+    }
+
     try {
-        if (appState.servicoSelecionado.showSchedule) {
-            const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dadosAgendamento.dataAgendamento), where("horaAgendamento", "==", dadosAgendamento.horaAgendamento));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                alert("Desculpe, este horário acabou de ser preenchido! Por favor, selecione outro.");
-                btnFinalizar.disabled = false;
-                atualizarHorariosDisponiveis(dadosAgendamento.dataAgendamento);
-                return;
-            }
-        }
-
         await addDoc(collection(db, "agendamentos"), dadosAgendamento);
-
-        alert("Seu agendamento foi aprovado com sucesso! Você receberá uma mensagem de confirmação no WhatsApp em breve.");
-
-        const mensagemWhats = criarMensagemWhatsApp(dadosAgendamento);
-        const url = `https://wa.me/55${appState.whatsappNumber}?text=${encodeURIComponent(mensagemWhats)}`;
+        
+        alert("Agendamento salvo com sucesso! Você receberá uma confirmação no WhatsApp em breve.");
+        
+        const mensagem = criarMensagemWhatsApp(dadosAgendamento);
+        const url = `https://wa.me/${appState.configSite.whatsappNumber}?text=${encodeURIComponent(mensagem)}`;
         window.open(url, "_blank");
         
         setTimeout(() => window.location.reload(), 500);
@@ -324,13 +289,12 @@ function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
     msg += `📞 *Contato:* ${dados.telefoneCliente}\n`;
-    msg += `🛠️ *Serviço Selecionado:* ${dados.servico}\n`;
-    msg += `🔧 *Tipo de Equipamento:* ${dados.tipoEquipamento}\n`;
-    msg += `❄️ *Capacidade:* ${dados.capacidadeBtus} BTUs\n`;
+    msg += `🛠️ *Serviço:* ${dados.servico}\n`;
+    msg += `🔌 *Equipamento:* ${dados.tipoEquipamento} (${dados.capacidadeBtus} BTUs)\n`;
 
     if (appState.servicoSelecionado.showBudget) {
-        const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Análise";
-        msg += `💰 *Valor do Orçamento:* ${valorTxt}\n`;
+        const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Consulta";
+        msg += `💰 *Valor:* ${valorTxt}\n`;
     }
     if (appState.servicoSelecionado.showSchedule) {
         msg += `🗓️ *Data:* ${dados.dataAgendamento}\n`;
@@ -343,4 +307,12 @@ function criarMensagemWhatsApp(dados) {
     }
     
     return msg;
+}
+
+// --- Atualização da Data no Rodapé ---
+if (ultimaAtualizacaoEl) {
+    const dataModificacao = new Date(document.lastModified);
+    ultimaAtualizacaoEl.textContent = "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
 }
