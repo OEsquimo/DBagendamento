@@ -193,10 +193,9 @@ function initCalendar() {
     calendario = flatpickr(dataAgendamentoInput, {
         locale: "pt",
         minDate: "today",
-        dateFormat: "d/m/Y", // Formato de exibição para o usuário
-        disable: [(date) => date.getDay() === 0], // Desabilita Domingos
+        dateFormat: "d/m/Y",
+        disable: [(date) => date.getDay() === 0],
         onChange: (selectedDates, dateStr) => {
-            // A 'dateStr' já vem no formato "d/m/Y" por causa do dateFormat
             if (dateStr) {
                 atualizarHorariosDisponiveis(dateStr);
             }
@@ -204,32 +203,46 @@ function initCalendar() {
     });
 }
 
-// VERSÃO FINAL E CORRIGIDA: Lógica de consulta de horários
+// **AQUI ESTÁ A CORREÇÃO DEFINITIVA**
+// Esta função foi reescrita para ser simples e robusta, como no seu sistema original.
 async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.disabled = true;
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
+    
     try {
         const horariosBase = ["08:00", "10:00", "13:00", "15:00", "17:00"];
         
-        // A consulta usa o campo 'dataAgendamento' que é uma string "DD/MM/AAAA"
+        // 1. A consulta busca na coleção 'agendamentos'
         const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
+        
+        // 2. Executa a busca
         const querySnapshot = await getDocs(q);
         
-        const ocupados = querySnapshot.docs.map(d => d.data().horaAgendamento);
-        const livres = horariosBase.filter(h => !ocupados.includes(h));
+        // 3. Pega apenas os horários dos documentos encontrados
+        const horariosOcupados = querySnapshot.docs.map(doc => doc.data().horaAgendamento);
+        
+        // 4. Filtra a lista de horários base para encontrar os que estão livres
+        const horariosLivres = horariosBase.filter(h => !horariosOcupados.includes(h));
 
-        if (livres.length > 0) {
+        // 5. Atualiza o select com as opções
+        if (horariosLivres.length > 0) {
             horarioAgendamentoSelect.innerHTML = '<option value="">Selecione um horário</option>';
-            livres.forEach(h => horarioAgendamentoSelect.innerHTML += `<option value="${h}">${h}</option>`);
+            horariosLivres.forEach(h => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.textContent = h;
+                horarioAgendamentoSelect.appendChild(option);
+            });
             horarioAgendamentoSelect.disabled = false;
         } else {
-            horarioAgendamentoSelect.innerHTML = '<option value="">Sem horários hoje</option>';
+            horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário disponível</option>';
         }
     } catch (err) {
-        console.error("Erro ao buscar horários:", err);
-        // Mensagem de erro para o usuário
+        // Se qualquer coisa na busca der errado, mostra a mensagem de erro.
+        console.error("Ocorreu um erro ao buscar horários no Firebase:", err);
         horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     } finally {
+        // Garante que o estado do botão principal seja atualizado
         validarFormulario();
     }
 }
@@ -260,7 +273,7 @@ form.addEventListener("submit", async (e) => {
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
         timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
-        dataAgendamento: dataSelecionada || null, // Salva a data como "DD/MM/AAAA"
+        dataAgendamento: dataSelecionada || null,
         horaAgendamento: horaSelecionada || null,
         formaPagamento: formaPagamentoSelect.value || null
     };
