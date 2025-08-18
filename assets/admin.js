@@ -24,7 +24,8 @@ const loginSection = document.getElementById("loginSection"),
       loginMsg = document.getElementById("loginMsg"),
       cfgCompanyName = document.getElementById("cfgCompanyName"),
       cfgCompanyDesc = document.getElementById("cfgCompanyDesc"),
-      cfgHeroUrl = document.getElementById("cfgHeroUrl"),
+      cfgHeroUrl = document.getElementById("cfgHeroUrl"), // Agora é um <select>
+      heroImagePreview = document.getElementById("heroImagePreview"), // Novo preview
       cfgWhats = document.getElementById("cfgWhats"),
       cfgReminderMonths = document.getElementById("cfgReminderMonths"),
       siteMsg = document.getElementById("siteMsg"),
@@ -49,10 +50,10 @@ const loginSection = document.getElementById("loginSection"),
 // --- Estado e Helpers ---
 let siteState = {};
 const imageGallery = [
+    { name: "Técnico em Serviço", url: "assets/imagens/tecnico-trabalhando.jpg" },
     { name: "Limpeza de Split", url: "assets/imagens/limpeza-split.jpg" },
     { name: "Instalação de Ar", url: "assets/imagens/instalacao-ar.jpg" },
     { name: "Manutenção Preventiva", url: "assets/imagens/manutencao-ar.jpg" },
-    { name: "Técnico em Serviço", url: "assets/imagens/tecnico-trabalhando.jpg" },
     { name: "Condensadora Externa", url: "assets/imagens/condensadora_lg.jpg" }
 ];
 
@@ -98,21 +99,44 @@ async function loadAdminData() {
     await Promise.all([loadSiteConfig(), loadServices()]);
 }
 
+// **FUNÇÃO ATUALIZADA**
 async function loadSiteConfig() {
+    // 1. Preenche a galeria de imagens do topo
+    cfgHeroUrl.innerHTML = imageGallery.map(img => `<option value="${img.url}">${img.name}</option>`).join('');
+
+    // 2. Busca os dados salvos no Firebase
     const docRef = doc(db, "config", "site");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         siteState = docSnap.data();
         cfgCompanyName.value = siteState.companyName || "";
         cfgCompanyDesc.value = siteState.description || "";
-        cfgHeroUrl.value = siteState.heroUrl || "";
         cfgWhats.value = siteState.whatsappNumber || "";
         cfgReminderMonths.value = siteState.reminderMonths || 12;
+        
+        // 3. Seleciona a imagem correta no <select> e mostra o preview
+        if (siteState.heroUrl) {
+            cfgHeroUrl.value = siteState.heroUrl;
+            heroImagePreview.src = siteState.heroUrl;
+            heroImagePreview.style.display = 'block';
+        } else {
+            // Se não houver imagem salva, mostra o preview da primeira da lista
+            heroImagePreview.src = cfgHeroUrl.value;
+            heroImagePreview.style.display = 'block';
+        }
+        
         maskPhone(cfgWhats);
     }
+
+    // 4. Adiciona o evento para atualizar o preview quando o admin mudar a seleção
+    cfgHeroUrl.addEventListener('change', () => {
+        heroImagePreview.src = cfgHeroUrl.value;
+        heroImagePreview.style.display = 'block';
+    });
 }
 
 // --- Gerenciamento de Serviços (CRUD Dinâmico) ---
+// Nenhuma mudança necessária nesta seção, ela continua igual.
 function createServiceForm(service = {}) {
     const isEditing = !!service.id;
     serviceFormContainer.innerHTML = ''; 
@@ -164,9 +188,6 @@ function createServiceForm(service = {}) {
     document.getElementById('btnCancelSrv').addEventListener('click', hideServiceForm);
     
     btnShowAddServiceForm.style.display = 'none';
-
-    // **AQUI ESTÁ A CORREÇÃO**
-    // Leva o foco do usuário para o formulário que acabou de ser criado.
     serviceFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -265,12 +286,14 @@ async function loadServices() {
 btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 
 // --- Ações Gerais e Manuais ---
+// **FUNÇÃO ATUALIZADA**
 btnSaveSite.addEventListener("click", async () => {
     try {
+        // Agora pega o valor do <select> em vez de um <input>
         await setDoc(doc(db, "config", "site"), {
             companyName: cfgCompanyName.value.trim(),
             description: cfgCompanyDesc.value.trim(),
-            heroUrl: cfgHeroUrl.value.trim(),
+            heroUrl: cfgHeroUrl.value, // Pega a URL selecionada
             whatsappNumber: cfgWhats.value.replace(/\D/g, ""),
             reminderMonths: Number(cfgReminderMonths.value)
         }, { merge: true });
