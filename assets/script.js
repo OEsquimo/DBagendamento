@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// --- Configuração Firebase (usando as suas credenciais) ---
+// --- Configuração Firebase ---
 const firebaseConfig = {
     apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
     authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -27,7 +27,6 @@ const siteTitle = document.getElementById("siteTitle"),
       whatsappInput = document.getElementById("whatsapp"),
       tipoEquipamentoSelect = document.getElementById("tipo_equipamento"),
       capacidadeBtusSelect = document.getElementById("capacidade_btus"),
-      servicoDesejadoSelect = document.getElementById("servico_desejado"),
       observacoesTextarea = document.getElementById("observacoes"),
       relatorioOrcamentoDiv = document.getElementById("relatorio-orcamento"),
       dataAgendamentoInput = document.getElementById("data_agendamento"),
@@ -62,7 +61,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     form.addEventListener("input", validarFormulario);
 });
 
-// Carrega as configurações gerais do site (nome, logo, etc) do Firestore
 async function loadSiteConfig() {
     try {
         const docSnap = await getDoc(doc(db, "config", "site"));
@@ -79,7 +77,6 @@ async function loadSiteConfig() {
     }
 }
 
-// Carrega a lista de serviços cadastrados no Firestore
 async function loadServices() {
     try {
         const q = query(collection(db, "services"), orderBy("name"));
@@ -91,7 +88,6 @@ async function loadServices() {
     }
 }
 
-// Desenha os cards de serviço na tela
 function renderServices() {
     servicosGrid.innerHTML = "";
     if (appState.servicos.length === 0) {
@@ -111,7 +107,6 @@ function renderServices() {
     });
 }
 
-// Lida com a seleção de um serviço pelo cliente
 function handleServiceSelection(serviceId) {
     appState.servicoSelecionado = appState.servicos.find(s => s.id === serviceId);
     
@@ -126,14 +121,12 @@ function handleServiceSelection(serviceId) {
     validarFormulario();
 }
 
-// Calcula o valor do orçamento com base no serviço e BTU selecionados
 function calcularOrcamento() {
     if (!appState.servicoSelecionado || !appState.servicoSelecionado.prices) return 0;
     const btu = capacidadeBtusSelect.value;
     return appState.servicoSelecionado.prices[btu] || 0;
 }
 
-// Gera o HTML do resumo do orçamento
 function gerarHtmlOrcamento() {
     appState.valorOrcamento = calcularOrcamento();
     const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Análise";
@@ -146,14 +139,14 @@ function gerarHtmlOrcamento() {
     `;
 }
 
-// Valida o formulário inteiro e controla a visibilidade das seções
 function validarFormulario() {
     if (!appState.servicoSelecionado) return;
 
     const { showBudget, showSchedule } = appState.servicoSelecionado;
     let isFormValid = true;
 
-    const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect, servicoDesejadoSelect];
+    // CORRIGIDO: Validação simplificada sem o campo "serviço desejado"
+    const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect];
     for (const field of fields) {
         if (!field.value) {
             isFormValid = false;
@@ -162,7 +155,6 @@ function validarFormulario() {
     }
     if (whatsappInput.value.replace(/\D/g, "").length < 10) isFormValid = false;
 
-    // Controla visibilidade do Orçamento
     if (isFormValid && showBudget) {
         orcamentoWrapper.style.display = 'block';
         relatorioOrcamentoDiv.innerHTML = gerarHtmlOrcamento();
@@ -170,16 +162,14 @@ function validarFormulario() {
         orcamentoWrapper.style.display = 'none';
     }
 
-    // Controla visibilidade do Agendamento
     if (isFormValid && showSchedule) {
         agendamentoWrapper.style.display = 'block';
     } else {
         agendamentoWrapper.style.display = 'none';
     }
 
-    // Validação final para o botão
     let isButtonEnabled = isFormValid;
-    if (showSchedule && isFormValid) { // Só valida agendamento se o resto do form estiver ok
+    if (showSchedule && isFormValid) {
         if (!dataAgendamentoInput.value || !horarioAgendamentoSelect.value || !formaPagamentoSelect.value) {
             isButtonEnabled = false;
         }
@@ -187,7 +177,6 @@ function validarFormulario() {
     
     btnFinalizar.disabled = !isButtonEnabled;
     
-    // Atualiza texto do botão para guiar o usuário
     if (!isFormValid) {
         btnFinalizarTexto.textContent = "Preencha os dados para continuar";
     } else if (showSchedule && !dataAgendamentoInput.value) {
@@ -215,7 +204,7 @@ function initCalendar() {
     });
 }
 
-// Busca no Firestore os horários já agendados para a data selecionada
+// CORRIGIDO: Lógica de horários com tratamento de erro robusto
 async function atualizarHorariosDisponiveis(data) {
     horarioAgendamentoSelect.disabled = true;
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
@@ -235,7 +224,7 @@ async function atualizarHorariosDisponiveis(data) {
         }
     } catch (err) {
         console.error("Erro ao buscar horários:", err);
-        horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+        horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar horários</option>';
     } finally {
         validarFormulario();
     }
@@ -250,13 +239,12 @@ form.addEventListener("submit", async (e) => {
     btnFinalizarTexto.textContent = "Salvando...";
 
     const dadosAgendamento = {
-        servico: appState.servicoSelecionado.name,
+        servico: appState.servicoSelecionado.name, // Pega o nome do serviço selecionado
         valor: appState.valorOrcamento,
         nomeCliente: nomeInput.value.trim(),
         telefoneCliente: whatsappInput.value.replace(/\D/g, ""),
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
-        servicoDesejado: servicoDesejadoSelect.value,
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
         timestamp: new Date().getTime(),
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
@@ -266,7 +254,6 @@ form.addEventListener("submit", async (e) => {
     };
 
     try {
-        // Lógica anti-conflito para agendamentos: verifica novamente antes de salvar
         if (appState.servicoSelecionado.showSchedule) {
             const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dadosAgendamento.dataAgendamento), where("horaAgendamento", "==", dadosAgendamento.horaAgendamento));
             const snap = await getDocs(q);
@@ -295,15 +282,13 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// Cria a mensagem formatada para ser enviada ao WhatsApp
 function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
     msg += `📞 *Contato:* ${dados.telefoneCliente}\n`;
-    msg += `🛠️ *Serviço Principal:* ${dados.servico}\n`;
+    msg += `🛠️ *Serviço Selecionado:* ${dados.servico}\n`; // Nome do serviço clicado
     msg += `🔧 *Tipo de Equipamento:* ${dados.tipoEquipamento}\n`;
     msg += `❄️ *Capacidade:* ${dados.capacidadeBtus} BTUs\n`;
-    msg += `📋 *Serviço Desejado:* ${dados.servicoDesejado}\n`;
 
     if (appState.servicoSelecionado.showBudget) {
         const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Análise";
