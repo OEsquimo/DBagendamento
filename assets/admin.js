@@ -27,10 +27,12 @@ const loginSection = document.getElementById("loginSection"),
       cfgHeroUrl = document.getElementById("cfgHeroUrl"),
       heroImagePreview = document.getElementById("heroImagePreview"),
       cfgWhats = document.getElementById("cfgWhats"),
-      cfgMaxTime = document.getElementById("cfgMaxTime"),
-      cfgInterval = document.getElementById("cfgInterval"),
       siteMsg = document.getElementById("siteMsg"),
       btnSaveSite = document.getElementById("btnSaveSite"),
+      scheduleGridContainer = document.getElementById("schedule-grid-container"),
+      btnAddScheduleSlot = document.getElementById("btnAddScheduleSlot"),
+      btnSaveSchedule = document.getElementById("btnSaveSchedule"),
+      scheduleMsg = document.getElementById("scheduleMsg"),
       serviceFormContainer = document.getElementById("service-form-container"),
       btnShowAddServiceForm = document.getElementById("btnShowAddServiceForm"),
       srvList = document.getElementById("srvList"),
@@ -104,7 +106,7 @@ btnLogin.addEventListener("click", async () => {
 
 // --- Carregamento de Dados ---
 async function loadAdminData() {
-    await Promise.all([loadSiteConfig(), loadServices()]);
+    await Promise.all([loadSiteConfig(), loadSchedule(), loadServices()]);
     maskPhone(searchClientPhone);
     maskPhone(mFone);
 }
@@ -119,8 +121,6 @@ async function loadSiteConfig() {
         cfgCompanyDesc.value = siteState.description || "";
         cfgWhats.value = siteState.whatsappNumber || "";
         cfgReminderMonths.value = siteState.reminderMonths || 12;
-        cfgMaxTime.value = siteState.maxTime || "";
-        cfgInterval.value = siteState.interval || 120;
         if (siteState.heroUrl) {
             cfgHeroUrl.value = siteState.heroUrl;
             heroImagePreview.src = siteState.heroUrl;
@@ -133,6 +133,64 @@ async function loadSiteConfig() {
         heroImagePreview.style.display = 'block';
     });
 }
+
+// --- Grade de Horários ---
+async function loadSchedule() {
+    const docRef = doc(db, "config", "schedule");
+    const docSnap = await getDoc(docRef);
+    scheduleGridContainer.innerHTML = '';
+    if (docSnap.exists() && docSnap.data().slots) {
+        const slots = docSnap.data().slots.sort((a, b) => a.time.localeCompare(b.time));
+        slots.forEach(slot => addScheduleSlot(slot.time, slot.vacancies));
+    } else {
+        addScheduleSlot("08:00", 1);
+        addScheduleSlot("10:00", 1);
+        addScheduleSlot("14:00", 1);
+    }
+}
+
+function addScheduleSlot(time = '', vacancies = 1) {
+    const slotId = `slot-${Date.now()}`;
+    const div = document.createElement('div');
+    div.className = 'dynamic-field';
+    div.id = slotId;
+    div.innerHTML = `
+        <input type="time" class="time-input" value="${time}" required>
+        <input type="number" class="vacancies-input" min="1" value="${vacancies}" required>
+        <label>vaga(s)</label>
+        <button type="button" class="remove-field-btn" onclick="document.getElementById('${slotId}').remove()">×</button>
+    `;
+    scheduleGridContainer.appendChild(div);
+}
+
+btnAddScheduleSlot.addEventListener('click', () => addScheduleSlot());
+
+btnSaveSchedule.addEventListener('click', async () => {
+    const slots = [];
+    let isValid = true;
+    document.querySelectorAll('#schedule-grid-container .dynamic-field').forEach(field => {
+        const time = field.querySelector('.time-input').value;
+        const vacancies = parseInt(field.querySelector('.vacancies-input').value, 10);
+        if (!time || isNaN(vacancies) || vacancies < 1) {
+            isValid = false;
+        }
+        slots.push({ time, vacancies });
+    });
+
+    if (!isValid) {
+        showMessage(scheduleMsg, "Preencha todos os horários e vagas corretamente.", false);
+        return;
+    }
+
+    try {
+        await setDoc(doc(db, "config", "schedule"), { slots });
+        showMessage(scheduleMsg, "Grade de horários salva com sucesso!");
+    } catch (e) {
+        showMessage(scheduleMsg, "Erro ao salvar a grade.", false);
+        console.error(e);
+    }
+});
+
 
 // --- Gerenciamento de Serviços (CRUD Dinâmico) ---
 function createServiceForm(service = {}) {
@@ -355,10 +413,7 @@ btnSaveSite.addEventListener("click", async () => {
             companyName: cfgCompanyName.value.trim(),
             description: cfgCompanyDesc.value.trim(),
             heroUrl: cfgHeroUrl.value,
-            whatsappNumber: cfgWhats.value.replace(/\D/g, ""),
-            reminderMonths: Number(cfgReminderMonths.value),
-            maxTime: cfgMaxTime.value,
-            interval: Number(cfgInterval.value)
+            whatsappNumber: cfgWhats.value.replace(/\D/g, "")
         }, { merge: true });
         showMessage(siteMsg, "Configurações salvas com sucesso!");
     } catch (e) { showMessage(siteMsg, "Erro ao salvar configurações.", false); }
