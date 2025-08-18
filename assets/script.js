@@ -27,7 +27,7 @@ const siteTitle = document.getElementById("siteTitle"),
       whatsappInput = document.getElementById("whatsapp"),
       tipoEquipamentoSelect = document.getElementById("tipo_equipamento"),
       capacidadeBtusSelect = document.getElementById("capacidade_btus"),
-      observacoesTextarea = document.getElementById("observacoes"),
+      observacoesTextarea = document.getElementById("observacoes"), // Já estava mapeado
       relatorioOrcamentoDiv = document.getElementById("relatorio-orcamento"),
       dataAgendamentoInput = document.getElementById("data_agendamento"),
       horarioAgendamentoSelect = document.getElementById("horario_agendamento"),
@@ -127,16 +127,26 @@ function calcularOrcamento() {
     return appState.servicoSelecionado.prices[btu] || 0;
 }
 
+// **CORREÇÃO 1: Adicionando as observações ao resumo do orçamento**
 function gerarHtmlOrcamento() {
     appState.valorOrcamento = calcularOrcamento();
     const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Análise";
+    const observacoes = observacoesTextarea.value.trim();
     
-    return `
+    let html = `
         <div class="orcamento-item"><strong>Serviço:</strong><span>${appState.servicoSelecionado.name}</span></div>
         <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
         <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text}</span></div>
-        <div class="orcamento-total"><strong>Valor Total:</strong><span>${valorTexto}</span></div>
     `;
+
+    // Adiciona a linha de observações apenas se o campo foi preenchido
+    if (observacoes) {
+        html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoes}</span></div>`;
+    }
+
+    html += `<div class="orcamento-total"><strong>Valor Total:</strong><span>${valorTexto}</span></div>`;
+    
+    return html;
 }
 
 function validarFormulario() {
@@ -145,6 +155,7 @@ function validarFormulario() {
     const { showBudget, showSchedule } = appState.servicoSelecionado;
     let isFormValid = true;
 
+    // O campo de observações é opcional, então não entra na validação de campos obrigatórios
     const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect];
     for (const field of fields) {
         if (!field.value) {
@@ -203,28 +214,17 @@ function initCalendar() {
     });
 }
 
-// **AQUI ESTÁ A CORREÇÃO DEFINITIVA**
-// Esta função foi reescrita para ser simples e robusta, como no seu sistema original.
 async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.disabled = true;
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
     
     try {
         const horariosBase = ["08:00", "10:00", "13:00", "15:00", "17:00"];
-        
-        // 1. A consulta busca na coleção 'agendamentos'
         const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
-        
-        // 2. Executa a busca
         const querySnapshot = await getDocs(q);
-        
-        // 3. Pega apenas os horários dos documentos encontrados
         const horariosOcupados = querySnapshot.docs.map(doc => doc.data().horaAgendamento);
-        
-        // 4. Filtra a lista de horários base para encontrar os que estão livres
         const horariosLivres = horariosBase.filter(h => !horariosOcupados.includes(h));
 
-        // 5. Atualiza o select com as opções
         if (horariosLivres.length > 0) {
             horarioAgendamentoSelect.innerHTML = '<option value="">Selecione um horário</option>';
             horariosLivres.forEach(h => {
@@ -238,11 +238,9 @@ async function atualizarHorariosDisponiveis(dataSelecionada) {
             horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário disponível</option>';
         }
     } catch (err) {
-        // Se qualquer coisa na busca der errado, mostra a mensagem de erro.
         console.error("Ocorreu um erro ao buscar horários no Firebase:", err);
         horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     } finally {
-        // Garante que o estado do botão principal seja atualizado
         validarFormulario();
     }
 }
@@ -270,7 +268,7 @@ form.addEventListener("submit", async (e) => {
         telefoneCliente: whatsappInput.value.replace(/\D/g, ""),
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
-        observacoes: observacoesTextarea.value.trim() || "Nenhuma",
+        observacoes: observacoesTextarea.value.trim() || "Nenhuma", // Garante que o valor seja salvo
         timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
         dataAgendamento: dataSelecionada || null,
@@ -307,6 +305,7 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
+// **CORREÇÃO 2: Adicionando as observações à mensagem do WhatsApp**
 function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
@@ -324,6 +323,11 @@ function criarMensagemWhatsApp(dados) {
         msg += `⏰ *Hora:* ${dados.horaAgendamento}\n`;
         msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
     }
-    msg += `📝 *Observações:* ${dados.observacoes}`;
+    
+    // Adiciona a linha de observações apenas se o campo foi preenchido
+    if (dados.observacoes && dados.observacoes !== "Nenhuma") {
+        msg += `📝 *Observações:* ${dados.observacoes}`;
+    }
+    
     return msg;
 }
