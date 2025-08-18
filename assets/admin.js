@@ -15,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// --- Mapeamento DOM ---
+// --- Mapeamento DOM (sem alterações) ---
 const loginSection = document.getElementById("loginSection"),
       adminContent = document.getElementById("adminContent"),
       adminEmail = document.getElementById("adminEmail"),
@@ -46,9 +46,8 @@ const loginSection = document.getElementById("loginSection"),
       btnRodarLembretes = document.getElementById("btnRodarLembretes"),
       reminderLog = document.getElementById("reminderLog");
 
-// --- Estado e Helpers ---
+// --- Estado e Helpers (sem alterações) ---
 let siteState = {};
-// CORRIGIDO: Galeria de imagens com nomes corretos e sem opções desnecessárias.
 const imageGallery = [
     { name: "Limpeza de Split", url: "assets/imagens/limpeza-split.jpg" },
     { name: "Instalação de Ar", url: "assets/imagens/instalacao-ar.jpg" },
@@ -76,7 +75,7 @@ const showMessage = (el, text, success = true, duration = 3000) => {
     }
 };
 
-// --- Autenticação ---
+// --- Autenticação (sem alterações) ---
 onAuthStateChanged(auth, user => {
     loginSection.style.display = user ? "none" : "block";
     adminContent.style.display = user ? "block" : "none";
@@ -94,7 +93,7 @@ btnLogin.addEventListener("click", async () => {
     }
 });
 
-// --- Carregamento de Dados ---
+// --- Carregamento de Dados (sem alterações) ---
 async function loadAdminData() {
     await Promise.all([loadSiteConfig(), loadServices()]);
 }
@@ -113,9 +112,7 @@ async function loadSiteConfig() {
     }
 }
 
-// --- Gerenciamento de Serviços (CRUD Dinâmico) ---
-
-// CORRIGIDO: Lógica de exibição do formulário
+// --- Gerenciamento de Serviços (sem alterações na lógica principal) ---
 function createServiceForm(service = {}) {
     const isEditing = !!service.id;
     serviceFormContainer.innerHTML = `
@@ -260,8 +257,7 @@ async function loadServices() {
 
 btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 
-// --- Ações Gerais e Manuais ---
-
+// --- Ações Gerais e Manuais (sem alterações) ---
 btnSaveSite.addEventListener("click", async () => {
     try {
         await setDoc(doc(db, "config", "site"), {
@@ -277,6 +273,7 @@ btnSaveSite.addEventListener("click", async () => {
     }
 });
 
+// CORRIGIDO: Garante que a data seja salva no formato correto para consulta
 btnSalvarManual.addEventListener("click", async () => {
     const requiredFields = [mNome, mFone, mData, mHora, mTipoEquipamento, mCapacidade];
     if (requiredFields.some(f => !f.value.trim())) {
@@ -284,17 +281,20 @@ btnSalvarManual.addEventListener("click", async () => {
         return;
     }
     try {
+        const [ano, mes, dia] = mData.value.split('-');
+        const dataFormatada = `${dia}/${mes}/${ano}`;
+        const timestamp = new Date(`${mData.value}T${mHora.value}`).getTime();
+
         await addDoc(collection(db, "agendamentos"), {
             nomeCliente: mNome.value.trim(),
             telefoneCliente: mFone.value.replace(/\D/g, ""),
             enderecoCliente: mEndereco.value.trim(),
             tipoEquipamento: mTipoEquipamento.value,
             capacidadeBtus: mCapacidade.value,
-            // O serviço desejado é inferido ou pode ser adicionado como um campo extra se necessário
             observacoes: mObs.value.trim(),
-            dataAgendamento: mData.value.split('-').reverse().join('/'),
+            dataAgendamento: dataFormatada, // Salva no formato DD/MM/AAAA
             horaAgendamento: mHora.value,
-            timestamp: new Date(`${mData.value}T${mHora.value}`).getTime(),
+            timestamp: timestamp,
             status: "Concluído",
             origem: "Manual"
         });
@@ -305,7 +305,6 @@ btnSalvarManual.addEventListener("click", async () => {
     }
 });
 
-// CORRIGIDO: Lógica de lembretes com feedback claro
 btnRodarLembretes.addEventListener("click", async () => {
     reminderLog.innerHTML = "<li>Buscando clientes...</li>";
     try {
@@ -315,7 +314,6 @@ btnRodarLembretes.addEventListener("click", async () => {
         targetDate.setHours(0, 0, 0, 0);
         const targetTimestamp = targetDate.getTime();
 
-        // Query para buscar agendamentos de limpeza concluídos antes da data alvo
         const q = query(collection(db, "agendamentos"), 
             where("status", "==", "Concluído"), 
             where("timestamp", "<=", targetTimestamp)
@@ -327,11 +325,13 @@ btnRodarLembretes.addEventListener("click", async () => {
             return;
         }
         
-        reminderLog.innerHTML = ""; // Limpa a mensagem "Buscando..."
+        reminderLog.innerHTML = "";
+        let foundAny = false;
         querySnapshot.forEach(docSnap => {
             const d = docSnap.data();
-            // Filtro adicional para garantir que o serviço seja de limpeza, caso o campo exista
-            if (d.servico && d.servico.toLowerCase().includes('limpeza')) {
+            const servicoInfo = d.servico || d.servicoDesejado || '';
+            if (servicoInfo.toLowerCase().includes('limpeza')) {
+                foundAny = true;
                 const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita para manter seu equipamento funcionando perfeitamente?`;
                 const url = `https://wa.me/55${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
                 const li = document.createElement('li');
@@ -340,7 +340,7 @@ btnRodarLembretes.addEventListener("click", async () => {
             }
         });
 
-        if (reminderLog.innerHTML === "") {
+        if (!foundAny) {
              reminderLog.innerHTML = "<li>Nenhum serviço de 'Limpeza' encontrado no período.</li>";
         }
 
