@@ -108,18 +108,14 @@ function renderServices() {
     });
 }
 
-// **FUNÇÃO ATUALIZADA**
 function handleServiceSelection(serviceId) {
     appState.servicoSelecionado = appState.servicos.find(s => s.id === serviceId);
     
-    // Verifica se o serviço tem um link externo
     if (appState.servicoSelecionado && appState.servicoSelecionado.externalLink) {
-        // Se tiver, abre o link em uma nova aba e para a execução da função
         window.open(appState.servicoSelecionado.externalLink, '_blank');
         return; 
     }
     
-    // Se não tiver link, o comportamento normal do formulário continua...
     document.querySelectorAll(".servico").forEach(el => el.classList.remove("selecionado"));
     document.querySelector(`[data-service-id="${serviceId}"]`).classList.add("selecionado");
 
@@ -226,10 +222,22 @@ async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
     
     try {
-        const horariosBase = ["08:00", "10:00", "13:00", "15:00", "17:00"];
+        const maxTime = appState.configSite.maxTime || "23:59";
+        const interval = appState.configSite.interval || 120;
+
+        const horariosBase = [];
+        let currentTime = new Date(`1970-01-01T08:00:00`);
+        const maxDateTime = new Date(`1970-01-01T${maxTime}:00`);
+
+        while (currentTime <= maxDateTime) {
+            horariosBase.push(currentTime.toTimeString().substring(0, 5));
+            currentTime.setMinutes(currentTime.getMinutes() + interval);
+        }
+        
         const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
         const querySnapshot = await getDocs(q);
         const horariosOcupados = querySnapshot.docs.map(doc => doc.data().horaAgendamento);
+        
         const horariosLivres = horariosBase.filter(h => !horariosOcupados.includes(h));
 
         if (horariosLivres.length > 0) {
@@ -245,7 +253,7 @@ async function atualizarHorariosDisponiveis(dataSelecionada) {
             horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário disponível</option>';
         }
     } catch (err) {
-        console.error("Ocorreu um erro ao buscar horários no Firebase:", err);
+        console.error("Ocorreu um erro ao buscar horários:", err);
         horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     } finally {
         validarFormulario();
@@ -260,12 +268,10 @@ form.addEventListener("submit", async (e) => {
     btnFinalizar.disabled = true;
     btnFinalizarTexto.textContent = "Salvando...";
 
-    const dataSelecionada = dataAgendamentoInput.value;
-    const horaSelecionada = horarioAgendamentoSelect.value;
     let timestamp = new Date().getTime();
-    if (dataSelecionada && horaSelecionada) {
-        const [dia, mes, ano] = dataSelecionada.split('/');
-        timestamp = new Date(`${ano}-${mes}-${dia}T${horaSelecionada}`).getTime();
+    if (dataAgendamentoInput.value && horarioAgendamentoSelect.value) {
+        const [dia, mes, ano] = dataAgendamentoInput.value.split('/');
+        timestamp = new Date(`${ano}-${mes}-${dia}T${horarioAgendamentoSelect.value}`).getTime();
     }
 
     const dadosAgendamento = {
@@ -278,9 +284,10 @@ form.addEventListener("submit", async (e) => {
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
         timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
-        dataAgendamento: dataSelecionada || null,
-        horaAgendamento: horaSelecionada || null,
-        formaPagamento: formaPagamentoSelect.value || null
+        dataAgendamento: dataAgendamentoInput.value || null,
+        horaAgendamento: horarioAgendamentoSelect.value || null,
+        formaPagamento: formaPagamentoSelect.value || null,
+        whatsappStatus: 'pending'
     };
 
     try {
@@ -297,16 +304,17 @@ form.addEventListener("submit", async (e) => {
 
         await addDoc(collection(db, "agendamentos"), dadosAgendamento);
 
+        alert("Seu agendamento foi aprovado com sucesso! Você receberá uma mensagem de confirmação no WhatsApp em breve.");
+
         const mensagemWhats = criarMensagemWhatsApp(dadosAgendamento);
         const url = `https://wa.me/55${appState.whatsappNumber}?text=${encodeURIComponent(mensagemWhats)}`;
-        
-        alert("Solicitação enviada com sucesso! Você será redirecionado para o WhatsApp para confirmar.");
         window.open(url, "_blank");
+        
         setTimeout(() => window.location.reload(), 500);
 
     } catch (err) {
         console.error("Falha ao salvar agendamento:", err);
-        alert("Houve uma falha ao enviar sua solicitação. Tente novamente.");
+        alert("Houve uma falha ao salvar seu agendamento. Por favor, tente novamente. Se o erro persistir, entre em contato conosco.");
         btnFinalizar.disabled = false;
         btnFinalizarTexto.textContent = "Tentar Novamente";
     }
