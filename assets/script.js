@@ -59,11 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCalendar();
     renderServices();
     form.addEventListener("input", validarFormulario);
-
-    // **AQUI ESTÁ A ATUALIZAÇÃO**
-    // Adiciona um "ouvinte" ao campo de observações.
-    // Toda vez que o usuário digitar algo ('input'), a função validarFormulario será chamada.
-    // Como a validarFormulario recria o orçamento, o efeito será em tempo real.
     observacoesTextarea.addEventListener('input', validarFormulario);
 });
 
@@ -113,9 +108,18 @@ function renderServices() {
     });
 }
 
+// **FUNÇÃO ATUALIZADA**
 function handleServiceSelection(serviceId) {
     appState.servicoSelecionado = appState.servicos.find(s => s.id === serviceId);
     
+    // Verifica se o serviço tem um link externo
+    if (appState.servicoSelecionado && appState.servicoSelecionado.externalLink) {
+        // Se tiver, abre o link em uma nova aba e para a execução da função
+        window.open(appState.servicoSelecionado.externalLink, '_blank');
+        return; 
+    }
+    
+    // Se não tiver link, o comportamento normal do formulário continua...
     document.querySelectorAll(".servico").forEach(el => el.classList.remove("selecionado"));
     document.querySelector(`[data-service-id="${serviceId}"]`).classList.add("selecionado");
 
