@@ -159,8 +159,8 @@ textarea {
 /* --- Estilos Específicos da Página do Cliente (index.html) --- */
 .servicos-imagens {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr); /* FORÇA 3 COLUNAS SEMPRE */
+  gap: 16px;
 }
 
 .servico {
@@ -435,7 +435,7 @@ textarea {
 }
 
 
-/* --- Responsividade --- */
+/* --- Responsividade Geral (sem afetar a grade de imagens) --- */
 @media (max-width: 768px) {
   body {
     padding: 10px;
