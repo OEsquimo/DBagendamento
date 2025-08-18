@@ -4,8 +4,8 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Painel Admin - O Esquimó</title>
-    <link rel="stylesheet" href="assets/style.css?v=6.0"/>
-    <script type="module" defer src="assets/admin.js?v=6.0"></script>
+    <link rel="stylesheet" href="assets/style.css?v=7.0"/>
+    <script type="module" defer src="assets/admin.js?v=7.0"></script>
 </head>
 <body>
 <main class="container">
@@ -34,8 +34,12 @@
             <label for="cfgCompanyDesc">Descrição (página inicial)</label>
             <input type="text" id="cfgCompanyDesc" placeholder="Breve descrição para a home"/>
 
-            <label for="cfgHeroUrl">URL da Imagem de Topo (Hero)</label>
-            <input type="text" id="cfgHeroUrl" placeholder="https://..."/>
+            <!-- **AQUI ESTÁ A MUDANÇA** -->
+            <!-- Trocamos o input de texto por um select -->
+            <label for="cfgHeroUrl">Imagem de Topo (Hero)</label>
+            <select id="cfgHeroUrl"></select>
+            <!-- Adicionamos um local para o preview da imagem -->
+            <img id="heroImagePreview" src="" alt="Preview da Imagem de Topo" class="image-preview" style="display:none; margin-top: 10px;">
 
             <label for="cfgWhats">Número do WhatsApp da Empresa</label>
             <input type="tel" id="cfgWhats" placeholder="(81) 99999-9999"/>
@@ -50,15 +54,13 @@
             <p id="siteMsg" class="form-message success"></p>
         </section>
 
+        <!-- O restante do arquivo admin.html continua o mesmo... -->
         <!-- Gerenciamento de Serviços -->
         <section class="step">
             <h2 class="step-title"><span>2</span>Serviços Oferecidos</h2>
-            <div id="service-form-container">
-                <!-- O formulário de criação/edição de serviço será inserido aqui pelo admin.js -->
-            </div>
+            <div id="service-form-container"></div>
             <button id="btnShowAddServiceForm" class="final-button" style="margin-top:12px;"><span>Adicionar Novo Serviço</span></button>
             <p id="srvMsg" class="form-message success"></p>
-
             <h3 style="margin-top:20px;">Serviços Atuais</h3>
             <div id="srvList" class="service-list-admin"></div>
         </section>
