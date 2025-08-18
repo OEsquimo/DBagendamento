@@ -15,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// --- Mapeamento DOM (sem alterações) ---
+// --- Mapeamento DOM ---
 const loginSection = document.getElementById("loginSection"),
       adminContent = document.getElementById("adminContent"),
       adminEmail = document.getElementById("adminEmail"),
@@ -46,7 +46,7 @@ const loginSection = document.getElementById("loginSection"),
       btnRodarLembretes = document.getElementById("btnRodarLembretes"),
       reminderLog = document.getElementById("reminderLog");
 
-// --- Estado e Helpers (sem alterações) ---
+// --- Estado e Helpers ---
 let siteState = {};
 const imageGallery = [
     { name: "Limpeza de Split", url: "assets/imagens/limpeza-split.jpg" },
@@ -75,7 +75,7 @@ const showMessage = (el, text, success = true, duration = 3000) => {
     }
 };
 
-// --- Autenticação (sem alterações) ---
+// --- Autenticação ---
 onAuthStateChanged(auth, user => {
     loginSection.style.display = user ? "none" : "block";
     adminContent.style.display = user ? "block" : "none";
@@ -93,7 +93,7 @@ btnLogin.addEventListener("click", async () => {
     }
 });
 
-// --- Carregamento de Dados (sem alterações) ---
+// --- Carregamento de Dados ---
 async function loadAdminData() {
     await Promise.all([loadSiteConfig(), loadServices()]);
 }
@@ -112,10 +112,12 @@ async function loadSiteConfig() {
     }
 }
 
-// --- Gerenciamento de Serviços (sem alterações na lógica principal) ---
+// --- Gerenciamento de Serviços (CRUD Dinâmico) ---
 function createServiceForm(service = {}) {
     const isEditing = !!service.id;
-    serviceFormContainer.innerHTML = `
+    serviceFormContainer.innerHTML = ''; 
+
+    const formHtml = `
         <div class="service-form active">
             <h4>${isEditing ? 'Editar Serviço' : 'Adicionar Novo Serviço'}</h4>
             <input type="hidden" id="srvId" value="${service.id || ''}">
@@ -147,6 +149,7 @@ function createServiceForm(service = {}) {
             </div>
         </div>
     `;
+    serviceFormContainer.innerHTML = formHtml;
 
     const fieldsContainer = document.getElementById('dynamic-fields-container');
     if (service.prices) {
@@ -257,7 +260,7 @@ async function loadServices() {
 
 btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 
-// --- Ações Gerais e Manuais (sem alterações) ---
+// --- Ações Gerais e Manuais ---
 btnSaveSite.addEventListener("click", async () => {
     try {
         await setDoc(doc(db, "config", "site"), {
@@ -273,7 +276,6 @@ btnSaveSite.addEventListener("click", async () => {
     }
 });
 
-// CORRIGIDO: Garante que a data seja salva no formato correto para consulta
 btnSalvarManual.addEventListener("click", async () => {
     const requiredFields = [mNome, mFone, mData, mHora, mTipoEquipamento, mCapacidade];
     if (requiredFields.some(f => !f.value.trim())) {
@@ -292,7 +294,7 @@ btnSalvarManual.addEventListener("click", async () => {
             tipoEquipamento: mTipoEquipamento.value,
             capacidadeBtus: mCapacidade.value,
             observacoes: mObs.value.trim(),
-            dataAgendamento: dataFormatada, // Salva no formato DD/MM/AAAA
+            dataAgendamento: dataFormatada,
             horaAgendamento: mHora.value,
             timestamp: timestamp,
             status: "Concluído",
