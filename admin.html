@@ -4,14 +4,14 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Painel Admin - O Esquimó</title>
-    <link rel="stylesheet" href="assets/style.css?v=7.0"/>
-    <script type="module" defer src="assets/admin.js?v=7.0"></script>
+    <link rel="stylesheet" href="assets/style.css?v=8.0"/>
+    <script type="module" defer src="assets/admin.js?v=8.0"></script>
 </head>
 <body>
 <main class="container">
     <h1>Painel Administrativo</h1>
 
-    <!-- Seção de Login -->
+    <!-- Seção de Login (sem alterações) -->
     <section id="loginSection" class="step">
         <h2 class="step-title"><span>🔐</span> Acesso Administrativo</h2>
         <label for="adminEmail">E-mail</label>
@@ -25,37 +25,23 @@
     <!-- Conteúdo do Admin -->
     <section id="adminContent" style="display:none;">
 
-        <!-- Configurações Gerais -->
+        <!-- Configurações Gerais (sem alterações) -->
         <section class="step">
             <h2 class="step-title"><span>1</span>Configurações Gerais</h2>
             <label for="cfgCompanyName">Nome da Empresa</label>
             <input type="text" id="cfgCompanyName" placeholder="Ex: O Esquimó"/>
-
             <label for="cfgCompanyDesc">Descrição (página inicial)</label>
             <input type="text" id="cfgCompanyDesc" placeholder="Breve descrição para a home"/>
-
-            <!-- **AQUI ESTÁ A MUDANÇA** -->
-            <!-- Trocamos o input de texto por um select -->
             <label for="cfgHeroUrl">Imagem de Topo (Hero)</label>
             <select id="cfgHeroUrl"></select>
-            <!-- Adicionamos um local para o preview da imagem -->
             <img id="heroImagePreview" src="" alt="Preview da Imagem de Topo" class="image-preview" style="display:none; margin-top: 10px;">
-
             <label for="cfgWhats">Número do WhatsApp da Empresa</label>
             <input type="tel" id="cfgWhats" placeholder="(81) 99999-9999"/>
-
-            <div class="lembrete-group">
-                <label for="cfgReminderMonths">Lembretes de Limpeza</label>
-                <input type="number" id="cfgReminderMonths" min="1" value="12"/>
-                <span>Meses para lembrete de Limpeza (ex: 12)</span>
-            </div>
-
             <button id="btnSaveSite" class="final-button"><span>Salvar Configurações</span></button>
             <p id="siteMsg" class="form-message success"></p>
         </section>
 
-        <!-- O restante do arquivo admin.html continua o mesmo... -->
-        <!-- Gerenciamento de Serviços -->
+        <!-- Gerenciamento de Serviços (sem alterações) -->
         <section class="step">
             <h2 class="step-title"><span>2</span>Serviços Oferecidos</h2>
             <div id="service-form-container"></div>
@@ -65,69 +51,82 @@
             <div id="srvList" class="service-list-admin"></div>
         </section>
 
-        <!-- Cadastro Manual de Serviço -->
+        <!-- **SEÇÃO ATUALIZADA: GESTÃO DE SERVIÇOS REALIZADOS** -->
         <section class="step">
-            <h2 class="step-title"><span>3</span>Cadastrar Serviço Realizado</h2>
-            <div class="grid-form">
-                <div>
-                    <label for="mNome">Nome completo do Cliente</label>
-                    <input type="text" id="mNome" placeholder="Nome do cliente" maxlength="50" required/>
+            <h2 class="step-title"><span>3</span>Gestão de Serviços Realizados</h2>
+            
+            <!-- Campo de Busca -->
+            <label for="searchClientPhone">Buscar Cliente por WhatsApp</label>
+            <div class="search-group">
+                <input type="tel" id="searchClientPhone" placeholder="(81) 99999-9999">
+                <button id="btnSearchClient" class="secondary-button">Buscar</button>
+            </div>
+            <p id="searchMsg" class="form-message"></p>
+
+            <!-- Formulário de Edição/Criação (será preenchido pelo JS) -->
+            <div id="manualServiceForm" style="display:none;">
+                <input type="hidden" id="mServiceId"> <!-- Campo para guardar o ID do serviço em edição -->
+                <div class="grid-form">
+                    <div>
+                        <label for="mNome">Nome completo do Cliente</label>
+                        <input type="text" id="mNome" placeholder="Nome do cliente" maxlength="50" required/>
+                    </div>
+                    <div>
+                        <label for="mFone">Telefone (WhatsApp)</label>
+                        <input type="tel" id="mFone" placeholder="(81) 99999-9999" required/>
+                    </div>
+                    <div class="full-width">
+                        <label for="mEndereco">Endereço</label>
+                        <input type="text" id="mEndereco" placeholder="Rua, número, bairro e cidade"/>
+                    </div>
+                    <div>
+                        <label for="mTipoEquipamento">Tipo de equipamento</label>
+                        <select id="mTipoEquipamento" required>
+                            <option value="">Selecione...</option>
+                            <option>Janela</option><option>Split (Hi-Wall)</option><option>Multi-Split</option>
+                            <option>Cassete</option><option>Piso-Teto</option><option>Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="mCapacidade">Capacidade (BTUs)</label>
+                        <select id="mCapacidade" required>
+                             <option value="">Selecione...</option>
+                             <option>9000</option><option>12000</option><option>18000</option>
+                             <option>24000</option><option>30000</option><option>36000</option><option>48000</option>
+                        </select>
+                    </div>
+                    <div class="full-width">
+                        <label for="mObs">Observações</label>
+                        <textarea id="mObs" rows="3" maxlength="1000"></textarea>
+                    </div>
+                    <div>
+                        <label for="mData">Data</label>
+                        <input type="date" id="mData" required/>
+                    </div>
+                    <div>
+                        <label for="mHora">Hora</label>
+                        <input type="time" id="mHora" required/>
+                    </div>
                 </div>
-                <div>
-                    <label for="mFone">Telefone (WhatsApp)</label>
-                    <input type="tel" id="mFone" placeholder="(81) 99999-9999" required/>
-                </div>
-                <div class="full-width">
-                    <label for="mEndereco">Endereço</label>
-                    <input type="text" id="mEndereco" placeholder="Rua, número, bairro e cidade"/>
-                </div>
-                <div>
-                    <label for="mTipoEquipamento">Tipo de equipamento</label>
-                    <select id="mTipoEquipamento" required>
-                        <option value="">Selecione...</option>
-                        <option>Janela</option>
-                        <option>Split (Hi-Wall)</option>
-                        <option>Multi-Split</option>
-                        <option>Cassete</option>
-                        <option>Piso-Teto</option>
-                        <option>Outro</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="mCapacidade">Capacidade (BTUs)</label>
-                    <select id="mCapacidade" required>
-                         <option value="">Selecione...</option>
-                         <option>9000</option>
-                         <option>12000</option>
-                         <option>18000</option>
-                         <option>24000</option>
-                         <option>30000</option>
-                         <option>36000</option>
-                         <option>48000</option>
-                    </select>
-                </div>
-                <div class="full-width">
-                    <label for="mObs">Observações</label>
-                    <textarea id="mObs" rows="3" maxlength="1000"></textarea>
-                </div>
-                <div>
-                    <label for="mData">Data</label>
-                    <input type="date" id="mData" required/>
-                </div>
-                <div>
-                    <label for="mHora">Hora</label>
-                    <input type="time" id="mHora" required/>
+                <!-- Botões de Ação -->
+                <div class="form-actions">
+                    <button id="btnSaveManual" class="final-button">Salvar Novo</button>
+                    <button id="btnUpdateManual" class="secondary-button" style="display:none;">Atualizar</button>
+                    <button id="btnDeleteManual" class="delete-button" style="display:none;">Excluir</button>
                 </div>
             </div>
-            <button id="btnSalvarManual" class="final-button" style="margin-top:12px;"><span>Salvar no Banco</span></button>
-            <p id="manualMsg" class="form-message success"></p>
         </section>
 
-        <!-- Lembretes -->
+        <!-- **SEÇÃO ATUALIZADA: LEMBRETES** -->
         <section class="step">
-            <h2 class="step-title"><span>4</span>Lembretes de Limpeza</h2>
-            <p>Envia mensagem via WhatsApp para clientes cuja <b>Limpeza</b> completou o ciclo configurado em "Configurações Gerais".</p>
-            <button id="btnRodarLembretes" class="final-button"><span>Enviar Lembretes Agora</span></button>
+            <h2 class="step-title"><span>4</span>Lembrete de Limpeza</h2>
+            <!-- Texto alterado conforme solicitado -->
+            <p>Lembre seu cliente de fazer a limpeza e manutenção preventiva.</p>
+            <div class="lembrete-group">
+                <label for="cfgReminderMonths">Meses para lembrete de Limpeza (ex: 12)</label>
+                <input type="number" id="cfgReminderMonths" min="1" value="12"/>
+            </div>
+            <button id="btnRodarLembretes" class="final-button"><span>Gerar Lembretes Agora</span></button>
             <ul id="reminderLog" class="reminder-log"></ul>
         </section>
 
