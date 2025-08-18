@@ -27,7 +27,7 @@ const siteTitle = document.getElementById("siteTitle"),
       whatsappInput = document.getElementById("whatsapp"),
       tipoEquipamentoSelect = document.getElementById("tipo_equipamento"),
       capacidadeBtusSelect = document.getElementById("capacidade_btus"),
-      observacoesTextarea = document.getElementById("observacoes"), // Já estava mapeado
+      observacoesTextarea = document.getElementById("observacoes"),
       relatorioOrcamentoDiv = document.getElementById("relatorio-orcamento"),
       dataAgendamentoInput = document.getElementById("data_agendamento"),
       horarioAgendamentoSelect = document.getElementById("horario_agendamento"),
@@ -59,6 +59,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCalendar();
     renderServices();
     form.addEventListener("input", validarFormulario);
+
+    // **AQUI ESTÁ A ATUALIZAÇÃO**
+    // Adiciona um "ouvinte" ao campo de observações.
+    // Toda vez que o usuário digitar algo ('input'), a função validarFormulario será chamada.
+    // Como a validarFormulario recria o orçamento, o efeito será em tempo real.
+    observacoesTextarea.addEventListener('input', validarFormulario);
 });
 
 async function loadSiteConfig() {
@@ -127,7 +133,6 @@ function calcularOrcamento() {
     return appState.servicoSelecionado.prices[btu] || 0;
 }
 
-// **CORREÇÃO 1: Adicionando as observações ao resumo do orçamento**
 function gerarHtmlOrcamento() {
     appState.valorOrcamento = calcularOrcamento();
     const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Análise";
@@ -139,7 +144,6 @@ function gerarHtmlOrcamento() {
         <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text}</span></div>
     `;
 
-    // Adiciona a linha de observações apenas se o campo foi preenchido
     if (observacoes) {
         html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoes}</span></div>`;
     }
@@ -155,7 +159,6 @@ function validarFormulario() {
     const { showBudget, showSchedule } = appState.servicoSelecionado;
     let isFormValid = true;
 
-    // O campo de observações é opcional, então não entra na validação de campos obrigatórios
     const fields = [nomeInput, whatsappInput, tipoEquipamentoSelect, capacidadeBtusSelect];
     for (const field of fields) {
         if (!field.value) {
@@ -268,7 +271,7 @@ form.addEventListener("submit", async (e) => {
         telefoneCliente: whatsappInput.value.replace(/\D/g, ""),
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
-        observacoes: observacoesTextarea.value.trim() || "Nenhuma", // Garante que o valor seja salvo
+        observacoes: observacoesTextarea.value.trim() || "Nenhuma",
         timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
         dataAgendamento: dataSelecionada || null,
@@ -305,7 +308,6 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// **CORREÇÃO 2: Adicionando as observações à mensagem do WhatsApp**
 function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
@@ -324,7 +326,6 @@ function criarMensagemWhatsApp(dados) {
         msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
     }
     
-    // Adiciona a linha de observações apenas se o campo foi preenchido
     if (dados.observacoes && dados.observacoes !== "Nenhuma") {
         msg += `📝 *Observações:* ${dados.observacoes}`;
     }
