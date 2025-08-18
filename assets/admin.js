@@ -79,6 +79,7 @@ const maskPhone = (input) => {
 };
 
 const showMessage = (el, text, success = true, duration = 3000) => {
+    if (!el) return; // Adiciona uma verificação para segurança
     el.textContent = text;
     el.className = `form-message ${success ? 'success' : 'error'}`;
     if (duration > 0) {
@@ -254,7 +255,11 @@ function addPriceField(container, btu = '', price = '') {
 async function saveService() {
     const id = document.getElementById('srvId').value;
     const name = document.getElementById('srvName').value.trim();
-    if (!name) { showMessage(srvMsg, "O nome do serviço é obrigatório.", false); return; }
+    if (!name) { 
+        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
+        showMessage(srvMsg, "O nome do serviço é obrigatório.", false); 
+        return; 
+    }
     const prices = {};
     document.querySelectorAll('.dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
@@ -274,10 +279,15 @@ async function saveService() {
     try {
         const docRef = id ? doc(db, "services", id) : doc(collection(db, "services"));
         await setDoc(docRef, serviceData, { merge: true });
+        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
         showMessage(srvMsg, `Serviço ${id ? 'atualizado' : 'salvo'} com sucesso!`);
         hideServiceForm();
         loadServices();
-    } catch (e) { showMessage(srvMsg, "Erro ao salvar o serviço.", false); console.error(e); }
+    } catch (e) { 
+        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
+        showMessage(srvMsg, "Erro ao salvar o serviço.", false); 
+        console.error(e); 
+    }
 }
 
 async function loadServices() {
