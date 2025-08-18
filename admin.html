@@ -4,8 +4,8 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Painel Admin - O Esquimó</title>
-    <link rel="stylesheet" href="assets/style.css?v=9.0"/>
-    <script type="module" defer src="assets/admin.js?v=9.0"></script>
+    <link rel="stylesheet" href="assets/style.css?v=12.0"/>
+    <script type="module" defer src="assets/admin.js?v=12.0"></script>
 </head>
 <body>
 <main class="container">
@@ -30,41 +30,34 @@
             <h2 class="step-title"><span>1</span>Configurações Gerais</h2>
             <label for="cfgCompanyName">Nome da Empresa</label>
             <input type="text" id="cfgCompanyName" placeholder="Ex: O Esquimó"/>
-
             <label for="cfgCompanyDesc">Descrição (página inicial)</label>
             <input type="text" id="cfgCompanyDesc" placeholder="Breve descrição para a home"/>
-
             <label for="cfgHeroUrl">Imagem de Topo (Hero)</label>
             <select id="cfgHeroUrl"></select>
             <img id="heroImagePreview" src="" alt="Preview da Imagem de Topo" class="image-preview" style="display:none; margin-top: 10px;">
-
             <label for="cfgWhats">Número do WhatsApp da Empresa</label>
             <input type="tel" id="cfgWhats" placeholder="(81) 99999-9999"/>
-
-            <div class="grid-form">
-                <div>
-                    <label for="cfgMaxTime">Horário Máximo de Agendamento</label>
-                    <select id="cfgMaxTime">
-                        <option value="">24 Horas</option>
-                        <option value="17:00">17:00</option>
-                        <option value="18:00">18:00</option>
-                        <option value="19:00">19:00</option>
-                        <option value="20:00">20:00</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="cfgInterval">Intervalo entre horários (min)</label>
-                    <input type="number" id="cfgInterval" min="30" value="120" step="15">
-                </div>
-            </div>
-
             <button id="btnSaveSite" class="final-button"><span>Salvar Configurações</span></button>
             <p id="siteMsg" class="form-message success"></p>
         </section>
 
+        <!-- Grade de Horários e Vagas -->
+        <section class="step">
+            <h2 class="step-title"><span>2</span>Grade de Horários e Vagas</h2>
+            <p>Defina os horários de atendimento e quantas equipes (vagas) estão disponíveis para cada um.</p>
+            <div id="schedule-grid-container">
+                <!-- Horários serão carregados aqui pelo JS -->
+            </div>
+            <div class="form-actions">
+                <button id="btnAddScheduleSlot" type="button" class="secondary-button">Adicionar Horário</button>
+                <button id="btnSaveSchedule" class="final-button">Salvar Grade de Horários</button>
+            </div>
+            <p id="scheduleMsg" class="form-message success"></p>
+        </section>
+
         <!-- Gerenciamento de Serviços -->
         <section class="step">
-            <h2 class="step-title"><span>2</span>Serviços Oferecidos</h2>
+            <h2 class="step-title"><span>3</span>Serviços Oferecidos</h2>
             <div id="service-form-container"></div>
             <p id="srvMsg" class="form-message success"></p>
             <h3 style="margin-top:20px;">Serviços Atuais</h3>
@@ -74,7 +67,7 @@
 
         <!-- Gestão de Serviços Realizados -->
         <section class="step">
-            <h2 class="step-title"><span>3</span>Gestão de Serviços Realizados</h2>
+            <h2 class="step-title"><span>4</span>Gestão de Serviços Realizados</h2>
             <label for="searchClientPhone">Buscar Cliente por WhatsApp</label>
             <div class="search-group">
                 <input type="tel" id="searchClientPhone" placeholder="(81) 99999-9999">
@@ -103,7 +96,7 @@
 
         <!-- Lembretes de Limpeza -->
         <section class="step">
-            <h2 class="step-title"><span>4</span>Lembrete de Limpeza</h2>
+            <h2 class="step-title"><span>5</span>Lembrete de Limpeza</h2>
             <p>Lembre seu cliente de fazer a limpeza e manutenção preventiva.</p>
             <div class="lembrete-group">
                 <label for="cfgReminderMonths">Meses para lembrete de Limpeza (ex: 12)</label>
