@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// --- Configuração Firebase (usando as suas credenciais) ---
+// --- Configuração Firebase ---
 const firebaseConfig = {
     apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
     authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -38,7 +38,6 @@ const loginSection = document.getElementById("loginSection"),
       mEndereco = document.getElementById("mEndereco"),
       mTipoEquipamento = document.getElementById("mTipoEquipamento"),
       mCapacidade = document.getElementById("mCapacidade"),
-      mServico = document.getElementById("mServico"),
       mObs = document.getElementById("mObs"),
       mData = document.getElementById("mData"),
       mHora = document.getElementById("mHora"),
@@ -49,15 +48,15 @@ const loginSection = document.getElementById("loginSection"),
 
 // --- Estado e Helpers ---
 let siteState = {};
+// CORRIGIDO: Galeria de imagens com nomes corretos e sem opções desnecessárias.
 const imageGallery = [
-    { name: "Instalação Padrão", url: "assets/imagens/instalacao-ar.jpg" },
     { name: "Limpeza de Split", url: "assets/imagens/limpeza-split.jpg" },
+    { name: "Instalação de Ar", url: "assets/imagens/instalacao-ar.jpg" },
     { name: "Manutenção Preventiva", url: "assets/imagens/manutencao-ar.jpg" },
     { name: "Técnico em Serviço", url: "assets/imagens/tecnico-trabalhando.jpg" },
     { name: "Condensadora Externa", url: "assets/imagens/condensadora_lg.jpg" }
 ];
 
-// Aplica máscara de telefone a um campo de input
 const maskPhone = (input) => {
     const applyMask = (e) => {
         let v = e.target.value.replace(/\D/g, "").slice(0, 11);
@@ -66,11 +65,9 @@ const maskPhone = (input) => {
         e.target.value = v;
     };
     input.addEventListener('input', applyMask);
-    // Força a aplicação da máscara no valor inicial, se houver
     input.dispatchEvent(new Event('input'));
 };
 
-// Exibe uma mensagem de feedback para o usuário
 const showMessage = (el, text, success = true, duration = 3000) => {
     el.textContent = text;
     el.className = `form-message ${success ? 'success' : 'error'}`;
@@ -98,12 +95,10 @@ btnLogin.addEventListener("click", async () => {
 });
 
 // --- Carregamento de Dados ---
-// Função principal que carrega todos os dados necessários para o painel
 async function loadAdminData() {
     await Promise.all([loadSiteConfig(), loadServices()]);
 }
 
-// Carrega as configurações do site (nome, whats, etc) e preenche os campos
 async function loadSiteConfig() {
     const docRef = doc(db, "config", "site");
     const docSnap = await getDoc(docRef);
@@ -120,7 +115,7 @@ async function loadSiteConfig() {
 
 // --- Gerenciamento de Serviços (CRUD Dinâmico) ---
 
-// Cria e exibe o formulário para adicionar ou editar um serviço
+// CORRIGIDO: Lógica de exibição do formulário
 function createServiceForm(service = {}) {
     const isEditing = !!service.id;
     serviceFormContainer.innerHTML = `
@@ -161,22 +156,21 @@ function createServiceForm(service = {}) {
         Object.entries(service.prices).forEach(([btu, price]) => addPriceField(fieldsContainer, btu, price));
     }
 
-    // Adiciona os listeners de evento aos novos elementos do formulário
     document.getElementById('srvImage').addEventListener('change', e => {
         document.getElementById('srvImagePreview').src = e.target.value;
     });
     document.getElementById('btnAddField').addEventListener('click', () => addPriceField(fieldsContainer));
     document.getElementById('btnSaveSrv').addEventListener('click', saveService);
-    document.getElementById('btnCancelSrv').addEventListener('click', () => {
-        serviceFormContainer.innerHTML = '';
-        btnShowAddServiceForm.style.display = 'flex';
-    });
+    document.getElementById('btnCancelSrv').addEventListener('click', hideServiceForm);
     
-    // Esconde o botão "Adicionar Novo" para evitar confusão
     btnShowAddServiceForm.style.display = 'none';
 }
 
-// Adiciona um novo par de campos (BTU e Preço) ao formulário de serviço
+function hideServiceForm() {
+    serviceFormContainer.innerHTML = '';
+    btnShowAddServiceForm.style.display = 'flex';
+}
+
 function addPriceField(container, btu = '', price = '') {
     const fieldId = `field-${Date.now()}`;
     const div = document.createElement('div');
@@ -190,7 +184,6 @@ function addPriceField(container, btu = '', price = '') {
     container.appendChild(div);
 }
 
-// Salva (cria ou atualiza) um serviço no Firestore
 async function saveService() {
     const id = document.getElementById('srvId').value;
     const name = document.getElementById('srvName').value.trim();
@@ -222,16 +215,14 @@ async function saveService() {
         const docRef = id ? doc(db, "services", id) : doc(collection(db, "services"));
         await setDoc(docRef, serviceData, { merge: true });
         showMessage(srvMsg, `Serviço ${id ? 'atualizado' : 'salvo'} com sucesso!`);
-        serviceFormContainer.innerHTML = '';
-        btnShowAddServiceForm.style.display = 'flex';
-        loadServices(); // Recarrega a lista para mostrar as alterações
+        hideServiceForm();
+        loadServices();
     } catch (e) {
         showMessage(srvMsg, "Erro ao salvar o serviço.", false);
         console.error(e);
     }
 }
 
-// Carrega e exibe a lista de serviços já cadastrados
 async function loadServices() {
     const q = query(collection(db, "services"), orderBy("name"));
     const querySnapshot = await getDocs(q);
@@ -271,7 +262,6 @@ btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 
 // --- Ações Gerais e Manuais ---
 
-// Salva as configurações gerais do site
 btnSaveSite.addEventListener("click", async () => {
     try {
         await setDoc(doc(db, "config", "site"), {
@@ -287,9 +277,8 @@ btnSaveSite.addEventListener("click", async () => {
     }
 });
 
-// Salva um serviço realizado manualmente
 btnSalvarManual.addEventListener("click", async () => {
-    const requiredFields = [mNome, mFone, mData, mHora, mTipoEquipamento, mCapacidade, mServico];
+    const requiredFields = [mNome, mFone, mData, mHora, mTipoEquipamento, mCapacidade];
     if (requiredFields.some(f => !f.value.trim())) {
         showMessage(manualMsg, "Preencha todos os campos obrigatórios.", false);
         return;
@@ -301,7 +290,7 @@ btnSalvarManual.addEventListener("click", async () => {
             enderecoCliente: mEndereco.value.trim(),
             tipoEquipamento: mTipoEquipamento.value,
             capacidadeBtus: mCapacidade.value,
-            servicoDesejado: mServico.value,
+            // O serviço desejado é inferido ou pode ser adicionado como um campo extra se necessário
             observacoes: mObs.value.trim(),
             dataAgendamento: mData.value.split('-').reverse().join('/'),
             horaAgendamento: mHora.value,
@@ -316,37 +305,51 @@ btnSalvarManual.addEventListener("click", async () => {
     }
 });
 
-// Roda a lógica para encontrar e sugerir o envio de lembretes de limpeza
+// CORRIGIDO: Lógica de lembretes com feedback claro
 btnRodarLembretes.addEventListener("click", async () => {
     reminderLog.innerHTML = "<li>Buscando clientes...</li>";
-    const months = siteState.reminderMonths || 12;
-    const targetDate = new Date();
-    targetDate.setMonth(targetDate.getMonth() - months);
-    
-    // Para simplificar, vamos considerar o início do dia para a comparação
-    targetDate.setHours(0, 0, 0, 0);
-    const targetTimestamp = targetDate.getTime();
+    try {
+        const months = siteState.reminderMonths || 12;
+        const targetDate = new Date();
+        targetDate.setMonth(targetDate.getMonth() - months);
+        targetDate.setHours(0, 0, 0, 0);
+        const targetTimestamp = targetDate.getTime();
 
-    const q = query(collection(db, "agendamentos"), where("servicoDesejado", "==", "Limpeza"), where("timestamp", "<=", targetTimestamp));
-    const querySnapshot = await getDocs(q);
+        // Query para buscar agendamentos de limpeza concluídos antes da data alvo
+        const q = query(collection(db, "agendamentos"), 
+            where("status", "==", "Concluído"), 
+            where("timestamp", "<=", targetTimestamp)
+        );
+        const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
-        reminderLog.innerHTML = "<li>Nenhum cliente elegível para lembrete hoje.</li>";
-        return;
+        if (querySnapshot.empty) {
+            reminderLog.innerHTML = "<li>Nenhum cliente elegível para lembrete hoje.</li>";
+            return;
+        }
+        
+        reminderLog.innerHTML = ""; // Limpa a mensagem "Buscando..."
+        querySnapshot.forEach(docSnap => {
+            const d = docSnap.data();
+            // Filtro adicional para garantir que o serviço seja de limpeza, caso o campo exista
+            if (d.servico && d.servico.toLowerCase().includes('limpeza')) {
+                const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita para manter seu equipamento funcionando perfeitamente?`;
+                const url = `https://wa.me/55${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+                const li = document.createElement('li');
+                li.innerHTML = `Encontrado: ${d.nomeCliente} (${new Date(d.timestamp).toLocaleDateString()}) - <a href="${url}" target="_blank">Enviar Lembrete</a>`;
+                reminderLog.appendChild(li);
+            }
+        });
+
+        if (reminderLog.innerHTML === "") {
+             reminderLog.innerHTML = "<li>Nenhum serviço de 'Limpeza' encontrado no período.</li>";
+        }
+
+    } catch (error) {
+        console.error("Erro ao buscar lembretes:", error);
+        reminderLog.innerHTML = "<li>Ocorreu um erro ao buscar os lembretes.</li>";
     }
-    reminderLog.innerHTML = "";
-    querySnapshot.forEach(docSnap => {
-        const d = docSnap.data();
-        const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita para manter seu equipamento funcionando perfeitamente?`;
-        const url = `https://wa.me/55${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
-        const li = document.createElement('li');
-        li.innerHTML = `Enviando para ${d.nomeCliente}... <a href="${url}" target="_blank">Abrir no WhatsApp</a>`;
-        reminderLog.appendChild(li);
-        window.open(url, "_blank");
-    });
 });
 
 // --- Inicialização ---
-// Aplica as máscaras de telefone assim que o script carrega
 maskPhone(cfgWhats);
 maskPhone(mFone);
