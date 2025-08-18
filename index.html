@@ -1,125 +1,127 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title id="siteTitle">Agendamento de Serviço - O Esquimó</title>
-
-  <!-- Fonte -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Estilos -->
-  <link rel="stylesheet" href="assets/style.css?v=3.1"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
-  <!-- Calendário -->
-  <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script defer src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
-
-  <!-- App Público -->
-  <script type="module" defer src="assets/script.js?v=3.0"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title id="siteTitle">Agendamento de Serviço</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css?v=5.0"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script defer src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    <script type="module" defer src="assets/script.js?v=5.0"></script>
 </head>
 <body>
 
-  <header class="topo">
+<header class="topo">
     <img id="heroImage" src="assets/imagens/tecnico-trabalhando.jpg" alt="Técnico de ar condicionado trabalhando"/>
-  </header>
+</header>
 
-  <main class="container">
-    <h1 id="companyName">O Esquimó</h1>
-    <p id="companyDescription">Serviços de instalação, limpeza e manutenção de ar-condicionado.</p>
+<main class="container">
+    <h1 id="companyName">Nome da Empresa</h1>
+    <p id="companyDescription">Descrição dos serviços.</p>
 
     <form id="formulario" novalidate>
 
-      <!-- Passo 1: Escolha do Serviço (dinâmico) -->
-      <section class="step">
-        <h2 class="step-title"><span>1</span>Escolha o tipo de serviço</h2>
-        <div id="servicosGrid" class="servicos-imagens">
-          <!-- Cards de serviços carregados dinamicamente do Firestore -->
-        </div>
-      </section>
+        <!-- Passo 1: Escolha do Serviço -->
+        <section class="step">
+            <h2 class="step-title"><span>1</span>Escolha o tipo de serviço</h2>
+            <div id="servicosGrid" class="servicos-imagens">
+                <!-- Cards de serviços carregados dinamicamente -->
+            </div>
+        </section>
 
-      <!-- Passo 2: Dados do Cliente (oculto até escolher serviço) -->
-      <section id="dados-cliente-wrapper" class="step" style="display:none;">
-        <h2 class="step-title"><span>2</span>Preencha seus dados</h2>
+        <!-- Passo 2: Detalhes do Serviço e Cliente -->
+        <section id="detalhes-cliente-wrapper" class="step" style="display:none;">
+            <h2 class="step-title"><span>2</span>Preencha seus dados</h2>
 
-        <label for="nome">Nome Completo</label>
-        <input type="text" id="nome" placeholder="Seu nome e sobrenome" required />
+            <label for="nome">Nome completo</label>
+            <input type="text" id="nome" placeholder="Informe seu nome" required maxlength="50" />
 
-        <label for="endereco">Endereço Completo</label>
-        <input type="text" id="endereco" placeholder="Rua, número, bairro e cidade" required />
+            <label for="whatsapp">Telefone (WhatsApp)</label>
+            <input type="tel" id="whatsapp" placeholder="(81) 99999-9999" required />
 
-        <label for="whatsapp">Telefone / WhatsApp</label>
-        <input type="tel" id="whatsapp" placeholder="(00) 00000-0000" required />
+            <label for="tipo_equipamento">Tipo de equipamento</label>
+            <select id="tipo_equipamento" required>
+                <option value="">Selecione...</option>
+                <option>Janela</option>
+                <option>Split (Hi-Wall)</option>
+                <option>Multi-Split</option>
+                <option>Cassete</option>
+                <option>Piso-Teto</option>
+                <option>Outro</option>
+            </select>
 
-        <!-- Campos condicionais -->
-        <div id="campo-btus-wrapper" style="display:none;">
-          <label for="btus">Capacidade do Ar (BTUs)</label>
-          <select id="btus" name="btus" required>
-            <!-- opções preenchidas dinamicamente a partir da config -->
-          </select>
-        </div>
+            <label for="capacidade_btus">Capacidade (BTUs)</label>
+            <select id="capacidade_btus" required>
+                <option value="">Selecione...</option>
+                <option value="9000">9.000 BTUs</option>
+                <option value="12000">12.000 BTUs</option>
+                <option value="18000">18.000 BTUs</option>
+                <option value="24000">24.000 BTUs</option>
+                <option value="30000">30.000 BTUs</option>
+                <option value="36000">36.000 BTUs</option>
+                <option value="48000">48.000 BTUs</option>
+            </select>
 
-        <div id="campo-defeito-wrapper" style="display:none;">
-          <label for="defeito">Descreva o Problema</label>
-          <textarea id="defeito" placeholder="Ex: O ar condicionado está pingando água." required></textarea>
-        </div>
+            <label for="servico_desejado">Serviço desejado</label>
+            <select id="servico_desejado" required>
+                 <option value="">Selecione...</option>
+                 <option>Limpeza</option>
+                 <option>Manutenção</option>
+                 <option>Instalação</option>
+                 <option>Outros</option>
+            </select>
 
-        <div id="campo-observacoes-wrapper">
-          <label for="obs_cliente">Observações Adicionais (Opcional)</label>
-          <textarea id="obs_cliente" rows="3" placeholder="Ex: Ponto de referência, informações sobre o local, etc."></textarea>
-        </div>
-      </section>
+            <label for="observacoes">Observações (Opcional)</label>
+            <textarea id="observacoes" rows="4" placeholder="Descreva detalhes adicionais, problemas ou instruções." maxlength="1000"></textarea>
+        </section>
 
-      <!-- Passo 3: Orçamento -->
-      <section id="orcamento-wrapper" class="step" style="display:none;">
-        <h2 class="step-title"><span>3</span>Confira seu orçamento</h2>
-        <div id="relatorio-orcamento"></div>
-      </section>
+        <!-- Passo 3: Orçamento (condicional) -->
+        <section id="orcamento-wrapper" class="step" style="display:none;">
+            <h2 class="step-title"><span>3</span>Confira seu orçamento</h2>
+            <div id="relatorio-orcamento"></div>
+        </section>
 
-      <!-- Passo 4: Agendamento -->
-      <section id="agendamento-wrapper" class="step" style="display:none;">
-        <h2 class="step-title"><span>4</span>Agende o melhor dia e horário</h2>
+        <!-- Passo 4: Agendamento (condicional) -->
+        <section id="agendamento-wrapper" class="step" style="display:none;">
+            <h2 class="step-title"><span>4</span>Agende o melhor dia e horário</h2>
+            <label for="data_agendamento">Data do Serviço</label>
+            <input type="text" id="data_agendamento" class="agendamento-campo" placeholder="Escolha uma data disponível" readonly required />
+            <label for="horario_agendamento">Horário do Serviço</label>
+            <select id="horario_agendamento" class="agendamento-campo" required disabled>
+                <option value="">Primeiro, escolha a data</option>
+            </select>
+            <label for="forma_pagamento">Forma de Pagamento</label>
+            <select id="forma_pagamento" class="agendamento-campo" required>
+                <option value="">Selecione como prefere pagar</option>
+                <option>Pix</option>
+                <option>Dinheiro</option>
+                <option>Cartão de Crédito</option>
+                <option>Cartão de Débito</option>
+            </select>
+        </section>
 
-        <label for="data_agendamento">Data do Serviço</label>
-        <input type="text" id="data_agendamento" class="agendamento-campo" placeholder="Escolha uma data disponível" readonly required />
-
-        <label for="horario_agendamento">Horário do Serviço</label>
-        <select id="horario_agendamento" class="agendamento-campo" required disabled>
-          <option value="">Primeiro, escolha a data</option>
-        </select>
-
-        <label for="forma_pagamento">Forma de Pagamento</label>
-        <select id="forma_pagamento" class="agendamento-campo" required>
-          <option value="">Selecione como prefere pagar</option>
-          <option value="Pix">Pix</option>
-          <option value="Dinheiro">Dinheiro</option>
-          <option value="Cartão de Crédito">Cartão de Crédito</option>
-          <option value="Cartão de Débito">Cartão de Débito</option>
-        </select>
-      </section>
-
-      <!-- Botão Final -->
-      <button type="submit" id="btn_agendar_servico" class="final-button" disabled>
-        <img src="assets/imagens/whatsapp-icon.png" alt="WhatsApp Icon"/>
-        <span>Agendar Serviço</span>
-      </button>
+        <!-- Botão Final -->
+        <button type="submit" id="btn_finalizar" class="final-button" disabled>
+            <img src="assets/imagens/whatsapp-icon.png" alt="WhatsApp Icon"/>
+            <span id="btn_finalizar_texto">Escolha um serviço para começar</span>
+        </button>
     </form>
-  </main>
+</main>
 
-  <footer class="rodape">
+<footer class="rodape">
     <p id="ultima-atualizacao"></p>
-  </footer>
+</footer>
 
-  <script>
-    // Data de atualização do arquivo
+<script>
     const dataModificacao = new Date(document.lastModified);
     document.getElementById("ultima-atualizacao").textContent =
-      "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
-        day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
-      });
-  </script>
+        "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+</script>
 </body>
 </html>
