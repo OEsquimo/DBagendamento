@@ -164,6 +164,10 @@ function createServiceForm(service = {}) {
     document.getElementById('btnCancelSrv').addEventListener('click', hideServiceForm);
     
     btnShowAddServiceForm.style.display = 'none';
+
+    // **AQUI ESTÁ A CORREÇÃO**
+    // Leva o foco do usuário para o formulário que acabou de ser criado.
+    serviceFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function hideServiceForm() {
