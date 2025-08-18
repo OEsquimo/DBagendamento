@@ -27,6 +27,8 @@ const loginSection = document.getElementById("loginSection"),
       cfgHeroUrl = document.getElementById("cfgHeroUrl"),
       heroImagePreview = document.getElementById("heroImagePreview"),
       cfgWhats = document.getElementById("cfgWhats"),
+      cfgMaxTime = document.getElementById("cfgMaxTime"),
+      cfgInterval = document.getElementById("cfgInterval"),
       siteMsg = document.getElementById("siteMsg"),
       btnSaveSite = document.getElementById("btnSaveSite"),
       serviceFormContainer = document.getElementById("service-form-container"),
@@ -117,6 +119,8 @@ async function loadSiteConfig() {
         cfgCompanyDesc.value = siteState.description || "";
         cfgWhats.value = siteState.whatsappNumber || "";
         cfgReminderMonths.value = siteState.reminderMonths || 12;
+        cfgMaxTime.value = siteState.maxTime || "";
+        cfgInterval.value = siteState.interval || 120;
         if (siteState.heroUrl) {
             cfgHeroUrl.value = siteState.heroUrl;
             heroImagePreview.src = siteState.heroUrl;
@@ -352,7 +356,9 @@ btnSaveSite.addEventListener("click", async () => {
             description: cfgCompanyDesc.value.trim(),
             heroUrl: cfgHeroUrl.value,
             whatsappNumber: cfgWhats.value.replace(/\D/g, ""),
-            reminderMonths: Number(cfgReminderMonths.value)
+            reminderMonths: Number(cfgReminderMonths.value),
+            maxTime: cfgMaxTime.value,
+            interval: Number(cfgInterval.value)
         }, { merge: true });
         showMessage(siteMsg, "Configurações salvas com sucesso!");
     } catch (e) { showMessage(siteMsg, "Erro ao salvar configurações.", false); }
