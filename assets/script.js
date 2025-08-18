@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- Mapeamento DOM (sem alterações) ---
+// --- Mapeamento DOM ---
 const siteTitle = document.getElementById("siteTitle"),
       heroImage = document.getElementById("heroImage"),
       companyNameEl = document.getElementById("companyName"),
@@ -35,7 +35,7 @@ const siteTitle = document.getElementById("siteTitle"),
       btnFinalizar = document.getElementById("btn_finalizar"),
       btnFinalizarTexto = document.getElementById("btn_finalizar_texto");
 
-// --- Estado da Aplicação (sem alterações) ---
+// --- Estado da Aplicação ---
 const appState = {
     servicoSelecionado: null,
     valorOrcamento: 0,
@@ -44,7 +44,7 @@ const appState = {
     servicos: []
 };
 
-// --- Helpers (sem alterações) ---
+// --- Helpers ---
 const maskPhone = (e) => {
     let v = e.target.value.replace(/\D/g, "").slice(0, 11);
     if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
@@ -53,7 +53,7 @@ const maskPhone = (e) => {
 };
 whatsappInput.addEventListener("input", maskPhone);
 
-// --- Lógica Principal (sem alterações) ---
+// --- Lógica Principal ---
 document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([loadSiteConfig(), loadServices()]);
     initCalendar();
@@ -193,25 +193,28 @@ function initCalendar() {
     calendario = flatpickr(dataAgendamentoInput, {
         locale: "pt",
         minDate: "today",
-        dateFormat: "d/m/Y",
-        disable: [(date) => date.getDay() === 0],
-        onChange: (selectedDates, dateStr) => { // Usar o segundo argumento (dateStr)
-            if (selectedDates.length > 0) {
-                atualizarHorariosDisponiveis(dateStr); // Passa a data formatada
+        dateFormat: "d/m/Y", // Formato de exibição para o usuário
+        disable: [(date) => date.getDay() === 0], // Desabilita Domingos
+        onChange: (selectedDates, dateStr) => {
+            // A 'dateStr' já vem no formato "d/m/Y" por causa do dateFormat
+            if (dateStr) {
+                atualizarHorariosDisponiveis(dateStr);
             }
         }
     });
 }
 
-// CORRIGIDO: Lógica de consulta de horários restaurada para a versão funcional
+// VERSÃO FINAL E CORRIGIDA: Lógica de consulta de horários
 async function atualizarHorariosDisponiveis(dataSelecionada) {
     horarioAgendamentoSelect.disabled = true;
     horarioAgendamentoSelect.innerHTML = '<option value="">Verificando...</option>';
     try {
         const horariosBase = ["08:00", "10:00", "13:00", "15:00", "17:00"];
-        // A consulta funciona perfeitamente com o campo de texto 'dataAgendamento'
+        
+        // A consulta usa o campo 'dataAgendamento' que é uma string "DD/MM/AAAA"
         const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
         const querySnapshot = await getDocs(q);
+        
         const ocupados = querySnapshot.docs.map(d => d.data().horaAgendamento);
         const livres = horariosBase.filter(h => !ocupados.includes(h));
 
@@ -224,7 +227,8 @@ async function atualizarHorariosDisponiveis(dataSelecionada) {
         }
     } catch (err) {
         console.error("Erro ao buscar horários:", err);
-        horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar horários</option>';
+        // Mensagem de erro para o usuário
+        horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     } finally {
         validarFormulario();
     }
@@ -238,7 +242,6 @@ form.addEventListener("submit", async (e) => {
     btnFinalizar.disabled = true;
     btnFinalizarTexto.textContent = "Salvando...";
 
-    // CORRIGIDO: Garante que a data e o timestamp sejam salvos corretamente
     const dataSelecionada = dataAgendamentoInput.value;
     const horaSelecionada = horarioAgendamentoSelect.value;
     let timestamp = new Date().getTime();
@@ -257,7 +260,7 @@ form.addEventListener("submit", async (e) => {
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
         timestamp: timestamp,
         status: appState.servicoSelecionado.showSchedule ? "Agendado" : "Orçamento Solicitado",
-        dataAgendamento: dataSelecionada || null,
+        dataAgendamento: dataSelecionada || null, // Salva a data como "DD/MM/AAAA"
         horaAgendamento: horaSelecionada || null,
         formaPagamento: formaPagamentoSelect.value || null
     };
@@ -295,4 +298,19 @@ function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
     msg += `📞 *Contato:* ${dados.telefoneCliente}\n`;
-    msg += `🛠️ *Servi
+    msg += `🛠️ *Serviço Selecionado:* ${dados.servico}\n`;
+    msg += `🔧 *Tipo de Equipamento:* ${dados.tipoEquipamento}\n`;
+    msg += `❄️ *Capacidade:* ${dados.capacidadeBtus} BTUs\n`;
+
+    if (appState.servicoSelecionado.showBudget) {
+        const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Análise";
+        msg += `💰 *Valor do Orçamento:* ${valorTxt}\n`;
+    }
+    if (appState.servicoSelecionado.showSchedule) {
+        msg += `🗓️ *Data:* ${dados.dataAgendamento}\n`;
+        msg += `⏰ *Hora:* ${dados.horaAgendamento}\n`;
+        msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
+    }
+    msg += `📝 *Observações:* ${dados.observacoes}`;
+    return msg;
+}
