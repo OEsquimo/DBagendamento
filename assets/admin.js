@@ -315,9 +315,12 @@ btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 btnSearchClient.addEventListener('click', async () => {
     const phone = searchClientPhone.value.replace(/\D/g, "");
     if (phone.length < 10) { showMessage(searchMsg, "Digite um número de WhatsApp válido.", false); return; }
+    
     showMessage(searchMsg, "Buscando...", true, 0);
-    const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", phone), orderBy("timestamp", "desc"));
+    // CORREÇÃO: Busca pelo número com o DDI 55
+    const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", "55" + phone), orderBy("timestamp", "desc"));
     const querySnapshot = await getDocs(q);
+
     if (querySnapshot.empty) {
         showMessage(searchMsg, "Nenhum serviço encontrado. Preencha para criar um novo.", false);
         resetManualForm();
@@ -342,7 +345,8 @@ btnSearchClient.addEventListener('click', async () => {
 function fillManualForm(data, id) {
     mServiceId.value = id;
     mNome.value = data.nomeCliente || "";
-    mFone.value = data.telefoneCliente || "";
+    // CORREÇÃO: Remove o '55' apenas para exibição no formulário
+    mFone.value = (data.telefoneCliente || "").replace(/^55/, ''); 
     maskPhone(mFone);
     mEndereco.value = data.enderecoCliente || "";
     mTipoEquipamento.value = data.tipoEquipamento || "";
@@ -367,9 +371,12 @@ function getManualFormData() {
         return null;
     }
     const [ano, mes, dia] = mData.value.split('-');
+    const phoneOnlyDigits = mFone.value.replace(/\D/g, "");
+
     return {
         nomeCliente: mNome.value.trim(),
-        telefoneCliente: mFone.value.replace(/\D/g, ""),
+        // CORREÇÃO: Garante que o '55' seja adicionado ao salvar
+        telefoneCliente: "55" + phoneOnlyDigits,
         enderecoCliente: mEndereco.value.trim(),
         tipoEquipamento: mTipoEquipamento.value,
         capacidadeBtus: mCapacidade.value,
@@ -445,8 +452,8 @@ btnRodarLembretes.addEventListener("click", async () => {
             foundAny = true;
             const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita?`;
             
-            // CORREÇÃO AQUI: Adicionar o "55" ao número do cliente
-            const url = `https://wa.me/55${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+            // O número já vem com '55' do banco de dados, então não precisa adicionar de novo.
+            const url = `https://wa.me/${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
             
             const li = document.createElement('li');
             li.innerHTML = `Encontrado: ${d.nomeCliente} (${new Date(d.timestamp).toLocaleDateString()}) - <a href="${url}" target="_blank">Enviar Lembrete</a>`;
