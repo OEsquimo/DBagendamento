@@ -210,8 +210,11 @@ function createServiceForm(service = {}) {
             <img id="srvImagePreview" src="${service.imageUrl || imageGallery[0].url}" alt="Preview" class="image-preview">
             <label>Link Externo (Opcional)</label>
             <input type="text" id="srvExternalLink" placeholder="https://... (preencha para desativar o formulário)" value="${service.externalLink || ''}">
-            <div id="dynamic-fields-container"></div>
-            <button id="btnAddField" type="button" class="secondary-button">Adicionar Campo de Preço (por BTUs)</button>
+            
+            <label style="margin-top: 20px;">Preços por Capacidade (BTUs)</label>
+            <div id="btu-prices-container"></div>
+            <button id="btnAddBtuPrice" type="button" class="secondary-button">Adicionar Preço por BTU</button>
+            
             <div class="checkbox-group">
                 <input type="checkbox" id="srvShowBudget" ${service.showBudget ? 'checked' : ''}>
                 <label for="srvShowBudget">Deseja mostrar Orçamento para o cliente?</label>
@@ -226,12 +229,12 @@ function createServiceForm(service = {}) {
             </div>
         </div>`;
     serviceFormContainer.innerHTML = formHtml;
-    const fieldsContainer = document.getElementById('dynamic-fields-container');
-    if (service.precos) {
-        Object.entries(service.precos).forEach(([btu, price]) => addPriceField(fieldsContainer, btu, price));
+    const btuPricesContainer = document.getElementById('btu-prices-container');
+    if (service.btuPrices) {
+        service.btuPrices.forEach(item => addBtuPriceField(btuPricesContainer, item.btu, item.price));
     }
     document.getElementById('srvImage').addEventListener('change', e => { document.getElementById('srvImagePreview').src = e.target.value; });
-    document.getElementById('btnAddField').addEventListener('click', () => addPriceField(fieldsContainer));
+    document.getElementById('btnAddBtuPrice').addEventListener('click', () => addBtuPriceField(btuPricesContainer));
     document.getElementById('btnSaveSrv').addEventListener('click', saveService);
     document.getElementById('btnCancelSrv').addEventListener('click', hideServiceForm);
     btnShowAddServiceForm.style.display = 'none';
@@ -243,12 +246,12 @@ function hideServiceForm() {
     btnShowAddServiceForm.style.display = 'flex';
 }
 
-function addPriceField(container, btu = '', price = '') {
-    const fieldId = `field-${Date.now()}`;
+function addBtuPriceField(container, btu = '', price = '') {
+    const fieldId = `btu-field-${Date.now()}`;
     const div = document.createElement('div');
     div.className = 'dynamic-field';
     div.id = fieldId;
-    div.innerHTML = `<input type="text" class="btu-input" placeholder="Capacidade (BTUs)" value="${btu}"><input type="number" class="price-input" placeholder="Preço (R$)" value="${price}"><button type="button" class="remove-field-btn" onclick="document.getElementById('${fieldId}').remove()">×</button>`;
+    div.innerHTML = `<input type="text" class="btu-input" placeholder="Ex: 9000 BTUs" value="${btu}"><input type="number" class="price-input" placeholder="Preço (R$)" value="${price}"><button type="button" class="remove-field-btn" onclick="document.getElementById('${fieldId}').remove()">×</button>`;
     container.appendChild(div);
 }
 
@@ -259,12 +262,12 @@ async function saveService() {
         showMessage(srvMsg, "O nome do serviço é obrigatório.", false); 
         return; 
     }
-    const precos = {};
-    document.querySelectorAll('#dynamic-fields-container .dynamic-field').forEach(field => {
+    const btuPrices = [];
+    document.querySelectorAll('#btu-prices-container .dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
         const price = field.querySelector('.price-input').value;
         if (btu) { 
-            precos[btu] = price === '' ? 0 : parseFloat(price);
+            btuPrices.push({ btu, price: price === '' ? 0 : parseFloat(price) });
         }
     });
     const serviceData = {
@@ -274,7 +277,7 @@ async function saveService() {
         externalLink: document.getElementById('srvExternalLink').value.trim(),
         showBudget: document.getElementById('srvShowBudget').checked,
         showSchedule: document.getElementById('srvShowSchedule').checked,
-        precos: precos,
+        btuPrices: btuPrices,
         lastUpdated: new Date().toISOString()
     };
     try {
