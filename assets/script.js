@@ -126,4 +126,244 @@ function handleServiceSelection(servico) {
     if (clickedElement) {
         clickedElement.classList.add("selecionado");
     }
-    app
+    appState.servicoSelecionado = servico;
+    detalhesWrapper.style.display = "block";
+    if (window.innerWidth < 768) {
+        detalhesWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    nomeInput.focus();
+    validarFormulario();
+}
+
+function validarFormulario() {
+    if (!appState.servicoSelecionado) return;
+
+    const nomeValido = nomeInput.value.trim().length > 2;
+    const whatsappValido = whatsappInput.value.replace(/\D/g, "").length === 11;
+    const tipoEquipamentoValido = tipoEquipamentoSelect.value !== "";
+    const capacidadeValida = capacidadeBtusSelect.value !== "";
+    const dadosBasicosValidos = nomeValido && whatsappValido && tipoEquipamentoValido && capacidadeValida;
+
+    orcamentoWrapper.style.display = dadosBasicosValidos && appState.servicoSelecionado.showBudget ? "block" : "none";
+    agendamentoWrapper.style.display = dadosBasicosValidos && appState.servicoSelecionado.showSchedule ? "block" : "none";
+
+    if (orcamentoWrapper.style.display === "block") {
+        gerarHtmlOrcamento();
+    }
+
+    let agendamentoValido = true;
+    if (agendamentoWrapper.style.display === "block") {
+        const dataValida = dataAgendamentoInput.value !== "";
+        const horarioValido = horarioAgendamentoSelect.value !== "" && !horarioAgendamentoSelect.disabled;
+        const pagamentoValido = formaPagamentoSelect.value !== "";
+        agendamentoValido = dataValida && horarioValido && pagamentoValido;
+    } else {
+        agendamentoValido = false;
+    }
+
+    btnFinalizar.disabled = !(dadosBasicosValidos && (appState.servicoSelecionado.showBudget || appState.servicoSelecionado.showSchedule) && (!appState.servicoSelecionado.showSchedule || agendamentoValido));
+}
+
+function calcularValorOrcamento() {
+    if (!appState.servicoSelecionado || !appState.servicoSelecionado.precos) return 0;
+    const btuSelecionado = capacidadeBtusSelect.value;
+    return appState.servicoSelecionado.precos[btuSelecionado] || 0;
+}
+
+function gerarHtmlOrcamento() {
+    appState.valorOrcamento = calcularValorOrcamento();
+    const valorTexto = appState.valorOrcamento > 0 ? `R$ ${appState.valorOrcamento.toFixed(2)}` : "Sob Consulta";
+    const observacoesTexto = observacoesTextarea.value.trim();
+    const descricaoServico = appState.servicoSelecionado.description || "";
+
+    let html = `
+        <div class="orcamento-item"><strong>Serviço:</strong><span>${appState.servicoSelecionado.name}</span></div>`;
+    if (descricaoServico) {
+        html += `<div class="orcamento-item"><strong>Descrição:</strong><span>${descricaoServico}</span></div>`;
+    }
+    html += `
+        <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
+        <div class="orcamento-item"><strong>WhatsApp:</strong><span>${whatsappInput.value}</span></div>
+        <div class="orcamento-item"><strong>Equipamento:</strong><span>${tipoEquipamentoSelect.value}</span></div>
+        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.value} BTUs</span></div>
+    `;
+    if (observacoesTexto) {
+        html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoesTexto}</span></div>`;
+    }
+    html += `<div class="orcamento-total"><strong>Valor Total:</strong><span>${valorTexto}</span></div>`;
+    relatorioOrcamentoDiv.innerHTML = html;
+}
+
+// --- Calendário e Horários ---
+let calendario = null;
+function initCalendar() {
+    calendario = flatpickr(dataAgendamentoInput, {
+        locale: "pt",
+        minDate: "today",
+        dateFormat: "d/m/Y",
+        disable: [(date) => date.getDay() === 0], // Desabilita Domingos
+        onChange: (selectedDates) => {
+            if (selectedDates.length > 0) {
+                const dataFormatada = calendario.input.value;
+                atualizarHorariosDisponiveis(dataFormatada);
+            }
+        }
+    });
+}
+
+async function atualizarHorariosDisponiveis(dataSelecionada) {
+    horarioAgendamentoSelect.disabled = true;
+    horarioAgendamentoSelect.innerHTML = '<option value="">Verificando horários...</option>';
+    try {
+        const horariosBase = appState.configSchedule.slots.sort((a, b) => a.time.localeCompare(b.time)) || [];
+        if (horariosBase.length === 0) {
+            horarioAgendamentoSelect.innerHTML = '<option value="">Nenhum horário configurado</option>';
+            return;
+        }
+
+        const q = query(collection(db, "agendamentos"), where("dataAgendamento", "==", dataSelecionada));
+        const querySnapshot = await getDocs(q);
+        const agendamentosDoDia = querySnapshot.docs.map(d => d.data().horaAgendamento);
+
+        const contagemAgendamentos = agendamentosDoDia.reduce((acc, hora) => {
+            acc[hora] = (acc[hora] || 0) + 1;
+            return acc;
+        }, {});
+
+        const agora = new Date();
+        const [dia, mes, ano] = dataSelecionada.split('/');
+        const dataSelecionadaObj = new Date(`${ano}-${mes}-${dia}T00:00:00`);
+        const isToday = agora.toDateString() === dataSelecionadaObj.toDateString();
+
+        const horariosDisponiveis = horariosBase.filter(slot => {
+            const vagasOcupadas = contagemAgendamentos[slot.time] || 0;
+            if (vagasOcupadas >= slot.vacancies) {
+                return false;
+            }
+            if (isToday) {
+                const [horaSlot, minutoSlot] = slot.time.split(':');
+                if (agora.getHours() > horaSlot || (agora.getHours() == horaSlot && agora.getMinutes() >= minutoSlot)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        if (horariosDisponiveis.length > 0) {
+            horarioAgendamentoSelect.innerHTML = '<option value="">Selecione um horário</option>';
+            horariosDisponiveis.forEach(slot => {
+                horarioAgendamentoSelect.innerHTML += `<option value="${slot.time}">${slot.time}</option>`;
+            });
+            horarioAgendamentoSelect.disabled = false;
+        } else {
+            horarioAgendamentoSelect.innerHTML = '<option value="">Não há horários para este dia</option>';
+        }
+    } catch (err) {
+        console.error("Ocorreu um erro ao buscar horários:", err);
+        horarioAgendamentoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+    } finally {
+        validarFormulario();
+    }
+}
+
+// --- Submissão do Formulário ---
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (btnFinalizar.disabled) return;
+
+    btnFinalizar.disabled = true;
+    btnFinalizarTexto.textContent = "Verificando...";
+
+    const phoneOnlyDigits = whatsappInput.value.replace(/\D/g, "");
+    const phoneWithDDI = "55" + phoneOnlyDigits;
+
+    try {
+        const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", phoneWithDDI));
+        const existing = await getDocs(q);
+        if (!existing.empty) {
+            alert("Já existe um cadastro com este número de WhatsApp. Por favor, entre em contato diretamente para agendar um novo serviço.");
+            btnFinalizar.disabled = false;
+            btnFinalizarTexto.textContent = "Finalizar Solicitação";
+            return;
+        }
+
+        btnFinalizarTexto.textContent = "Salvando...";
+
+        const adminWhatsAppNumber = appState.configSite.whatsappNumber ? appState.configSite.whatsappNumber.replace(/\D/g, "") : "";
+        if (!adminWhatsAppNumber || adminWhatsAppNumber.length < 10) {
+            alert("Erro: O número de WhatsApp do administrador não está configurado. Não é possível enviar a notificação.");
+            btnFinalizar.disabled = false;
+            btnFinalizarTexto.textContent = "Tentar Novamente";
+            return;
+        }
+
+        const dadosAgendamento = {
+            servico: appState.servicoSelecionado.name,
+            valor: appState.valorOrcamento,
+            nomeCliente: nomeInput.value.trim(),
+            telefoneCliente: phoneWithDDI,
+            tipoEquipamento: tipoEquipamentoSelect.value,
+            capacidadeBtus: capacidadeBtusSelect.value,
+            observacoes: observacoesTextarea.value.trim() || "Nenhuma",
+            status: "Agendado",
+            origem: "Site",
+            timestamp: new Date().getTime()
+        };
+
+        if (appState.servicoSelecionado.showSchedule) {
+            dadosAgendamento.dataAgendamento = dataAgendamentoInput.value;
+            dadosAgendamento.horaAgendamento = horarioAgendamentoSelect.value;
+            dadosAgendamento.formaPagamento = formaPagamentoSelect.value;
+            const [dia, mes, ano] = dadosAgendamento.dataAgendamento.split('/');
+            const [hora, minuto] = dadosAgendamento.horaAgendamento.split(':');
+            dadosAgendamento.timestamp = new Date(ano, mes - 1, dia, hora, minuto).getTime();
+        }
+
+        await addDoc(collection(db, "agendamentos"), dadosAgendamento);
+        const mensagem = criarMensagemWhatsApp(dadosAgendamento);
+        
+        const url = `https://wa.me/55${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
+        
+        alert("Seu agendamento foi recebido com sucesso! Você receberá uma confirmação no WhatsApp em breve.");
+        window.open(url, "_blank");
+        setTimeout(() => window.location.reload(), 500);
+
+    } catch (err) {
+        console.error("Falha ao salvar agendamento:", err);
+        alert("Houve uma falha ao salvar seu agendamento. Por favor, tente novamente. Se o erro persistir, entre em contato conosco.");
+        btnFinalizar.disabled = false;
+        btnFinalizarTexto.textContent = "Tentar Novamente";
+    }
+});
+
+function criarMensagemWhatsApp(dados) {
+    let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
+    msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
+    msg += `📞 *Contato:* ${dados.telefoneCliente.replace(/^55/, '')}\n`;
+    msg += `🛠️ *Serviço:* ${dados.servico}\n`;
+    msg += `🔌 *Equipamento:* ${dados.tipoEquipamento} - ${dados.capacidadeBtus} BTUs\n`;
+
+    if (appState.servicoSelecionado.showBudget) {
+        const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Consulta";
+        msg += `💰 *Valor:* ${valorTxt}\n`;
+    }
+    if (appState.servicoSelecionado.showSchedule) {
+        msg += `🗓️ *Data:* ${dados.dataAgendamento}\n`;
+        msg += `⏰ *Hora:* ${dados.horaAgendamento}\n`;
+        msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
+    }
+    
+    if (dados.observacoes && dados.observacoes !== "Nenhuma") {
+        msg += `📝 *Observações:* ${dados.observacoes}`;
+    }
+    
+    return msg;
+}
+
+// --- Atualização da Data no Rodapé ---
+if (ultimaAtualizacaoEl) {
+    const dataModificacao = new Date(document.lastModified);
+    ultimaAtualizacaoEl.textContent = "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+}
