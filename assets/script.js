@@ -128,27 +128,13 @@ function handleServiceSelection(servico) {
     }
     appState.servicoSelecionado = servico;
 
-    // Popula dinamicamente os BTUs para o serviço selecionado
-    populateBtuOptions(servico.btuPrices);
-
+    // A lista de BTUs é fixa, então apenas mostramos o formulário
     detalhesWrapper.style.display = "block";
     if (window.innerWidth < 768) {
         detalhesWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     nomeInput.focus();
     validarFormulario();
-}
-
-function populateBtuOptions(btuPrices) {
-    capacidadeBtusSelect.innerHTML = '<option value="">Selecione a capacidade...</option>';
-    if (btuPrices && btuPrices.length > 0) {
-        btuPrices.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.btu;
-            option.textContent = item.btu;
-            capacidadeBtusSelect.appendChild(option);
-        });
-    }
 }
 
 function validarFormulario() {
@@ -182,8 +168,11 @@ function validarFormulario() {
 
 function calcularValorOrcamento() {
     if (!appState.servicoSelecionado || !appState.servicoSelecionado.btuPrices) return 0;
-    const btuSelecionado = capacidadeBtusSelect.value;
-    const priceInfo = appState.servicoSelecionado.btuPrices.find(p => p.btu === btuSelecionado);
+    
+    // CORREÇÃO: A busca agora é pelo texto da opção selecionada, não pelo valor
+    const btuSelecionadoTexto = capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text;
+    const priceInfo = appState.servicoSelecionado.btuPrices.find(p => p.btu === btuSelecionadoTexto);
+    
     return priceInfo ? priceInfo.price : 0;
 }
 
@@ -202,7 +191,7 @@ function gerarHtmlOrcamento() {
         <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
         <div class="orcamento-item"><strong>WhatsApp:</strong><span>${whatsappInput.value}</span></div>
         <div class="orcamento-item"><strong>Equipamento:</strong><span>${tipoEquipamentoSelect.value}</span></div>
-        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.value}</span></div>
+        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text}</span></div>
     `;
     if (observacoesTexto) {
         html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoesTexto}</span></div>`;
@@ -308,7 +297,7 @@ form.addEventListener("submit", async (e) => {
             nomeCliente: nomeInput.value.trim(),
             telefoneCliente: phoneWithDDI,
             tipoEquipamento: tipoEquipamentoSelect.value,
-            capacidadeBtus: capacidadeBtusSelect.value,
+            capacidadeBtus: capacidadeBtusSelect.options[capacidadeBtusSelect.selectedIndex].text, // Salva o texto
             observacoes: observacoesTextarea.value.trim() || "Nenhuma",
             status: "Agendado",
             origem: "Site",
