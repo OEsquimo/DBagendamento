@@ -444,7 +444,10 @@ btnRodarLembretes.addEventListener("click", async () => {
         if (servicoInfo.toLowerCase().includes('limpeza')) {
             foundAny = true;
             const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita?`;
+            
+            // CORREÇÃO AQUI: Adicionar o "55" ao número do cliente
             const url = `https://wa.me/55${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+            
             const li = document.createElement('li');
             li.innerHTML = `Encontrado: ${d.nomeCliente} (${new Date(d.timestamp).toLocaleDateString()}) - <a href="${url}" target="_blank">Enviar Lembrete</a>`;
             reminderLog.appendChild(li);
