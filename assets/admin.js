@@ -227,8 +227,8 @@ function createServiceForm(service = {}) {
         </div>`;
     serviceFormContainer.innerHTML = formHtml;
     const fieldsContainer = document.getElementById('dynamic-fields-container');
-    if (service.prices) {
-        Object.entries(service.prices).forEach(([btu, price]) => addPriceField(fieldsContainer, btu, price));
+    if (service.precos) { // CORREÇÃO: Usar 'precos' ao invés de 'prices'
+        Object.entries(service.precos).forEach(([btu, price]) => addPriceField(fieldsContainer, btu, price));
     }
     document.getElementById('srvImage').addEventListener('change', e => { document.getElementById('srvImagePreview').src = e.target.value; });
     document.getElementById('btnAddField').addEventListener('click', () => addPriceField(fieldsContainer));
@@ -259,11 +259,11 @@ async function saveService() {
         showMessage(srvMsg, "O nome do serviço é obrigatório.", false); 
         return; 
     }
-    const prices = {};
+    const precos = {}; // CORREÇÃO: Usar 'precos' ao invés de 'prices'
     document.querySelectorAll('#dynamic-fields-container .dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
         const price = parseFloat(field.querySelector('.price-input').value);
-        if (btu && !isNaN(price)) { prices[btu] = price; }
+        if (btu && !isNaN(price)) { precos[btu] = price; }
     });
     const serviceData = {
         name,
@@ -272,7 +272,7 @@ async function saveService() {
         externalLink: document.getElementById('srvExternalLink').value.trim(),
         showBudget: document.getElementById('srvShowBudget').checked,
         showSchedule: document.getElementById('srvShowSchedule').checked,
-        prices: prices,
+        precos: precos, // CORREÇÃO: Usar 'precos' ao invés de 'prices'
         lastUpdated: new Date().toISOString()
     };
     try {
@@ -321,7 +321,7 @@ btnSearchClient.addEventListener('click', async () => {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        showMessage(searchMsg, "Nenhum serviço encontrado. Preencha para criar um novo.", false);
+        showMessage(searchMsg, "Nenhum serviço encontrado para este número. Preencha o formulário para criar um novo registro.", false);
         resetManualForm();
         mFone.value = searchClientPhone.value;
         maskPhone(mFone);
@@ -347,6 +347,7 @@ function fillManualForm(data, id) {
     mFone.value = (data.telefoneCliente || "").replace(/^55/, ''); 
     maskPhone(mFone);
     mEndereco.value = data.enderecoCliente || "";
+    // CORREÇÃO: Usar os IDs corretos dos campos
     mTipoEquipamento.value = data.tipoEquipamento || "";
     mCapacidade.value = data.capacidadeBtus || "";
     mObs.value = data.observacoes || "";
@@ -390,6 +391,13 @@ btnSaveManual.addEventListener('click', async () => {
     const data = getManualFormData();
     if (!data) return;
     try {
+        // VALIDAÇÃO (Ponto 4): Verifica se o cliente já existe antes de criar um novo
+        const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", data.telefoneCliente));
+        const existing = await getDocs(q);
+        if (!existing.empty) {
+            showMessage(searchMsg, "Este número de WhatsApp já possui um registro. Use a busca para atualizá-lo.", false);
+            return;
+        }
         await addDoc(collection(db, "agendamentos"), data);
         showMessage(searchMsg, "Novo serviço salvo com sucesso!", true);
         manualServiceForm.style.display = 'none';
@@ -448,10 +456,7 @@ btnRodarLembretes.addEventListener("click", async () => {
         if (servicoInfo.toLowerCase().includes('limpeza')) {
             foundAny = true;
             const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita?`;
-            
-            // CORREÇÃO DEFINITIVA: Usa o número do cliente que já está com '55' no banco.
             const url = `https://wa.me/${d.telefoneCliente}?text=${encodeURIComponent(msg)}`;
-            
             const li = document.createElement('li');
             li.innerHTML = `Encontrado: ${d.nomeCliente} (${new Date(d.timestamp).toLocaleDateString()}) - <a href="${url}" target="_blank">Enviar Lembrete</a>`;
             reminderLog.appendChild(li);
