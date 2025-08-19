@@ -262,8 +262,10 @@ async function saveService() {
     const precos = {};
     document.querySelectorAll('#dynamic-fields-container .dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
-        const price = parseFloat(field.querySelector('.price-input').value);
-        if (btu && !isNaN(price)) { precos[btu] = price; }
+        const price = field.querySelector('.price-input').value;
+        if (btu) { 
+            precos[btu] = price === '' ? 0 : parseFloat(price);
+        }
     });
     const serviceData = {
         name,
@@ -311,7 +313,7 @@ async function loadServices() {
 
 btnShowAddServiceForm.addEventListener('click', () => createServiceForm());
 
-// --- Gestão de Serviços Realizados (CRUD) ---
+// --- Serviços Agendados (CRUD) ---
 btnSearchClient.addEventListener('click', async () => {
     const phone = searchClientPhone.value.replace(/\D/g, "");
     if (phone.length < 10) { showMessage(searchMsg, "Digite um número de WhatsApp válido.", false); return; }
@@ -321,7 +323,7 @@ btnSearchClient.addEventListener('click', async () => {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        showMessage(searchMsg, "Nenhum serviço encontrado para este número. Preencha o formulário para criar um novo registro.", false);
+        showMessage(searchMsg, "Nenhum agendamento encontrado. Preencha para criar um novo.", false);
         resetManualForm();
         mFone.value = searchClientPhone.value;
         maskPhone(mFone);
@@ -332,7 +334,7 @@ btnSearchClient.addEventListener('click', async () => {
     } else {
         const lastService = querySnapshot.docs[0].data();
         const serviceId = querySnapshot.docs[0].id;
-        showMessage(searchMsg, "Cliente encontrado! Último serviço carregado.", true);
+        showMessage(searchMsg, "Cliente encontrado! Último agendamento carregado.", true);
         fillManualForm(lastService, serviceId);
         manualServiceForm.style.display = 'block';
         btnUpdateManual.style.display = 'inline-block';
@@ -390,16 +392,10 @@ btnSaveManual.addEventListener('click', async () => {
     const data = getManualFormData();
     if (!data) return;
     try {
-        const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", data.telefoneCliente));
-        const existing = await getDocs(q);
-        if (!existing.empty) {
-            showMessage(searchMsg, "Este número de WhatsApp já possui um registro. Use a busca para atualizá-lo.", false);
-            return;
-        }
         await addDoc(collection(db, "agendamentos"), data);
-        showMessage(searchMsg, "Novo serviço salvo com sucesso!", true);
+        showMessage(searchMsg, "Novo agendamento salvo com sucesso!", true);
         manualServiceForm.style.display = 'none';
-    } catch (e) { showMessage(searchMsg, "Erro ao salvar novo serviço.", false); }
+    } catch (e) { showMessage(searchMsg, "Erro ao salvar novo agendamento.", false); }
 });
 
 btnUpdateManual.addEventListener('click', async () => {
@@ -409,18 +405,18 @@ btnUpdateManual.addEventListener('click', async () => {
     if (!data) return;
     try {
         await setDoc(doc(db, "agendamentos", id), data, { merge: true });
-        showMessage(searchMsg, "Serviço atualizado com sucesso!", true);
-    } catch (e) { showMessage(searchMsg, "Erro ao atualizar serviço.", false); }
+        showMessage(searchMsg, "Agendamento atualizado com sucesso!", true);
+    } catch (e) { showMessage(searchMsg, "Erro ao atualizar agendamento.", false); }
 });
 
 btnDeleteManual.addEventListener('click', async () => {
     const id = mServiceId.value;
-    if (!id || !confirm("Tem certeza que deseja excluir este registro de serviço?")) return;
+    if (!id || !confirm("Tem certeza que deseja excluir este agendamento?")) return;
     try {
         await deleteDoc(doc(db, "agendamentos", id));
-        showMessage(searchMsg, "Registro excluído com sucesso!", true);
+        showMessage(searchMsg, "Agendamento excluído com sucesso!", true);
         manualServiceForm.style.display = 'none';
-    } catch (e) { showMessage(searchMsg, "Erro ao excluir registro.", false); }
+    } catch (e) { showMessage(searchMsg, "Erro ao excluir agendamento.", false); }
 });
 
 // --- Ações Gerais e Lembretes ---
