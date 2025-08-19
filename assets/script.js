@@ -295,7 +295,8 @@ form.addEventListener("submit", async (e) => {
         await addDoc(collection(db, "agendamentos"), dadosAgendamento);
         const mensagem = criarMensagemWhatsApp(dadosAgendamento);
         
-        const adminWhatsAppNumber = appState.configSite.whatsappNumber.replace(/\D/g, "");
+        // CORREÇÃO DEFINITIVA AQUI: Garante que o número do admin tenha o DDI 55
+        const adminWhatsAppNumber = "55" + appState.configSite.whatsappNumber.replace(/\D/g, "");
         const url = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
         
         alert("Seu agendamento foi recebido com sucesso! Você receberá uma confirmação no WhatsApp em breve.");
