@@ -227,7 +227,7 @@ function createServiceForm(service = {}) {
         </div>`;
     serviceFormContainer.innerHTML = formHtml;
     const fieldsContainer = document.getElementById('dynamic-fields-container');
-    if (service.precos) { // CORREÇÃO: Usar 'precos' ao invés de 'prices'
+    if (service.precos) {
         Object.entries(service.precos).forEach(([btu, price]) => addPriceField(fieldsContainer, btu, price));
     }
     document.getElementById('srvImage').addEventListener('change', e => { document.getElementById('srvImagePreview').src = e.target.value; });
@@ -259,7 +259,7 @@ async function saveService() {
         showMessage(srvMsg, "O nome do serviço é obrigatório.", false); 
         return; 
     }
-    const precos = {}; // CORREÇÃO: Usar 'precos' ao invés de 'prices'
+    const precos = {};
     document.querySelectorAll('#dynamic-fields-container .dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
         const price = parseFloat(field.querySelector('.price-input').value);
@@ -272,7 +272,7 @@ async function saveService() {
         externalLink: document.getElementById('srvExternalLink').value.trim(),
         showBudget: document.getElementById('srvShowBudget').checked,
         showSchedule: document.getElementById('srvShowSchedule').checked,
-        precos: precos, // CORREÇÃO: Usar 'precos' ao invés de 'prices'
+        precos: precos,
         lastUpdated: new Date().toISOString()
     };
     try {
@@ -347,7 +347,6 @@ function fillManualForm(data, id) {
     mFone.value = (data.telefoneCliente || "").replace(/^55/, ''); 
     maskPhone(mFone);
     mEndereco.value = data.enderecoCliente || "";
-    // CORREÇÃO: Usar os IDs corretos dos campos
     mTipoEquipamento.value = data.tipoEquipamento || "";
     mCapacidade.value = data.capacidadeBtus || "";
     mObs.value = data.observacoes || "";
@@ -391,7 +390,6 @@ btnSaveManual.addEventListener('click', async () => {
     const data = getManualFormData();
     if (!data) return;
     try {
-        // VALIDAÇÃO (Ponto 4): Verifica se o cliente já existe antes de criar um novo
         const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", data.telefoneCliente));
         const existing = await getDocs(q);
         if (!existing.empty) {
