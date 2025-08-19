@@ -127,12 +127,28 @@ function handleServiceSelection(servico) {
         clickedElement.classList.add("selecionado");
     }
     appState.servicoSelecionado = servico;
+
+    // Popula dinamicamente os BTUs para o serviço selecionado
+    populateBtuOptions(servico.btuPrices);
+
     detalhesWrapper.style.display = "block";
     if (window.innerWidth < 768) {
         detalhesWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     nomeInput.focus();
     validarFormulario();
+}
+
+function populateBtuOptions(btuPrices) {
+    capacidadeBtusSelect.innerHTML = '<option value="">Selecione a capacidade...</option>';
+    if (btuPrices && btuPrices.length > 0) {
+        btuPrices.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.btu;
+            option.textContent = item.btu;
+            capacidadeBtusSelect.appendChild(option);
+        });
+    }
 }
 
 function validarFormulario() {
@@ -165,9 +181,10 @@ function validarFormulario() {
 }
 
 function calcularValorOrcamento() {
-    if (!appState.servicoSelecionado || !appState.servicoSelecionado.precos) return 0;
+    if (!appState.servicoSelecionado || !appState.servicoSelecionado.btuPrices) return 0;
     const btuSelecionado = capacidadeBtusSelect.value;
-    return appState.servicoSelecionado.precos[btuSelecionado] || 0;
+    const priceInfo = appState.servicoSelecionado.btuPrices.find(p => p.btu === btuSelecionado);
+    return priceInfo ? priceInfo.price : 0;
 }
 
 function gerarHtmlOrcamento() {
@@ -185,7 +202,7 @@ function gerarHtmlOrcamento() {
         <div class="orcamento-item"><strong>Nome:</strong><span>${nomeInput.value}</span></div>
         <div class="orcamento-item"><strong>WhatsApp:</strong><span>${whatsappInput.value}</span></div>
         <div class="orcamento-item"><strong>Equipamento:</strong><span>${tipoEquipamentoSelect.value}</span></div>
-        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.value} BTUs</span></div>
+        <div class="orcamento-item"><strong>Capacidade:</strong><span>${capacidadeBtusSelect.value}</span></div>
     `;
     if (observacoesTexto) {
         html += `<div class="orcamento-item"><strong>Observações:</strong><span>${observacoesTexto}</span></div>`;
@@ -272,23 +289,11 @@ form.addEventListener("submit", async (e) => {
     if (btnFinalizar.disabled) return;
 
     btnFinalizar.disabled = true;
-    btnFinalizarTexto.textContent = "Verificando...";
+    btnFinalizarTexto.textContent = "Salvando...";
 
-    const phoneOnlyDigits = whatsappInput.value.replace(/\D/g, "");
-    const phoneWithDDI = "55" + phoneOnlyDigits;
+    const phoneWithDDI = "55" + whatsappInput.value.replace(/\D/g, "");
 
     try {
-        const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", phoneWithDDI));
-        const existing = await getDocs(q);
-        if (!existing.empty) {
-            alert("Já existe um cadastro com este número de WhatsApp. Por favor, entre em contato diretamente para agendar um novo serviço.");
-            btnFinalizar.disabled = false;
-            btnFinalizarTexto.textContent = "Finalizar Solicitação";
-            return;
-        }
-
-        btnFinalizarTexto.textContent = "Salvando...";
-
         const adminWhatsAppNumber = appState.configSite.whatsappNumber ? appState.configSite.whatsappNumber.replace(/\D/g, "") : "";
         if (!adminWhatsAppNumber || adminWhatsAppNumber.length < 10) {
             alert("Erro: O número de WhatsApp do administrador não está configurado. Não é possível enviar a notificação.");
@@ -324,7 +329,7 @@ form.addEventListener("submit", async (e) => {
         
         const url = `https://wa.me/55${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
         
-        alert("Seu agendamento foi recebido com sucesso! Você receberá uma confirmação no WhatsApp em breve.");
+        alert("Já existe um agendamento com esse número. Você pode excluir ou alterar.");
         window.open(url, "_blank");
         setTimeout(() => window.location.reload(), 500);
 
@@ -341,7 +346,7 @@ function criarMensagemWhatsApp(dados) {
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
     msg += `📞 *Contato:* ${dados.telefoneCliente.replace(/^55/, '')}\n`;
     msg += `🛠️ *Serviço:* ${dados.servico}\n`;
-    msg += `🔌 *Equipamento:* ${dados.tipoEquipamento} - ${dados.capacidadeBtus} BTUs\n`;
+    msg += `🔌 *Equipamento:* ${dados.tipoEquipamento} - ${dados.capacidadeBtus}\n`;
 
     if (appState.servicoSelecionado.showBudget) {
         const valorTxt = dados.valor > 0 ? `R$ ${dados.valor.toFixed(2)}` : "Sob Consulta";
