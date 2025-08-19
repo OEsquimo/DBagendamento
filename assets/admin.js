@@ -79,7 +79,7 @@ const maskPhone = (input) => {
 };
 
 const showMessage = (el, text, success = true, duration = 3000) => {
-    if (!el) return; // Adiciona uma verificação para segurança
+    if (!el) return;
     el.textContent = text;
     el.className = `form-message ${success ? 'success' : 'error'}`;
     if (duration > 0) {
@@ -256,7 +256,6 @@ async function saveService() {
     const id = document.getElementById('srvId').value;
     const name = document.getElementById('srvName').value.trim();
     if (!name) { 
-        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
         showMessage(srvMsg, "O nome do serviço é obrigatório.", false); 
         return; 
     }
@@ -279,12 +278,10 @@ async function saveService() {
     try {
         const docRef = id ? doc(db, "services", id) : doc(collection(db, "services"));
         await setDoc(docRef, serviceData, { merge: true });
-        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
         showMessage(srvMsg, `Serviço ${id ? 'atualizado' : 'salvo'} com sucesso!`);
         hideServiceForm();
-        loadServices();
+        await loadServices(); 
     } catch (e) { 
-        // **CORREÇÃO: Garantir que a mensagem apareça no elemento correto (srvMsg)**
         showMessage(srvMsg, "Erro ao salvar o serviço.", false); 
         console.error(e); 
     }
@@ -305,7 +302,7 @@ async function loadServices() {
             if (confirm(`Tem certeza que deseja excluir o serviço "${service.name}"?`)) {
                 await deleteDoc(doc(db, "services", service.id));
                 showMessage(srvMsg, "Serviço excluído.");
-                loadServices();
+                await loadServices(); 
             }
         });
         srvList.appendChild(div);
