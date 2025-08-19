@@ -273,7 +273,7 @@ form.addEventListener("submit", async (e) => {
         servico: appState.servicoSelecionado.name,
         valor: appState.valorOrcamento,
         nomeCliente: nomeInput.value.trim(),
-        telefoneCliente: whatsappInput.value.replace(/\D/g, ""),
+        telefoneCliente: "55" + whatsappInput.value.replace(/\D/g, ""), // Garante o DDI do cliente
         tipoEquipamento: tipoEquipamentoSelect.value,
         capacidadeBtus: capacidadeBtusSelect.value,
         observacoes: observacoesTextarea.value.trim() || "Nenhuma",
@@ -294,7 +294,10 @@ form.addEventListener("submit", async (e) => {
     try {
         await addDoc(collection(db, "agendamentos"), dadosAgendamento);
         const mensagem = criarMensagemWhatsApp(dadosAgendamento);
-        const url = `https://wa.me/${appState.configSite.whatsappNumber}?text=${encodeURIComponent(mensagem)}`;
+        
+        // CORREÇÃO AQUI: Usa o número do administrador salvo nas configurações
+        const adminWhatsAppNumber = appState.configSite.whatsappNumber.replace(/\D/g, "");
+        const url = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
         
         alert("Seu agendamento foi recebido com sucesso! Você receberá uma confirmação no WhatsApp em breve.");
         window.open(url, "_blank");
@@ -311,7 +314,7 @@ form.addEventListener("submit", async (e) => {
 function criarMensagemWhatsApp(dados) {
     let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
     msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
-    msg += `📞 *Contato:* ${dados.telefoneCliente}\n`;
+    msg += `📞 *Contato:* ${dados.telefoneCliente.replace(/^55/, '')}\n`; // Mostra o número sem o 55 na mensagem
     msg += `🛠️ *Serviço:* ${dados.servico}\n`;
     msg += `🔌 *Equipamento:* ${dados.tipoEquipamento} - ${dados.capacidadeBtus} BTUs\n`;
 
