@@ -317,7 +317,6 @@ btnSearchClient.addEventListener('click', async () => {
     if (phone.length < 10) { showMessage(searchMsg, "Digite um número de WhatsApp válido.", false); return; }
     
     showMessage(searchMsg, "Buscando...", true, 0);
-    // CORREÇÃO: Busca pelo número com o DDI 55
     const q = query(collection(db, "agendamentos"), where("telefoneCliente", "==", "55" + phone), orderBy("timestamp", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -345,7 +344,6 @@ btnSearchClient.addEventListener('click', async () => {
 function fillManualForm(data, id) {
     mServiceId.value = id;
     mNome.value = data.nomeCliente || "";
-    // CORREÇÃO: Remove o '55' apenas para exibição no formulário
     mFone.value = (data.telefoneCliente || "").replace(/^55/, ''); 
     maskPhone(mFone);
     mEndereco.value = data.enderecoCliente || "";
@@ -375,7 +373,6 @@ function getManualFormData() {
 
     return {
         nomeCliente: mNome.value.trim(),
-        // CORREÇÃO: Garante que o '55' seja adicionado ao salvar
         telefoneCliente: "55" + phoneOnlyDigits,
         enderecoCliente: mEndereco.value.trim(),
         tipoEquipamento: mTipoEquipamento.value,
@@ -452,8 +449,8 @@ btnRodarLembretes.addEventListener("click", async () => {
             foundAny = true;
             const msg = `🔔 *Lembrete de Limpeza* \nOlá, ${d.nomeCliente}! Notamos que sua última limpeza de ar-condicionado foi há ${months} meses. Deseja agendar uma nova visita?`;
             
-            // O número já vem com '55' do banco de dados, então não precisa adicionar de novo.
-            const url = `https://wa.me/${d.telefoneCliente.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+            // CORREÇÃO DEFINITIVA: Usa o número do cliente que já está com '55' no banco.
+            const url = `https://wa.me/${d.telefoneCliente}?text=${encodeURIComponent(msg)}`;
             
             const li = document.createElement('li');
             li.innerHTML = `Encontrado: ${d.nomeCliente} (${new Date(d.timestamp).toLocaleDateString()}) - <a href="${url}" target="_blank">Enviar Lembrete</a>`;
