@@ -260,7 +260,7 @@ async function saveService() {
         return; 
     }
     const prices = {};
-    document.querySelectorAll('.dynamic-field').forEach(field => {
+    document.querySelectorAll('#dynamic-fields-container .dynamic-field').forEach(field => {
         const btu = field.querySelector('.btu-input').value.trim();
         const price = parseFloat(field.querySelector('.price-input').value);
         if (btu && !isNaN(price)) { prices[btu] = price; }
@@ -420,7 +420,8 @@ btnSaveSite.addEventListener("click", async () => {
             companyName: cfgCompanyName.value.trim(),
             description: cfgCompanyDesc.value.trim(),
             heroUrl: cfgHeroUrl.value,
-            whatsappNumber: cfgWhats.value.replace(/\D/g, "")
+            whatsappNumber: cfgWhats.value.replace(/\D/g, ""),
+            reminderMonths: Number(cfgReminderMonths.value) || 12
         }, { merge: true });
         showMessage(siteMsg, "Configurações salvas com sucesso!");
     } catch (e) { showMessage(siteMsg, "Erro ao salvar configurações.", false); }
