@@ -295,7 +295,6 @@ form.addEventListener("submit", async (e) => {
         await addDoc(collection(db, "agendamentos"), dadosAgendamento);
         const mensagem = criarMensagemWhatsApp(dadosAgendamento);
         
-        // CORREÇÃO AQUI: Usa o número do administrador salvo nas configurações
         const adminWhatsAppNumber = appState.configSite.whatsappNumber.replace(/\D/g, "");
         const url = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
         
