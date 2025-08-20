@@ -178,6 +178,43 @@ textarea {
   text-align: center;
 }
 
+/* Adicionar ao CSS */
+#campos-servico-container {
+    border: 1px solid var(--cor-borda);
+    transition: all 0.3s ease;
+}
+
+.campo-servico {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    font-family: var(--fonte-principal);
+}
+
+.servico-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid var(--cor-primaria);
+}
+
+.servico-item div {
+    flex: 1;
+}
+
+.servico-item strong {
+    color: var(--cor-secundaria);
+    display: block;
+    margin-bottom: 4px;
+}
+
+
 .servico .checkmark {
   position: absolute;
   top: 10px;
@@ -325,3 +362,6 @@ textarea {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 }
+
+
+
