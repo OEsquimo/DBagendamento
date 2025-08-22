@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title id="siteTitle">Agendamento de Serviço - O Esquimó</title>
+    <title id="siteTitle">Agendamento de Serviço</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css?v=8.0"/>
+    <link rel="stylesheet" href="assets/style.css?v=6.0"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script defer src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    <script type="module" defer src="assets/script.js?v=6.20"></script>
 </head>
 <body>
 
@@ -19,25 +20,16 @@
 </header>
 
 <main class="container">
-    <h1 id="companyName">O Esquimó - Refrigeração</h1>
-    <p id="companyDescription">Serviços especializados em ar condicionado e refrigeração</p>
+    <h1 id="companyName">Nome da Empresa</h1>
+    <p id="companyDescription">Descrição dos serviços.</p>
 
     <form id="formulario" novalidate>
+
         <!-- Passo 1: Escolha do Serviço -->
         <section class="step">
-            <h2 class="step-title"><span>1</span>Escolha os serviços desejados</h2>
-            <p>Selecione um ou mais serviços:</p>
+            <h2 class="step-title"><span>1</span>Escolha o tipo de serviço</h2>
             <div id="servicosGrid" class="servicos-imagens">
-                <!-- Serviços carregados via JavaScript -->
-            </div>
-            
-            <div id="servicosSelecionadosContainer" class="servicos-selecionados" style="display:none;">
-                <h3>Serviços selecionados:</h3>
-                <div id="servicosSelecionadosLista"></div>
-                <div class="orcamento-total">
-                    <span>Total estimado:</span>
-                    <span id="valorTotal">R$ 0,00</span>
-                </div>
+                <!-- Cards de serviços carregados dinamicamente -->
             </div>
         </section>
 
@@ -50,9 +42,6 @@
 
             <label for="whatsapp">Telefone (WhatsApp)</label>
             <input type="tel" id="whatsapp" placeholder="(81) 99999-9999" required />
-
-            <label for="email">E-mail</label>
-            <input type="email" id="email" placeholder="seu@email.com" />
 
             <label for="tipo_equipamento">Tipo de equipamento</label>
             <select id="tipo_equipamento" required>
@@ -77,17 +66,19 @@
                 <option value="48000">48.000 BTUs</option>
             </select>
             
+            <!-- REMOVIDO: Campo "Serviço desejado" -->
+
             <label for="observacoes">Observações (Opcional)</label>
             <textarea id="observacoes" rows="4" placeholder="Descreva detalhes adicionais, problemas ou instruções." maxlength="1000"></textarea>
         </section>
 
-        <!-- Passo 3: Orçamento -->
+        <!-- Passo 3: Orçamento (condicional) -->
         <section id="orcamento-wrapper" class="step" style="display:none;">
-            <h2 class="step-title"><span>3</span>Confirme seu orçamento</h2>
+            <h2 class="step-title"><span>3</span>Confira seu orçamento</h2>
             <div id="relatorio-orcamento"></div>
         </section>
 
-        <!-- Passo 4: Agendamento -->
+        <!-- Passo 4: Agendamento (condicional) -->
         <section id="agendamento-wrapper" class="step" style="display:none;">
             <h2 class="step-title"><span>4</span>Agende o melhor dia e horário</h2>
             <label for="data_agendamento">Data do Serviço</label>
@@ -118,6 +109,12 @@
     <p id="ultima-atualizacao"></p>
 </footer>
 
-<script src="assets/script.js?v=8.0"></script>
+<script>
+    const dataModificacao = new Date(document.lastModified);
+    document.getElementById("ultima-atualizacao").textContent =
+        "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+</script>
 </body>
 </html>
