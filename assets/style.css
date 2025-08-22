@@ -1,3 +1,4 @@
+/* --- Variáveis Globais de Estilo --- */
 :root {
   --cor-primaria: #3498db;
   --cor-secundaria: #2c3e50;
@@ -7,16 +8,192 @@
   --cor-sucesso: #2ecc71;
   --cor-erro: #e74c3c;
   --cor-texto: #555;
-  --cor-texto-claro: #888;
+  --cor-🔹 Fluxo Completo – Sistema de Orçamento
+
+
+---
+
+Cenário 1: Um serviço, um aparelho
+
+👉 Exemplo: Instalação de 1 ar-condicionado
+
+Cliente seleciona Serviço: Instalação
+
+Informa:
+
+BTU do aparelho
+
+Tipo de ar-condicionado (Split, Janela, etc.)
+
+Parte elétrica pronta? (Sim / Não)
+
+Observações (opcional)
+
+
+Sistema gera orçamento de um único serviço.
+
+
+
+---
+
+Cenário 2: Um serviço, múltiplos aparelhos (quantidade)
+
+👉 Exemplo: Limpeza de 3 aparelhos
+
+Cliente seleciona Serviço: Limpeza
+
+Sistema pergunta: Quantos aparelhos deseja limpar?
+
+Cliente responde: 3
+
+Sistema gera 3 sub-blocos:
+
+Limpeza 1 → BTU + Tipo de ar-condicionado
+
+Limpeza 2 → BTU + Tipo de ar-condicionado
+
+Limpeza 3 → BTU + Tipo de ar-condicionado
+
+
+Orçamento calculado com base na quantidade + características individuais.
+
+
+
+---
+
+Cenário 3: Dois serviços, um aparelho cada
+
+👉 Exemplo: Instalação de 1 aparelho + Limpeza de 1 aparelho
+
+Cliente seleciona Serviços: Instalação e Limpeza
+
+Sistema gera 2 blocos independentes:
+
+Serviço 1: Instalação → BTU + Tipo + Elétrica + Obs.
+
+Serviço 2: Limpeza → BTU + Tipo + Obs.
+
+
+Orçamento final é a soma dos dois serviços.
+
+
+
+---
+
+Cenário 4: Dois serviços, múltiplos aparelhos
+
+👉 Exemplo: Instalação de 1 aparelho + Limpeza de 2 aparelhos
+
+Cliente seleciona Serviços: Instalação e Limpeza
+
+Sistema gera:
+
+Serviço 1: Instalação → BTU + Tipo + Elétrica + Obs.
+
+Serviço 2: Limpeza (com 2 aparelhos)
+
+Limpeza 1 → BTU + Tipo
+
+Limpeza 2 → BTU + Tipo
+
+
+
+Orçamento é calculado separadamente e somado.
+
+
+
+---
+
+Cenário 5: Vários serviços, múltiplas quantidades em cada um
+
+👉 Exemplo: Instalação de 2 aparelhos + Limpeza de 3 aparelhos + Manutenção de 1 aparelho
+
+Cliente seleciona Serviços: Instalação, Limpeza, Manutenção
+
+Sistema gera:
+
+Serviço 1: Instalação (2 aparelhos)
+
+Instalação 1 → BTU + Tipo + Elétrica + Obs.
+
+Instalação 2 → BTU + Tipo + Elétrica + Obs.
+
+
+Serviço 2: Limpeza (3 aparelhos)
+
+Limpeza 1 → BTU + Tipo
+
+Limpeza 2 → BTU + Tipo
+
+Limpeza 3 → BTU + Tipo
+
+
+Serviço 3: Manutenção (1 aparelho)
+
+BTU + Tipo + Obs.
+
+
+
+Orçamento final: soma de todos os blocos.
+
+
+
+---
+
+🔹 Regras Gerais do Sistema
+
+1. Cada serviço selecionado vira um bloco independente (Serviço 1, Serviço 2, Serviço 3…).
+
+
+2. Serviços com quantidade (ex.: limpeza, instalação múltipla) geram sub-blocos para detalhar cada aparelho.
+
+
+3. Orçamento calculado dinamicamente, somando:
+
+Tipo de serviço
+
+Quantidade
+
+BTU
+
+Tipo de ar-condicionado
+
+Situação da parte elétrica (quando aplicável).
+
+
+
+4. Dados pessoais do cliente (nome, endereço, WhatsApp) só são solicitados no agendamento.
+
+
+5. O Administrador controla:
+
+Valores de cada serviço por BTU e tipo de aparelho;
+
+Serviços que permitem múltiplas quantidades;
+
+Tipos de ar-condicionado disponíveis;
+
+Tabela de preços dinâmica.
+
+
+
+
+
+----claro: #888;
   --sombra-leve: 0 4px 15px rgba(0, 0, 0, 0.05);
   --sombra-media: 0 8px 25px rgba(0, 0, 0, 0.1);
   --fonte-principal: 'Poppins', sans-serif;
 }
 
+/* --- Reset e Padrões Globais --- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -27,6 +204,7 @@ body {
   padding: 20px;
 }
 
+/* --- Estrutura Principal (Container, Topo, Rodapé) --- */
 .topo img {
   width: 100%;
   height: 280px;
@@ -52,6 +230,7 @@ body {
   color: var(--cor-texto-claro);
 }
 
+/* --- Estilos de Seção (Passos) --- */
 .step {
   margin-bottom: 35px;
   padding-bottom: 35px;
@@ -65,8 +244,14 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .step-title {
@@ -91,6 +276,7 @@ body {
   font-size: 1.1rem;
 }
 
+/* --- Formulários (Inputs, Labels, Textarea) --- */
 label {
   display: block;
   margin-bottom: 8px;
@@ -131,11 +317,21 @@ textarea {
   resize: vertical;
 }
 
+.grid-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px; /* Espaçamento apenas entre colunas */
+}
+
+.grid-form .full-width {
+    grid-column: 1 / -1;
+}
+
+/* --- Estilos Específicos da Página do Cliente (index.html) --- */
 .servicos-imagens {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, 1fr); /* FORÇA 3 COLUNAS SEMPRE */
   gap: 16px;
-  margin-top: 20px;
 }
 
 .servico {
@@ -147,7 +343,6 @@ textarea {
   border-radius: 10px;
   overflow: hidden;
   background: #fff;
-  position: relative;
 }
 
 .servico:hover {
@@ -178,110 +373,6 @@ textarea {
   text-align: center;
 }
 
-/* Adicionar ao CSS */
-#campos-servico-container {
-    border: 1px solid var(--cor-borda);
-    transition: all 0.3s ease;
-}
-
-.campo-servico {
-    width: 100%;
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    border: 1px solid var(--cor-borda);
-    border-radius: 6px;
-    font-family: var(--fonte-principal);
-}
-
-.servico-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    margin-bottom: 8px;
-    background: white;
-    border-radius: 6px;
-    border-left: 4px solid var(--cor-primaria);
-}
-
-.servico-item div {
-    flex: 1;
-}
-
-.servico-item strong {
-    color: var(--cor-secundaria);
-    display: block;
-    margin-bottom: 4px;
-}
-
-
-.servico .checkmark {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  background-color: var(--cor-primaria);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.servico.selecionado .checkmark {
-  opacity: 1;
-}
-
-.servicos-selecionados {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid var(--cor-borda);
-}
-
-.servicos-selecionados h3 {
-  margin-bottom: 10px;
-  color: var(--cor-secundaria);
-}
-
-.servico-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--cor-borda);
-}
-
-.servico-item:last-child {
-  border-bottom: none;
-}
-
-.remover-servico {
-  background-color: var(--cor-erro);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.orcamento-total {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 2px solid var(--cor-primaria);
-  display: flex;
-  justify-content: space-between;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--cor-secundaria);
-}
-
 #relatorio-orcamento {
   background: #f8f9fa;
   border: 1px solid var(--cor-borda);
@@ -306,11 +397,160 @@ textarea {
   color: var(--cor-secundaria);
 }
 
+.orcamento-total {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 2px solid var(--cor-primaria);
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--cor-secundaria);
+}
+
+.orcamento-total span {
+  color: var(--cor-primaria);
+}
+
 #data_agendamento {
   cursor: pointer;
   background-color: #fff;
 }
 
+/* --- Estilos Específicos do Painel (admin.html) --- */
+.lembrete-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.lembrete-group input {
+    width: 80px;
+    margin-bottom: 0;
+}
+.lembrete-group span {
+    font-size: 0.9rem;
+    color: var(--cor-texto-claro);
+}
+
+.service-form {
+    padding: 20px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 12px;
+    background-color: #fdfdfd;
+    margin-top: 16px;
+}
+.service-form h4 {
+    font-size: 1.3rem;
+    color: var(--cor-secundaria);
+    margin-bottom: 20px;
+}
+.image-preview {
+    max-width: 150px;
+    height: auto;
+    border-radius: 8px;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    border: 1px solid var(--cor-borda);
+}
+.dynamic-field {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.dynamic-field .btu-input { width: 50%; margin-bottom: 0; }
+.dynamic-field .price-input { width: 40%; margin-bottom: 0; }
+.remove-field-btn {
+    background: var(--cor-erro);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 28px;
+}
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+}
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0 10px 0 0;
+}
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.service-list-admin {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.service-item-admin {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+}
+.service-item-admin img {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+.service-info {
+    flex-grow: 1;
+}
+.service-info strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--cor-secundaria);
+}
+.service-info span {
+    font-size: 0.9rem;
+    color: var(--cor-texto-claro);
+}
+.service-actions {
+    display: flex;
+    gap: 8px;
+}
+.service-actions .edit-btn, .service-actions .delete-btn {
+    padding: 8px 12px;
+    border: 1px solid var(--cor-borda);
+    background-color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.service-actions .edit-btn:hover { background-color: #f0f7ff; border-color: var(--cor-primaria); }
+.service-actions .delete-btn:hover { background-color: #fff1f0; border-color: var(--cor-erro); }
+
+.form-message {
+    margin-top: 12px;
+    font-weight: 500;
+    min-height: 1em; /* Evita que o layout pule quando a mensagem aparece */
+}
+.form-message.success { color: var(--cor-sucesso); }
+.form-message.error { color: var(--cor-erro); }
+
+.reminder-log {
+    margin-top: 15px;
+    list-style: none;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+.reminder-log li { padding: 5px 0; }
+
+/* --- Botões --- */
 .final-button {
   background: linear-gradient(45deg, var(--cor-sucesso), #27ae60);
   color: #fff;
@@ -345,6 +585,28 @@ textarea {
   height: 28px;
 }
 
+.secondary-button, .cancel-button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--cor-borda);
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.secondary-button:hover {
+    background-color: #f0f7ff;
+    border-color: var(--cor-primaria);
+}
+.cancel-button {
+    background-color: #f8f9fa;
+}
+.cancel-button:hover {
+    background-color: #f1f3f5;
+}
+
+
+/* --- Responsividade Geral (sem afetar a grade de imagens) --- */
 @media (max-width: 768px) {
   body {
     padding: 10px;
@@ -358,10 +620,13 @@ textarea {
     font-size: 1.3rem;
   }
 
-  .servicos-imagens {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  .grid-form {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .service-item-admin {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
-
-
-
