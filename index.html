@@ -7,11 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css?v=6.0"/>
+    <link rel="stylesheet" href="assets/style.css?v=7.0"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script defer src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
-    <script type="module" defer src="assets/script.js?v=6.20"></script>
+    <script type="module" defer src="assets/script.js?v=7.0"></script>
 </head>
 <body>
 
@@ -24,69 +24,54 @@
     <p id="companyDescription">Descrição dos serviços.</p>
 
     <form id="formulario" novalidate>
-
         <!-- Passo 1: Escolha do Serviço -->
-        <section class="step">
-            <h2 class="step-title"><span>1</span>Escolha o tipo de serviço</h2>
+        <section class="step" id="escolha-servico-step">
+            <h2 class="step-title"><span>1</span>Escolha os serviços desejados</h2>
             <div id="servicosGrid" class="servicos-imagens">
                 <!-- Cards de serviços carregados dinamicamente -->
             </div>
         </section>
 
-        <!-- Passo 2: Detalhes do Serviço e Cliente -->
-        <section id="detalhes-cliente-wrapper" class="step" style="display:none;">
-            <h2 class="step-title"><span>2</span>Preencha seus dados</h2>
-
-            <label for="nome">Nome completo</label>
-            <input type="text" id="nome" placeholder="Informe seu nome" required maxlength="50" />
-
-            <label for="whatsapp">Telefone (WhatsApp)</label>
-            <input type="tel" id="whatsapp" placeholder="(81) 99999-9999" required />
-
-            <label for="tipo_equipamento">Tipo de equipamento</label>
-            <select id="tipo_equipamento" required>
-                <option value="">Selecione...</option>
-                <option>Janela</option>
-                <option>Split (Hi-Wall)</option>
-                <option>Multi-Split</option>
-                <option>Cassete</option>
-                <option>Piso-Teto</option>
-                <option>Outro</option>
-            </select>
-
-            <label for="capacidade_btus">Capacidade (BTUs)</label>
-            <select id="capacidade_btus" required>
-                <option value="">Selecione...</option>
-                <option value="9000">9.000 BTUs</option>
-                <option value="12000">12.000 BTUs</option>
-                <option value="18000">18.000 BTUs</option>
-                <option value="24000">24.000 BTUs</option>
-                <option value="30000">30.000 BTUs</option>
-                <option value="36000">36.000 BTUs</option>
-                <option value="48000">48.000 BTUs</option>
-            </select>
-            
-            <!-- REMOVIDO: Campo "Serviço desejado" -->
-
-            <label for="observacoes">Observações (Opcional)</label>
-            <textarea id="observacoes" rows="4" placeholder="Descreva detalhes adicionais, problemas ou instruções." maxlength="1000"></textarea>
+        <!-- Passo 2: Detalhes dos Equipamentos -->
+        <section class="step" id="detalhes-equipamentos-step" style="display:none;">
+            <h2 class="step-title"><span>2</span>Detalhes dos equipamentos</h2>
+            <div id="equipamentos-container">
+                <!-- Formulários de equipamentos serão gerados aqui -->
+            </div>
         </section>
 
-        <!-- Passo 3: Orçamento (condicional) -->
-        <section id="orcamento-wrapper" class="step" style="display:none;">
+        <!-- Passo 3: Orçamento -->
+        <section class="step" id="orcamento-step" style="display:none;">
             <h2 class="step-title"><span>3</span>Confira seu orçamento</h2>
             <div id="relatorio-orcamento"></div>
+            <button type="button" id="btn-confirmar-orcamento" class="secondary-button">Confirmar Orçamento</button>
         </section>
 
-        <!-- Passo 4: Agendamento (condicional) -->
-        <section id="agendamento-wrapper" class="step" style="display:none;">
-            <h2 class="step-title"><span>4</span>Agende o melhor dia e horário</h2>
+        <!-- Passo 4: Dados do Cliente -->
+        <section class="step" id="dados-cliente-step" style="display:none;">
+            <h2 class="step-title"><span>4</span>Seus dados para contato</h2>
+            
+            <label for="nome">Nome completo</label>
+            <input type="text" id="nome" placeholder="Informe seu nome" required maxlength="50" />
+            
+            <label for="endereco">Endereço completo</label>
+            <input type="text" id="endereco" placeholder="Informe seu endereço" required />
+            
+            <label for="whatsapp">Telefone (WhatsApp)</label>
+            <input type="tel" id="whatsapp" placeholder="(81) 99999-9999" required />
+        </section>
+
+        <!-- Passo 5: Agendamento -->
+        <section class="step" id="agendamento-step" style="display:none;">
+            <h2 class="step-title"><span>5</span>Agende o melhor dia e horário</h2>
             <label for="data_agendamento">Data do Serviço</label>
             <input type="text" id="data_agendamento" class="agendamento-campo" placeholder="Escolha uma data disponível" readonly required />
+            
             <label for="horario_agendamento">Horário do Serviço</label>
             <select id="horario_agendamento" class="agendamento-campo" required disabled>
                 <option value="">Primeiro, escolha a data</option>
             </select>
+            
             <label for="forma_pagamento">Forma de Pagamento</label>
             <select id="forma_pagamento" class="agendamento-campo" required>
                 <option value="">Selecione como prefere pagar</option>
@@ -100,7 +85,7 @@
         <!-- Botão Final -->
         <button type="submit" id="btn_finalizar" class="final-button" disabled>
             <img src="assets/imagens/whatsapp-icon.png" alt="WhatsApp Icon"/>
-            <span id="btn_finalizar_texto">Escolha um serviço para começar</span>
+            <span id="btn_finalizar_texto">Finalizar Agendamento</span>
         </button>
     </form>
 </main>
