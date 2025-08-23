@@ -192,7 +192,6 @@ btnSaveSchedule.addEventListener('click', async () => {
     }
 });
 
-
 // --- Gerenciamento de Serviços (CRUD Dinâmico) ---
 function createServiceForm(service = {}) {
     const isEditing = !!service.id;
