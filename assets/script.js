@@ -320,84 +320,178 @@ function renderizarFormulariosEquipamentos() {
         
         // Adicionar formulários para cada equipamento
         servico.equipamentos.forEach((equipamento, equipamentoIndex) => {
-            const equipamentoHtml = `
-                <div class="equipment-item" data-servico-index="${servicoIndex}" data-equipamento-index="${equipamentoIndex}">
-                    <div class="equipment-header">
-                        <h4>${servico.name} #${equipamentoIndex + 1}</h4>
-                        ${equipamentoIndex > 0 ? '<button type="button" class="remove-equipamento">Remover</button>' : ''}
-                    </div>
-                    <div class="grid-form">
-                        <div class="form-group">
-                            <label>Tipo de equipamento</label>
-                            <select class="form-control tipo-equipamento" required>
-                                <option value="">Selecione...</option>
-                                <option value="Janela" ${equipamento.tipoEquipamento === "Janela" ? "selected" : ""}>Janela</option>
-                                <option value="Split" ${equipamento.tipoEquipamento === "Split" ? "selected" : ""}>Split (Hi-Wall)</option>
-                                <option value="Multi-Split" ${equipamento.tipoEquipamento === "Multi-Split" ? "selected" : ""}>Multi-Split</option>
-                                <option value="Cassete" ${equipamento.tipoEquipamento === "Cassete" ? "selected" : ""}>Cassete</option>
-                                <option value="Piso-Teto" ${equipamento.tipoEquipamento === "Piso-Teto" ? "selected" : ""}>Piso-Teto</option>
-                                <option value="Outro" ${equipamento.tipoEquipamento === "Outro" ? "selected" : ""}>Outro</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Capacidade (BTUs)</label>
-                            <select class="form-control capacidade-btus" required>
-                                <option value="">Selecione...</option>
-                                <option value="9000" ${equipamento.capacidadeBtus === "9000" ? "selected" : ""}>9.000 BTUs</option>
-                                <option value="12000" ${equipamento.capacidadeBtus === "12000" ? "selected" : ""}>12.000 BTUs</option>
-                                <option value="18000" ${equipamento.capacidadeBtus === "18000" ? "selected" : ""}>18.000 BTUs</option>
-                                <option value="24000" ${equipamento.capacidadeBtus === "24000" ? "selected" : ""}>24.000 BTUs</option>
-                                <option value="30000" ${equipamento.capacidadeBtus === "30000" ? "selected" : ""}>30.000 BTUs</option>
-                                <option value="36000" ${equipamento.capacidadeBtus === "36000" ? "selected" : ""}>36.000 BTUs</option>
-                                <option value="48000" ${equipamento.capacidadeBtus === "48000" ? "selected" : ""}>48.000 BTUs</option>
-                            </select>
-                        </div>
-            `;
-            
-            // Adicionar campo de parte elétrica apenas para serviços de instalação
-            if (servico.name.toLowerCase().includes('instalação') || servico.name.toLowerCase().includes('instalacao')) {
-                equipamentoHtml += `
-                        <div class="form-group">
-                            <label>Parte elétrica pronta?</label>
-                            <select class="form-control parte-eletrica">
-                                <option value="Sim" ${equipamento.parteEletricaPronta === "Sim" ? "selected" : ""}>Sim</option>
-                                <option value="Não" ${equipamento.parteEletricaPronta === "Não" ? "selected" : ""}>Não</option>
-                            </select>
-                        </div>
-                `;
-            }
-            
-            equipamentoHtml += `
-                        <div class="form-group full-width">
-                            <label>Observações (Opcional)</label>
-                            <textarea class="form-control observacoes" placeholder="Detalhes adicionais">${equipamento.observacoes || ""}</textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            servicoSection.innerHTML += equipamentoHtml;
+            const equipmentItem = criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex);
+            servicoSection.appendChild(equipmentItem);
         });
         
         elementos.equipamentosContainer.appendChild(servicoSection);
     });
     
-    // Adicionar event listeners
+    // Adicionar event listeners após renderizar
+    adicionarEventListeners();
+}
+
+// Criar elemento de equipamento
+function criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex) {
+    const equipmentItem = document.createElement('div');
+    equipmentItem.className = 'equipment-item';
+    equipmentItem.setAttribute('data-servico-index', servicoIndex);
+    equipmentItem.setAttribute('data-equipamento-index', equipamentoIndex);
+    
+    let equipmentHTML = `
+        <div class="equipment-header">
+            <h4>${servico.name} #${equipamentoIndex + 1}</h4>
+            ${equipamentoIndex > 0 ? 
+                `<button type="button" class="remove-equipment" 
+                         data-servico-index="${servicoIndex}" 
+                         data-equipamento-index="${equipamentoIndex}">
+                    <i class="fas fa-trash"></i> Remover
+                 </button>` : 
+                ''}
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Tipo de equipamento</label>
+                <select class="form-control tipo-equipamento" required>
+                    <option value="">Selecione...</option>
+                    <option value="Janela" ${equipamento.tipoEquipamento === "Janela" ? "selected" : ""}>Janela</option>
+                    <option value="Split" ${equipamento.tipoEquipamento === "Split" ? "selected" : ""}>Split (Hi-Wall)</option>
+                    <option value="Multi-Split" ${equipamento.tipoEquipamento === "Multi-Split" ? "selected" : ""}>Multi-Split</option>
+                    <option value="Cassete" ${equipamento.tipoEquipamento === "Cassete" ? "selected" : ""}>Cassete</option>
+                    <option value="Piso-Teto" ${equipamento.tipoEquipamento === "Piso-Teto" ? "selected" : ""}>Piso-Teto</option>
+                    <option value="Outro" ${equipamento.tipoEquipamento === "Outro" ? "selected" : ""}>Outro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Capacidade (BTUs)</label>
+                <select class="form-control capacidade-btus" required>
+                    <option value="">Selecione...</option>
+                    <option value="9000" ${equipamento.capacidadeBtus === "9000" ? "selected" : ""}>9.000 BTUs</option>
+                    <option value="12000" ${equipamento.capacidadeBtus === "12000" ? "selected" : ""}>12.000 BTUs</option>
+                    <option value="18000" ${equipamento.capacidadeBtus === "18000" ? "selected" : ""}>18.000 BTUs</option>
+                    <option value="24000" ${equipamento.capacidadeBtus === "24000" ? "selected" : ""}>24.000 BTUs</option>
+                    <option value="30000" ${equipamento.capacidadeBtus === "30000" ? "selected" : ""}>30.000 BTUs</option>
+                    <option value="36000" ${equipamento.capacidadeBtus === "36000" ? "selected" : ""}>36.000 BTUs</option>
+                    <option value="48000" ${equipamento.capacidadeBtus === "48000" ? "selected" : ""}>48.000 BTUs</option>
+                </select>
+            </div>
+    `;
+    
+    // Adicionar campo de parte elétrica apenas para serviços de instalação
+    if (servico.name.toLowerCase().includes('instalação') || servico.name.toLowerCase().includes('instalacao')) {
+        equipmentHTML += `
+            <div class="form-group">
+                <label>Parte elétrica pronta?</label>
+                <select class="form-control parte-eletrica">
+                    <option value="Sim" ${equipamento.parteEletricaPronta === "Sim" ? "selected" : ""}>Sim</option>
+                    <option value="Não" ${equipamento.parteEletricaPronta === "Não" ? "selected" : ""}>Não</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    equipmentHTML += `
+            <div class="form-group full-width">
+                <label>Observações (Opcional)</label>
+                <textarea class="form-control observacoes" placeholder="Detalhes adicionais, problemas ou instruções especiais">${equipamento.observacoes || ""}</textarea>
+            </div>
+        </div>
+    `;
+    
+    equipmentItem.innerHTML = equipmentHTML;
+    return equipmentItem;
+}
+
+// Adicionar event listeners aos elementos
+function adicionarEventListeners() {
+    // Listeners para quantidade de serviços
     document.querySelectorAll('.quantidade-servico').forEach(input => {
         input.addEventListener('change', alterarQuantidadeServico);
     });
     
-    document.querySelectorAll('.remove-equipamento').forEach(button => {
+    // Listeners para remover equipamentos
+    document.querySelectorAll('.remove-equipment').forEach(button => {
         button.addEventListener('click', removerEquipamento);
     });
     
+    // Listeners para atualizar dados dos equipamentos
     document.querySelectorAll('.tipo-equipamento, .capacidade-btus, .parte-eletrica, .observacoes').forEach(input => {
         input.addEventListener('change', atualizarDadosEquipamento);
     });
 }
 
-// Funções para manipulação de equipamentos (alterarQuantidadeServico, removerEquipamento, atualizarDadosEquipamento)
-// ... (código similar ao anterior, mas adaptado para a nova interface)
+// Alterar quantidade de um serviço
+function alterarQuantidadeServico(e) {
+    const servicoIndex = parseInt(e.target.dataset.servicoIndex);
+    const novaQuantidade = parseInt(e.target.value);
+    
+    if (novaQuantidade < 1) {
+        e.target.value = 1;
+        return;
+    }
+    
+    const servico = appState.servicosSelecionados[servicoIndex];
+    const quantidadeAtual = servico.equipamentos.length;
+    
+    if (novaQuantidade > quantidadeAtual) {
+        // Adicionar equipamentos
+        for (let i = quantidadeAtual; i < novaQuantidade; i++) {
+            servico.equipamentos.push({
+                tipoEquipamento: "",
+                capacidadeBtus: "",
+                parteEletricaPronta: "Não",
+                observacoes: ""
+            });
+        }
+    } else if (novaQuantidade < quantidadeAtual) {
+        // Remover equipamentos
+        servico.equipamentos.splice(novaQuantidade);
+    }
+    
+    servico.quantidade = novaQuantidade;
+    renderizarFormulariosEquipamentos();
+}
+
+// Remover equipamento
+function removerEquipamento(e) {
+    const servicoIndex = parseInt(e.target.dataset.servicoIndex);
+    const equipamentoIndex = parseInt(e.target.dataset.equipamentoIndex);
+    
+    appState.servicosSelecionados[servicoIndex].equipamentos.splice(equipamentoIndex, 1);
+    appState.servicosSelecionados[servicoIndex].quantidade--;
+    
+    // Atualizar o campo de quantidade
+    const quantidadeInput = document.querySelector(`.quantidade-servico[data-servico-index="${servicoIndex}"]`);
+    if (quantidadeInput) {
+        quantidadeInput.value = appState.servicosSelecionados[servicoIndex].quantidade;
+    }
+    
+    renderizarFormulariosEquipamentos();
+}
+
+// Atualizar dados do equipamento
+function atualizarDadosEquipamento(e) {
+    const equipmentItem = e.target.closest('.equipment-item');
+    if (!equipmentItem) return;
+    
+    const servicoIndex = parseInt(equipmentItem.dataset.servicoIndex);
+    const equipamentoIndex = parseInt(equipmentItem.dataset.equipamentoIndex);
+    
+    const equipamento = appState.servicosSelecionados[servicoIndex].equipamentos[equipamentoIndex];
+    const inputs = equipmentItem.querySelectorAll('select, textarea');
+    
+    inputs.forEach(input => {
+        if (input.classList.contains('tipo-equipamento')) {
+            equipamento.tipoEquipamento = input.value;
+        } else if (input.classList.contains('capacidade-btus')) {
+            equipamento.capacidadeBtus = input.value;
+        } else if (input.classList.contains('parte-eletrica')) {
+            equipamento.parteEletricaPronta = input.value;
+        } else if (input.classList.contains('observacoes')) {
+            equipamento.observacoes = input.value;
+        }
+    });
+}
 
 // Cálculo de orçamento
 function calcularOrcamento() {
@@ -442,6 +536,37 @@ function calcularOrcamento() {
     elementos.relatorioOrcamento.innerHTML = html;
 }
 
+function calcularPrecoEquipamento(servico, equipamento) {
+    // Esta é uma implementação simplificada
+    // Na implementação real, você buscaria os preços configurados no Firebase
+    
+    const precoBase = {
+        "Limpeza": 120,
+        "Instalação": 300,
+        "Manutenção": 150,
+        "Higienização": 100
+    };
+    
+    let preco = precoBase[servico.name] || 200;
+    
+    // Ajustar preço com base na capacidade BTUs
+    const fatorBTU = {
+        "9000": 1.0,
+        "12000": 1.2,
+        "18000": 1.5,
+        "24000": 1.8,
+        "30000": 2.0,
+        "36000": 2.3,
+        "48000": 2.8
+    };
+    
+    if (fatorBTU[equipamento.capacidadeBtus]) {
+        preco *= fatorBTU[equipamento.capacidadeBtus];
+    }
+    
+    return preco;
+}
+
 // Inicializar calendário
 function inicializarCalendario() {
     if (typeof flatpickr !== "undefined") {
@@ -452,7 +577,15 @@ function inicializarCalendario() {
             disable: [(date) => date.getDay() === 0],
             onChange: function(selectedDates) {
                 if (selectedDates.length > 0) {
-                    atualizarHorariosDisponiveis(selectedDates[0]);
+                    // Simular carregamento de horários
+                    elementos.horarioAgendamentoSelect.disabled = false;
+                    elementos.horarioAgendamentoSelect.innerHTML = `
+                        <option value="">Selecione um horário</option>
+                        <option value="08:00">08:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="16:00">16:00</option>
+                    `;
                 }
             }
         });
@@ -516,5 +649,33 @@ async function enviarFormulario(e) {
 
 // Função para criar mensagem do WhatsApp
 function criarMensagemWhatsApp(dados) {
-    // ... (implementação similar à anterior)
+    let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
+    msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
+    msg += `📞 *Contato:* ${dados.telefoneCliente.replace(/^55/, '')}\n`;
+    msg += `🏠 *Endereço:* ${dados.enderecoCliente}\n\n`;
+    msg += `🛠️ *Serviços Solicitados:*\n`;
+    
+    dados.servicos.forEach(servico => {
+        msg += `• ${servico.name} (${servico.quantidade} unidade(s))\n`;
+        
+        servico.equipamentos.forEach((equipamento, index) => {
+            msg += `  - Equipamento ${index + 1}: ${equipamento.tipoEquipamento} ${equipamento.capacidadeBtus} BTUs\n`;
+            if (equipamento.parteEletricaPronta && servico.name.toLowerCase().includes('instalação')) {
+                msg += `    Parte elétrica: ${equipamento.parteEletricaPronta}\n`;
+            }
+            if (equipamento.observacoes) {
+                msg += `    Observações: ${equipamento.observacoes}\n`;
+            }
+        });
+    });
+    
+    msg += `\n💰 *Valor Total Estimado:* R$ ${dados.valorTotal.toFixed(2)}\n`;
+    
+    if (dados.dataAgendamento) {
+        msg += `🗓️ *Data Agendada:* ${dados.dataAgendamento}\n`;
+        msg += `⏰ *Horário:* ${dados.horaAgendamento}\n`;
+        msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
+    }
+    
+    return msg;
 }
