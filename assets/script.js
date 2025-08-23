@@ -1,31 +1,12 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// Configuração Firebase
-const firebaseConfig = {
-    apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
-    authDomain: "agendamento-esquimo.firebaseapp.com",
-    projectId: "agendamento-esquimo",
-    storageBucket: "agendamento-esquimo.appspot.com",
-    messagingSenderId: "348946727206",
-    appId: "1:348946727206:web:f5989788f13c259be0c1e7"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
 // Estado da aplicação
 const appState = {
     servicosSelecionados: [],
-    configSite: {},
-    configSchedule: { slots: [] },
-    servicos: [],
-    orcamentoTotal: 0,
-    passoAtual: 1
+    passoAtual: 1,
+    orcamentoTotal: 0
 };
 
 // Elementos DOM
 const elementos = {
-    // Elementos de progresso
     progressBar: document.getElementById('progressBar'),
     steps: {
         1: document.getElementById('step-1'),
@@ -34,8 +15,6 @@ const elementos = {
         4: document.getElementById('step-4'),
         5: document.getElementById('step-5')
     },
-    
-    // Form steps
     formSteps: {
         servicos: document.getElementById('step-servicos'),
         equipamentos: document.getElementById('step-equipamentos'),
@@ -43,8 +22,10 @@ const elementos = {
         dados: document.getElementById('step-dados'),
         agendamento: document.getElementById('step-agendamento')
     },
-    
-    // Navegação
+    servicosGrid: document.getElementById('servicosGrid'),
+    equipamentosContainer: document.getElementById('equipamentos-container'),
+    relatorioOrcamento: document.getElementById('relatorio-orcamento'),
+    // Botões de navegação
     btnNextToEquipamentos: document.getElementById('btnNextToEquipamentos'),
     btnBackToServicos: document.getElementById('btnBackToServicos'),
     btnNextToOrcamento: document.getElementById('btnNextToOrcamento'),
@@ -53,38 +34,62 @@ const elementos = {
     btnBackToOrcamento: document.getElementById('btnBackToOrcamento'),
     btnNextToAgendamento: document.getElementById('btnNextToAgendamento'),
     btnBackToDados: document.getElementById('btnBackToDados'),
-    btnFinalizar: document.getElementById('btn_finalizar'),
-    
-    // Formulários
-    servicosGrid: document.getElementById('servicosGrid'),
-    equipamentosContainer: document.getElementById('equipamentos-container'),
-    relatorioOrcamento: document.getElementById('relatorio-orcamento'),
+    btnFinalizar: document.getElementById('btnFinalizar'),
+    // Campos de formulário
     nomeInput: document.getElementById('nome'),
     enderecoInput: document.getElementById('endereco'),
     whatsappInput: document.getElementById('whatsapp'),
     dataAgendamentoInput: document.getElementById('data_agendamento'),
     horarioAgendamentoSelect: document.getElementById('horario_agendamento'),
-    formaPagamentoSelect: document.getElementById('forma_pagamento'),
-    formulario: document.getElementById('formulario'),
-    
-    // Configuração do site
-    companyName: document.getElementById('companyName'),
-    companyDescription: document.getElementById('companyDescription')
+    formaPagamentoSelect: document.getElementById('forma_pagamento')
 };
 
-// Inicialização quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', async () => {
-    await Promise.all([carregarConfigSite(), carregarServicos()]);
+// Dados de serviços
+const servicosDisponiveis = [
+    {
+        id: "1",
+        name: "Limpeza Técnica",
+        description: "Limpeza completa do equipamento",
+        basePrice: 120,
+        permiteMultiplos: true,
+        icon: "fas fa-soap"
+    },
+    {
+        id: "2", 
+        name: "Instalação",
+        description: "Instalação profissional",
+        basePrice: 300,
+        permiteMultiplos: true,
+        icon: "fas fa-tools"
+    },
+    {
+        id: "3",
+        name: "Manutenção",
+        description: "Manutenção preventiva",
+        basePrice: 150,
+        permiteMultiplos: true,
+        icon: "fas fa-wrench"
+    },
+    {
+        id: "4",
+        name: "Higienização",
+        description: "Higienização completa",
+        basePrice: 100,
+        permiteMultiplos: true,
+        icon: "fas fa-spray-can"
+    }
+];
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    renderizarServicos();
     configurarEventListeners();
-    inicializarCalendario();
-    
-    // Configurar máscara de telefone
-    elementos.whatsappInput.addEventListener('input', mascararTelefone);
+    elementos.btnNextToEquipamentos.disabled = true;
 });
 
-// Configurar todos os event listeners
+// Configurar event listeners
 function configurarEventListeners() {
-    // Navegação entre passos
+    // Navegação
     elementos.btnNextToEquipamentos.addEventListener('click', () => avancarParaPasso(2));
     elementos.btnBackToServicos.addEventListener('click', () => retrocederParaPasso(1));
     elementos.btnNextToOrcamento.addEventListener('click', () => avancarParaPasso(3));
@@ -93,14 +98,10 @@ function configurarEventListeners() {
     elementos.btnBackToOrcamento.addEventListener('click', () => retrocederParaPasso(3));
     elementos.btnNextToAgendamento.addEventListener('click', () => avancarParaPasso(5));
     elementos.btnBackToDados.addEventListener('click', () => retrocederParaPasso(4));
-    
-    // Submissão do formulário
-    elementos.formulario.addEventListener('submit', enviarFormulario);
-    
-    // Validação em tempo real
-    elementos.nomeInput.addEventListener('input', validarDadosCliente);
-    elementos.enderecoInput.addEventListener('input', validarDadosCliente);
-    elementos.whatsappInput.addEventListener('input', validarDadosCliente);
+    elementos.btnFinalizar.addEventListener('click', finalizarAgendamento);
+
+    // Máscara de telefone
+    elementos.whatsappInput.addEventListener('input', mascararTelefone);
 }
 
 // Máscara de telefone
@@ -117,6 +118,11 @@ function avancarParaPasso(passo) {
     if (passo === 3 && !validarEquipamentos()) return;
     if (passo === 4 && !validarOrcamento()) return;
     if (passo === 5 && !validarDadosCliente()) return;
+    
+    // Se avançando para o orçamento, calcular e exibir
+    if (passo === 3) {
+        calcularOrcamento();
+    }
     
     // Esconder passo atual
     elementos.formSteps[Object.keys(elementos.formSteps)[appState.passoAtual - 1]].classList.remove('active');
@@ -195,82 +201,40 @@ function validarDadosCliente() {
     const enderecoValido = elementos.enderecoInput.value.trim().length > 5;
     const whatsappValido = elementos.whatsappInput.value.replace(/\D/g, "").length === 11;
     
-    elementos.btnNextToAgendamento.disabled = !(nomeValido && enderecoValido && whatsappValido);
+    if (!nomeValido || !enderecoValido || !whatsappValido) {
+        alert('Por favor, preencha todos os dados corretamente.');
+        return false;
+    }
     
-    return nomeValido && enderecoValido && whatsappValido;
-}
-
-// Carregar configuração do site
-async function carregarConfigSite() {
-    try {
-        const docSnap = await getDoc(doc(db, "config", "site"));
-        if (docSnap.exists()) {
-            appState.configSite = docSnap.data();
-            elementos.companyName.textContent = appState.configSite.companyName || "O Esquimó";
-            elementos.companyDescription.textContent = appState.configSite.description || "Serviços especializados em ar condicionado";
-        }
-    } catch (error) {
-        console.error("Erro ao carregar configurações do site:", error);
-    }
-}
-
-// Carregar serviços
-async function carregarServicos() {
-    try {
-        const q = query(collection(db, "services"), orderBy("name"));
-        const querySnapshot = await getDocs(q);
-        appState.servicos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderizarServicos();
-    } catch (error) {
-        console.error("Erro ao carregar serviços:", error);
-    }
+    return true;
 }
 
 // Renderizar serviços
 function renderizarServicos() {
-    elementos.servicosGrid.innerHTML = "";
+    elementos.servicosGrid.innerHTML = '';
     
-    if (appState.servicos.length === 0) {
-        elementos.servicosGrid.innerHTML = "<p>Nenhum serviço disponível no momento.</p>";
-        return;
-    }
-    
-    appState.servicos.forEach(servico => {
-        const card = document.createElement("div");
-        card.className = "service-card";
+    servicosDisponiveis.forEach(servico => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        card.setAttribute('data-servico-id', servico.id);
         card.innerHTML = `
-            <i class="${obterIconeServico(servico.name)}"></i>
+            <i class="${servico.icon}"></i>
             <h3>${servico.name}</h3>
-            <p>${servico.description || 'Serviço profissional'}</p>
+            <p>${servico.description}</p>
         `;
         
-        card.addEventListener("click", () => selecionarServico(servico, card));
+        card.addEventListener('click', () => {
+            selecionarServico(servico.id, card);
+        });
+        
         elementos.servicosGrid.appendChild(card);
     });
 }
 
-function obterIconeServico(nomeServico) {
-    const icones = {
-        'Limpeza': 'fas fa-soap',
-        'Instalação': 'fas fa-tools',
-        'Manutenção': 'fas fa-wrench',
-        'Higienização': 'fas fa-spray-can',
-        'Conserto': 'fas fa-toolbox',
-        'Desinstalação': 'fas fa-minus-circle'
-    };
-    
-    for (const [key, value] of Object.entries(icones)) {
-        if (nomeServico.toLowerCase().includes(key.toLowerCase())) {
-            return value;
-        }
-    }
-    
-    return 'fas fa-cog'; // Ícone padrão
-}
-
 // Selecionar serviço
-function selecionarServico(servico, elemento) {
-    const index = appState.servicosSelecionados.findIndex(s => s.id === servico.id);
+function selecionarServico(servicoId, elemento) {
+    const servico = servicosDisponiveis.find(s => s.id === servicoId);
+    const index = appState.servicosSelecionados.findIndex(s => s.id === servicoId);
     
     if (index === -1) {
         // Adicionar serviço
@@ -292,33 +256,44 @@ function selecionarServico(servico, elemento) {
         elemento.classList.remove('selected');
     }
     
-    // Atualizar interface
-    if (appState.servicosSelecionados.length > 0) {
-        elementos.btnNextToEquipamentos.disabled = false;
-        renderizarFormulariosEquipamentos();
-    } else {
-        elementos.btnNextToEquipamentos.disabled = true;
+    // Se há serviços selecionados, habilitar próximo passo
+    elementos.btnNextToEquipamentos.disabled = appState.servicosSelecionados.length === 0;
+    
+    // Se voltando da tela de equipamentos, renderizar novamente
+    if (appState.passoAtual === 2) {
+        renderizarEquipamentos();
     }
 }
 
-// Renderizar formulários de equipamentos
-function renderizarFormulariosEquipamentos() {
-    elementos.equipamentosContainer.innerHTML = "";
+// Renderizar equipamentos
+function renderizarEquipamentos() {
+    elementos.equipamentosContainer.innerHTML = '';
+    
+    if (appState.servicosSelecionados.length === 0) {
+        elementos.equipamentosContainer.innerHTML = `
+            <div class="service-section">
+                <h2>Nenhum serviço selecionado</h2>
+                <p>Volte à tela anterior para selecionar os serviços desejados.</p>
+            </div>
+        `;
+        return;
+    }
     
     appState.servicosSelecionados.forEach((servico, servicoIndex) => {
-        const servicoSection = document.createElement("div");
-        servicoSection.className = "equipment-section";
+        const servicoSection = document.createElement('div');
+        servicoSection.className = 'service-section';
         servicoSection.innerHTML = `
-            <h3>${servico.name}</h3>
+            <div class="service-header">
+                <h2>${servico.name}</h2>
+            </div>
             <div class="service-quantity">
-                <label>Quantidade:</label>
-                <input type="number" min="1" value="${servico.quantidade}" 
-                       data-servico-index="${servicoIndex}" 
-                       class="quantidade-servico">
+                <label for="quantidade-${servicoIndex}"><strong>Quantidade:</strong></label>
+                <input type="number" id="quantidade-${servicoIndex}" min="1" 
+                       value="${servico.quantidade}" data-servico-index="${servicoIndex}">
             </div>
         `;
         
-        // Adicionar formulários para cada equipamento
+        // Adicionar equipamentos
         servico.equipamentos.forEach((equipamento, equipamentoIndex) => {
             const equipmentItem = criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex);
             servicoSection.appendChild(equipmentItem);
@@ -328,7 +303,7 @@ function renderizarFormulariosEquipamentos() {
     });
     
     // Adicionar event listeners após renderizar
-    adicionarEventListeners();
+    adicionarEventListenersEquipamentos();
 }
 
 // Criar elemento de equipamento
@@ -340,7 +315,7 @@ function criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex
     
     let equipmentHTML = `
         <div class="equipment-header">
-            <h4>${servico.name} #${equipamentoIndex + 1}</h4>
+            <h3>${servico.name} #${equipamentoIndex + 1}</h3>
             ${equipamentoIndex > 0 ? 
                 `<button type="button" class="remove-equipment" 
                          data-servico-index="${servicoIndex}" 
@@ -402,10 +377,10 @@ function criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex
     return equipmentItem;
 }
 
-// Adicionar event listeners aos elementos
-function adicionarEventListeners() {
+// Adicionar event listeners aos equipamentos
+function adicionarEventListenersEquipamentos() {
     // Listeners para quantidade de serviços
-    document.querySelectorAll('.quantidade-servico').forEach(input => {
+    document.querySelectorAll('.service-quantity input').forEach(input => {
         input.addEventListener('change', alterarQuantidadeServico);
     });
     
@@ -449,7 +424,7 @@ function alterarQuantidadeServico(e) {
     }
     
     servico.quantidade = novaQuantidade;
-    renderizarFormulariosEquipamentos();
+    renderizarEquipamentos();
 }
 
 // Remover equipamento
@@ -461,12 +436,12 @@ function removerEquipamento(e) {
     appState.servicosSelecionados[servicoIndex].quantidade--;
     
     // Atualizar o campo de quantidade
-    const quantidadeInput = document.querySelector(`.quantidade-servico[data-servico-index="${servicoIndex}"]`);
+    const quantidadeInput = document.querySelector(`#quantidade-${servicoIndex}`);
     if (quantidadeInput) {
         quantidadeInput.value = appState.servicosSelecionados[servicoIndex].quantidade;
     }
     
-    renderizarFormulariosEquipamentos();
+    renderizarEquipamentos();
 }
 
 // Atualizar dados do equipamento
@@ -537,17 +512,7 @@ function calcularOrcamento() {
 }
 
 function calcularPrecoEquipamento(servico, equipamento) {
-    // Esta é uma implementação simplificada
-    // Na implementação real, você buscaria os preços configurados no Firebase
-    
-    const precoBase = {
-        "Limpeza": 120,
-        "Instalação": 300,
-        "Manutenção": 150,
-        "Higienização": 100
-    };
-    
-    let preco = precoBase[servico.name] || 200;
+    let preco = servico.basePrice;
     
     // Ajustar preço com base na capacidade BTUs
     const fatorBTU = {
@@ -567,115 +532,25 @@ function calcularPrecoEquipamento(servico, equipamento) {
     return preco;
 }
 
-// Inicializar calendário
-function inicializarCalendario() {
-    if (typeof flatpickr !== "undefined") {
-        flatpickr(elementos.dataAgendamentoInput, {
-            locale: "pt",
-            minDate: "today",
-            dateFormat: "d/m/Y",
-            disable: [(date) => date.getDay() === 0],
-            onChange: function(selectedDates) {
-                if (selectedDates.length > 0) {
-                    // Simular carregamento de horários
-                    elementos.horarioAgendamentoSelect.disabled = false;
-                    elementos.horarioAgendamentoSelect.innerHTML = `
-                        <option value="">Selecione um horário</option>
-                        <option value="08:00">08:00</option>
-                        <option value="10:00">10:00</option>
-                        <option value="14:00">14:00</option>
-                        <option value="16:00">16:00</option>
-                    `;
-                }
-            }
-        });
-    }
-}
-
-// Enviar formulário
-async function enviarFormulario(e) {
+// Finalizar agendamento
+function finalizarAgendamento(e) {
     e.preventDefault();
+    
+    if (!validarDadosCliente()) return;
     
     // Desabilitar botão para evitar múltiplos cliques
     elementos.btnFinalizar.disabled = true;
     elementos.btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     
-    try {
-        // Preparar dados do agendamento
-        const phoneWithDDI = "55" + elementos.whatsappInput.value.replace(/\D/g, "");
-        
-        const dadosAgendamento = {
-            servicos: appState.servicosSelecionados,
-            valorTotal: appState.orcamentoTotal,
-            nomeCliente: elementos.nomeInput.value.trim(),
-            enderecoCliente: elementos.enderecoInput.value.trim(),
-            telefoneCliente: phoneWithDDI,
-            status: "Solicitado",
-            origem: "Site",
-            timestamp: new Date().getTime()
-        };
-        
-        // Adicionar dados de agendamento
-        dadosAgendamento.dataAgendamento = elementos.dataAgendamentoInput.value;
-        dadosAgendamento.horaAgendamento = elementos.horarioAgendamentoSelect.value;
-        dadosAgendamento.formaPagamento = elementos.formaPagamentoSelect.value;
-        
-        // Salvar no Firebase
-        await addDoc(collection(db, "agendamentos"), dadosAgendamento);
-        
-        // Preparar mensagem para WhatsApp
-        const mensagem = criarMensagemWhatsApp(dadosAgendamento);
-        const adminWhatsAppNumber = appState.configSite.whatsappNumber.replace(/\D/g, "");
-        const url = `https://wa.me/55${adminWhatsAppNumber}?text=${encodeURIComponent(mensagem)}`;
-        
-        // Redirecionar para WhatsApp
-        window.open(url, "_blank");
-        
-        // Mostrar mensagem de sucesso
-        alert("Solicitação enviada com sucesso! Entraremos em contato em breve.");
+    // Simular envio
+    setTimeout(() => {
+        alert('Solicitação enviada com sucesso! Entraremos em contato em breve.');
+        elementos.btnFinalizar.disabled = false;
+        elementos.btnFinalizar.innerHTML = '<i class="fab fa-whatsapp"></i> Finalizar Agendamento';
         
         // Recarregar a página após um tempo
         setTimeout(() => {
             window.location.reload();
         }, 3000);
-        
-    } catch (err) {
-        console.error("Falha ao salvar agendamento:", err);
-        alert("Houve uma falha ao enviar sua solicitação. Por favor, tente novamente.");
-        elementos.btnFinalizar.disabled = false;
-        elementos.btnFinalizar.innerHTML = '<i class="fab fa-whatsapp"></i> Finalizar Agendamento';
-    }
-}
-
-// Função para criar mensagem do WhatsApp
-function criarMensagemWhatsApp(dados) {
-    let msg = `✅ *Nova Solicitação de Serviço* ✅\n-----------------------------------\n`;
-    msg += `👤 *Cliente:* ${dados.nomeCliente}\n`;
-    msg += `📞 *Contato:* ${dados.telefoneCliente.replace(/^55/, '')}\n`;
-    msg += `🏠 *Endereço:* ${dados.enderecoCliente}\n\n`;
-    msg += `🛠️ *Serviços Solicitados:*\n`;
-    
-    dados.servicos.forEach(servico => {
-        msg += `• ${servico.name} (${servico.quantidade} unidade(s))\n`;
-        
-        servico.equipamentos.forEach((equipamento, index) => {
-            msg += `  - Equipamento ${index + 1}: ${equipamento.tipoEquipamento} ${equipamento.capacidadeBtus} BTUs\n`;
-            if (equipamento.parteEletricaPronta && servico.name.toLowerCase().includes('instalação')) {
-                msg += `    Parte elétrica: ${equipamento.parteEletricaPronta}\n`;
-            }
-            if (equipamento.observacoes) {
-                msg += `    Observações: ${equipamento.observacoes}\n`;
-            }
-        });
-    });
-    
-    msg += `\n💰 *Valor Total Estimado:* R$ ${dados.valorTotal.toFixed(2)}\n`;
-    
-    if (dados.dataAgendamento) {
-        msg += `🗓️ *Data Agendada:* ${dados.dataAgendamento}\n`;
-        msg += `⏰ *Horário:* ${dados.horaAgendamento}\n`;
-        msg += `💳 *Pagamento:* ${dados.formaPagamento}\n`;
-    }
-    
-    return msg;
+    }, 2000);
 }
