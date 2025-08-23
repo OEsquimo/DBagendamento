@@ -3,103 +3,175 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title id="siteTitle">Agendamento de Serviço</title>
+    <title>Agendamento de Serviços - O Esquimó</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css?v=7.0"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/style.css?v=8.0"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script defer src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
-    <script type="module" defer src="assets/script.js?v=7.0"></script>
+    <script type="module" defer src="assets/script.js?v=8.0"></script>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1 id="companyName">O Esquimó</h1>
+            <p id="companyDescription">Serviços especializados em ar condicionado</p>
+        </div>
 
-<header class="topo">
-    <img id="heroImage" src="assets/imagens/tecnico-trabalhando.jpg" alt="Técnico de ar condicionado trabalhando"/>
-</header>
-
-<main class="container">
-    <h1 id="companyName">Nome da Empresa</h1>
-    <p id="companyDescription">Descrição dos serviços.</p>
-
-    <form id="formulario" novalidate>
-        <!-- Passo 1: Escolha do Serviço -->
-        <section class="step" id="escolha-servico-step">
-            <h2 class="step-title"><span>1</span>Escolha os serviços desejados</h2>
-            <div id="servicosGrid" class="servicos-imagens">
-                <!-- Cards de serviços carregados dinamicamente -->
+        <!-- Indicador de Progresso -->
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-step active" id="step-1">
+                <span class="progress-step-label">Serviços</span>
             </div>
-        </section>
-
-        <!-- Passo 2: Detalhes dos Equipamentos -->
-        <section class="step" id="detalhes-equipamentos-step" style="display:none;">
-            <h2 class="step-title"><span>2</span>Detalhes dos equipamentos</h2>
-            <div id="equipamentos-container">
-                <!-- Formulários de equipamentos serão gerados aqui -->
+            <div class="progress-step" id="step-2">
+                <span class="progress-step-label">Equipamentos</span>
             </div>
-        </section>
+            <div class="progress-step" id="step-3">
+                <span class="progress-step-label">Orçamento</span>
+            </div>
+            <div class="progress-step" id="step-4">
+                <span class="progress-step-label">Dados</span>
+            </div>
+            <div class="progress-step" id="step-5">
+                <span class="progress-step-label">Agendamento</span>
+            </div>
+        </div>
 
-        <!-- Passo 3: Orçamento -->
-        <section class="step" id="orcamento-step" style="display:none;">
-            <h2 class="step-title"><span>3</span>Confira seu orçamento</h2>
-            <div id="relatorio-orcamento"></div>
-            <button type="button" id="btn-confirmar-orcamento" class="secondary-button">Confirmar Orçamento</button>
-        </section>
+        <form id="formulario" novalidate>
+            <!-- Passo 1: Escolha do Serviço -->
+            <div class="form-step active" id="step-servicos">
+                <h2><i class="fas fa-concierge-bell"></i> Escolha os serviços desejados</h2>
+                <p>Selecione um ou mais serviços que você precisa</p>
+                
+                <div id="servicosGrid" class="services-grid">
+                    <!-- Conteúdo carregado dinamicamente -->
+                </div>
+                
+                <div class="navigation-buttons">
+                    <div></div> <!-- Espaço vazio para alinhamento -->
+                    <button type="button" class="btn btn-primary" id="btnNextToEquipamentos">
+                        Próximo <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
 
-        <!-- Passo 4: Dados do Cliente -->
-        <section class="step" id="dados-cliente-step" style="display:none;">
-            <h2 class="step-title"><span>4</span>Seus dados para contato</h2>
-            
-            <label for="nome">Nome completo</label>
-            <input type="text" id="nome" placeholder="Informe seu nome" required maxlength="50" />
-            
-            <label for="endereco">Endereço completo</label>
-            <input type="text" id="endereco" placeholder="Informe seu endereço" required />
-            
-            <label for="whatsapp">Telefone (WhatsApp)</label>
-            <input type="tel" id="whatsapp" placeholder="(81) 99999-9999" required />
-        </section>
+            <!-- Passo 2: Detalhes dos Equipamentos -->
+            <div class="form-step" id="step-equipamentos">
+                <h2><i class="fas fa-tools"></i> Detalhes dos equipamentos</h2>
+                <p>Informe os detalhes de cada equipamento para o serviço</p>
+                
+                <div id="equipamentos-container">
+                    <!-- Conteúdo carregado dinamicamente -->
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button type="button" class="btn btn-secondary" id="btnBackToServicos">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnNextToOrcamento">
+                        Próximo <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
 
-        <!-- Passo 5: Agendamento -->
-        <section class="step" id="agendamento-step" style="display:none;">
-            <h2 class="step-title"><span>5</span>Agende o melhor dia e horário</h2>
-            <label for="data_agendamento">Data do Serviço</label>
-            <input type="text" id="data_agendamento" class="agendamento-campo" placeholder="Escolha uma data disponível" readonly required />
-            
-            <label for="horario_agendamento">Horário do Serviço</label>
-            <select id="horario_agendamento" class="agendamento-campo" required disabled>
-                <option value="">Primeiro, escolha a data</option>
-            </select>
-            
-            <label for="forma_pagamento">Forma de Pagamento</label>
-            <select id="forma_pagamento" class="agendamento-campo" required>
-                <option value="">Selecione como prefere pagar</option>
-                <option>Pix</option>
-                <option>Dinheiro</option>
-                <option>Cartão de Crédito</option>
-                <option>Cartão de Débito</option>
-            </select>
-        </section>
+            <!-- Passo 3: Orçamento -->
+            <div class="form-step" id="step-orcamento">
+                <h2><i class="fas fa-calculator"></i> Confirme seu orçamento</h2>
+                <p>Revise os detalhes e valor do seu serviço</p>
+                
+                <div id="relatorio-orcamento" class="budget-summary">
+                    <!-- Conteúdo carregado dinamicamente -->
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button type="button" class="btn btn-secondary" id="btnBackToEquipamentos">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnConfirmarOrcamento">
+                        Confirmar <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
 
-        <!-- Botão Final -->
-        <button type="submit" id="btn_finalizar" class="final-button" disabled>
-            <img src="assets/imagens/whatsapp-icon.png" alt="WhatsApp Icon"/>
-            <span id="btn_finalizar_texto">Finalizar Agendamento</span>
-        </button>
-    </form>
-</main>
+            <!-- Passo 4: Dados do Cliente -->
+            <div class="form-step" id="step-dados">
+                <h2><i class="fas fa-user"></i> Seus dados para contato</h2>
+                <p>Informe seus dados para que possamos entrar em contato</p>
+                
+                <div class="form-group">
+                    <label for="nome">Nome completo</label>
+                    <input type="text" id="nome" class="form-control" placeholder="Informe seu nome completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="endereco">Endereço completo</label>
+                    <input type="text" id="endereco" class="form-control" placeholder="Informe seu endereço" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="whatsapp">Telefone (WhatsApp)</label>
+                    <input type="tel" id="whatsapp" class="form-control" placeholder="(81) 99999-9999" required>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button type="button" class="btn btn-secondary" id="btnBackToOrcamento">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnNextToAgendamento">
+                        Próximo <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
 
-<footer class="rodape">
-    <p id="ultima-atualizacao"></p>
-</footer>
+            <!-- Passo 5: Agendamento -->
+            <div class="form-step" id="step-agendamento">
+                <h2><i class="fas fa-calendar-alt"></i> Agende o melhor horário</h2>
+                <p>Escolha a data e horário para o serviço</p>
+                
+                <div class="form-group">
+                    <label for="data_agendamento">Data do Serviço</label>
+                    <input type="text" id="data_agendamento" class="form-control agendamento-campo" 
+                           placeholder="Escolha uma data disponível" readonly required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="horario_agendamento">Horário do Serviço</label>
+                    <select id="horario_agendamento" class="form-control agendamento-campo" required disabled>
+                        <option value="">Primeiro, escolha a data</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="forma_pagamento">Forma de Pagamento</label>
+                    <select id="forma_pagamento" class="form-control" required>
+                        <option value="">Selecione como prefere pagar</option>
+                        <option>Pix</option>
+                        <option>Dinheiro</option>
+                        <option>Cartão de Crédito</option>
+                        <option>Cartão de Débito</option>
+                    </select>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button type="button" class="btn btn-secondary" id="btnBackToDados">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button type="submit" id="btn_finalizar" class="btn btn-success">
+                        <i class="fab fa-whatsapp"></i> Finalizar Agendamento
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 
-<script>
-    const dataModificacao = new Date(document.lastModified);
-    document.getElementById("ultima-atualizacao").textContent =
-        "Última atualização: " + dataModificacao.toLocaleString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-</script>
+    <script>
+        // Atualização da data no rodapé
+        const dataModificacao = new Date(document.lastModified);
+        console.log("Última atualização: " + dataModificacao.toLocaleString('pt-BR'));
+    </script>
 </body>
 </html>
