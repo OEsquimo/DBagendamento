@@ -5,122 +5,220 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Painel Admin - O Esquimó</title>
     <link rel="stylesheet" href="assets/style.css?v=17.0"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script type="module" defer src="assets/admin.js?v=17.0"></script>
 </head>
 <body>
 <main class="container">
-    <h1>Painel Administrativo</h1>
+    <div class="header">
+        <h1><i class="fas fa-cogs"></i> Painel Administrativo</h1>
+        <p>Gerencie serviços, agendamentos e configurações</p>
+    </div>
 
     <!-- Seção de Login -->
-    <section id="loginSection" class="step">
-        <h2 class="step-title"><span>🔐</span> Acesso Administrativo</h2>
-        <label for="adminEmail">E-mail</label>
-        <input type="email" id="adminEmail" placeholder="seu@email.com"/>
-        <label for="adminPassword">Senha</label>
-        <input type="password" id="adminPassword" placeholder="Sua senha"/>
-        <button id="btnLogin" class="final-button"><span>Entrar</span></button>
+    <section id="loginSection" class="form-step active">
+        <h2><i class="fas fa-lock"></i> Acesso Administrativo</h2>
+        
+        <div class="form-group">
+            <label for="adminEmail">E-mail</label>
+            <input type="email" id="adminEmail" class="form-control" placeholder="seu@email.com"/>
+        </div>
+        
+        <div class="form-group">
+            <label for="adminPassword">Senha</label>
+            <input type="password" id="adminPassword" class="form-control" placeholder="Sua senha"/>
+        </div>
+        
+        <button id="btnLogin" class="btn btn-primary" style="width: 100%">
+            <i class="fas fa-sign-in-alt"></i> Entrar
+        </button>
+        
         <p id="loginMsg" class="form-message"></p>
     </section>
 
     <!-- Conteúdo do Admin -->
-    <section id="adminContent" style="display:none;">
+    <section id="adminContent" class="form-step">
+        <!-- Indicador de Abas -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="config"><i class="fas fa-cog"></i> Configurações</button>
+            <button class="tab-btn" data-tab="horarios"><i class="fas fa-clock"></i> Horários</button>
+            <button class="tab-btn" data-tab="servicos"><i class="fas fa-concierge-bell"></i> Serviços</button>
+            <button class="tab-btn" data-tab="agendamentos"><i class="fas fa-calendar-alt"></i> Agendamentos</button>
+            <button class="tab-btn" data-tab="lembretes"><i class="fas fa-bell"></i> Lembretes</button>
+        </div>
 
-        <!-- Configurações Gerais -->
-        <section class="step">
-            <h2 class="step-title"><span>1</span>Configurações Gerais</h2>
-            <label for="cfgCompanyName">Nome da Empresa</label>
-            <input type="text" id="cfgCompanyName" placeholder="Ex: O Esquimó"/>
-            <label for="cfgCompanyDesc">Descrição (página inicial)</label>
-            <input type="text" id="cfgCompanyDesc" placeholder="Breve descrição para a home"/>
-            <label for="cfgHeroUrl">Imagem de Topo (Hero)</label>
-            <select id="cfgHeroUrl"></select>
-            <img id="heroImagePreview" src="" alt="Preview da Imagem de Topo" class="image-preview" style="display:none; margin-top: 10px;">
-            <label for="cfgWhats">Número do WhatsApp da Empresa</label>
-            <input type="tel" id="cfgWhats" placeholder="(81) 99999-9999"/>
-            <button id="btnSaveSite" class="final-button"><span>Salvar Configurações</span></button>
-            <p id="siteMsg" class="form-message success"></p>
-        </section>
-
-        <!-- Grade de Horários e Vagas -->
-        <section class="step">
-            <h2 class="step-title"><span>2</span>Grade de Horários e Vagas</h2>
-            <p>Defina os horários de atendimento e quantas equipes (vagas) estão disponíveis para cada um.</p>
-            <div id="schedule-grid-container">
-                <!-- Horários serão carregados aqui pelo JS -->
-            </div>
-            <div class="form-actions">
-                <button id="btnAddScheduleSlot" type="button" class="secondary-button">Adicionar Horário</button>
-                <button id="btnSaveSchedule" class="final-button">Salvar Grade de Horários</button>
-            </div>
-            <p id="scheduleMsg" class="form-message success"></p>
-        </section>
-
-        <!-- Gerenciamento de Serviços -->
-        <section class="step">
-            <h2 class="step-title"><span>3</span>Serviços Oferecidos</h2>
-            <div id="service-form-container"></div>
-            <p id="srvMsg" class="form-message success"></p>
-            <h3 style="margin-top:20px;">Serviços Cadastrados</h3>
-            <div id="srvList" class="service-list-admin"></div>
-            <button id="btnShowAddServiceForm" class="final-button" style="margin-top:12px;"><span>Adicionar Novo Serviço</span></button>
-        </section>
-
-        <!-- Serviços Agendados -->
-        <section class="step">
-            <h2 class="step-title"><span>4</span>Serviços Agendados</h2>
-            <label for="searchClientPhone">Buscar Agendamento por WhatsApp</label>
-            <div class="search-group">
-                <input type="tel" id="searchClientPhone" placeholder="(81) 99999-9999">
-                <button id="btnSearchClient" class="secondary-button">Buscar</button>
-            </div>
-            <p id="searchMsg" class="form-message"></p>
-            <div id="manualServiceForm" style="display:none;">
-                <input type="hidden" id="mServiceId">
-                <div class="grid-form">
-                    <div><label for="mNome">Nome completo do Cliente</label><input type="text" id="mNome" required/></div>
-                    <div><label for="mFone">Telefone (WhatsApp)</label><input type="tel" id="mFone" required/></div>
-                    <div class="full-width"><label for="mEndereco">Endereço</label><input type="text" id="mEndereco"/></div>
-                    <div><label for="mTipoEquipamento">Tipo de equipamento</label><select id="mTipoEquipamento" required><option value="">Selecione...</option><option>Janela</option><option>Split (Hi-Wall)</option><option>Multi-Split</option><option>Cassete</option><option>Piso-Teto</option><option>Outro</option></select></div>
-                    
-                    <div>
-                        <label for="mCapacidade">Capacidade (BTUs)</label>
-                        <select id="mCapacidade" required>
-                            <option value="">Selecione...</option>
-                            <option value="9000">9.000 BTU/h</option>
-                            <option value="12000">12.000 BTU/h</option>
-                            <option value="18000">18.000 BTU/h</option>
-                            <option value="24000">24.000 BTU/h</option>
-                            <option value="30000">30.000 BTU/h</option>
-                            <option value="36000">36.000 BTU/h</option>
-                            <option value="48000">48.000 BTU/h</option>
-                            <option value="60000">60.000 BTU/h</option>
-                        </select>
-                    </div>
-
-                    <div class="full-width"><label for="mObs">Observações</label><textarea id="mObs" rows="3"></textarea></div>
-                    <div><label for="mData">Data</label><input type="date" id="mData" required/></div>
-                    <div><label for="mHora">Hora</label><input type="time" id="mHora" required/></div>
+        <!-- Conteúdo das Abas -->
+        <div class="tab-content">
+            <!-- Configurações Gerais -->
+            <div class="tab-pane active" id="tab-config">
+                <h2><i class="fas fa-cog"></i> Configurações Gerais</h2>
+                
+                <div class="form-group">
+                    <label for="cfgCompanyName">Nome da Empresa</label>
+                    <input type="text" id="cfgCompanyName" class="form-control" placeholder="Ex: O Esquimó"/>
                 </div>
+                
+                <div class="form-group">
+                    <label for="cfgCompanyDesc">Descrição (página inicial)</label>
+                    <input type="text" id="cfgCompanyDesc" class="form-control" placeholder="Breve descrição para a home"/>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cfgHeroUrl">Imagem de Topo (Hero)</label>
+                    <select id="cfgHeroUrl" class="form-control"></select>
+                    <img id="heroImagePreview" src="" alt="Preview da Imagem de Topo" class="image-preview">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cfgWhats">Número do WhatsApp da Empresa</label>
+                    <input type="tel" id="cfgWhats" class="form-control" placeholder="(81) 99999-9999"/>
+                </div>
+                
+                <button id="btnSaveSite" class="btn btn-success">
+                    <i class="fas fa-save"></i> Salvar Configurações
+                </button>
+                
+                <p id="siteMsg" class="form-message"></p>
+            </div>
+
+            <!-- Grade de Horários e Vagas -->
+            <div class="tab-pane" id="tab-horarios">
+                <h2><i class="fas fa-clock"></i> Grade de Horários e Vagas</h2>
+                <p>Defina os horários de atendimento e quantas equipes (vagas) estão disponíveis para cada um.</p>
+                
+                <div id="schedule-grid-container" class="grid-form">
+                    <!-- Horários serão carregados aqui pelo JS -->
+                </div>
+                
                 <div class="form-actions">
-                    <button id="btnSaveManual" class="final-button">Salvar Novo</button>
-                    <button id="btnUpdateManual" class="secondary-button" style="display:none;">Atualizar</button>
-                    <button id="btnDeleteManual" class="delete-button" style="display:none;">Excluir</button>
+                    <button id="btnAddScheduleSlot" type="button" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> Adicionar Horário
+                    </button>
+                    <button id="btnSaveSchedule" class="btn btn-success">
+                        <i class="fas fa-save"></i> Salvar Grade de Horários
+                    </button>
+                </div>
+                
+                <p id="scheduleMsg" class="form-message"></p>
+            </div>
+
+            <!-- Gerenciamento de Serviços -->
+            <div class="tab-pane" id="tab-servicos">
+                <h2><i class="fas fa-concierge-bell"></i> Serviços Oferecidos</h2>
+                
+                <div id="service-form-container"></div>
+                <p id="srvMsg" class="form-message"></p>
+                
+                <h3>Serviços Cadastrados</h3>
+                <div id="srvList" class="service-list-admin"></div>
+                
+                <button id="btnShowAddServiceForm" class="btn btn-primary" style="margin-top: 20px;">
+                    <i class="fas fa-plus"></i> Adicionar Novo Serviço
+                </button>
+            </div>
+
+            <!-- Serviços Agendados -->
+            <div class="tab-pane" id="tab-agendamentos">
+                <h2><i class="fas fa-calendar-alt"></i> Serviços Agendados</h2>
+                
+                <div class="form-group">
+                    <label for="searchClientPhone">Buscar Agendamento por WhatsApp</label>
+                    <div class="search-group">
+                        <input type="tel" id="searchClientPhone" class="form-control" placeholder="(81) 99999-9999">
+                        <button id="btnSearchClient" class="btn btn-secondary">Buscar</button>
+                    </div>
+                </div>
+                
+                <p id="searchMsg" class="form-message"></p>
+                
+                <div id="manualServiceForm" style="display:none;">
+                    <input type="hidden" id="mServiceId">
+                    
+                    <div class="grid-form">
+                        <div class="form-group">
+                            <label for="mNome">Nome completo do Cliente</label>
+                            <input type="text" id="mNome" class="form-control" required/>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mFone">Telefone (WhatsApp)</label>
+                            <input type="tel" id="mFone" class="form-control" required/>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="mEndereco">Endereço</label>
+                            <input type="text" id="mEndereco" class="form-control"/>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mTipoEquipamento">Tipo de equipamento</label>
+                            <select id="mTipoEquipamento" class="form-control" required>
+                                <option value="">Selecione...</option>
+                                <option>Janela</option>
+                                <option>Split (Hi-Wall)</option>
+                                <option>Multi-Split</option>
+                                <option>Cassete</option>
+                                <option>Piso-Teto</option>
+                                <option>Outro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mCapacidade">Capacidade (BTUs)</label>
+                            <select id="mCapacidade" class="form-control" required>
+                                <option value="">Selecione...</option>
+                                <option value="9000">9.000 BTU/h</option>
+                                <option value="12000">12.000 BTU/h</option>
+                                <option value="18000">18.000 BTU/h</option>
+                                <option value="24000">24.000 BTU/h</option>
+                                <option value="30000">30.000 BTU/h</option>
+                                <option value="36000">36.000 BTU/h</option>
+                                <option value="48000">48.000 BTU/h</option>
+                                <option value="60000">60.000 BTU/h</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="mObs">Observações</label>
+                            <textarea id="mObs" class="form-control" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mData">Data</label>
+                            <input type="date" id="mData" class="form-control" required/>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mHora">Hora</label>
+                            <input type="time" id="mHora" class="form-control" required/>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="btnSaveManual" class="btn btn-success">Salvar Novo</button>
+                        <button id="btnUpdateManual" class="btn btn-primary" style="display:none;">Atualizar</button>
+                        <button id="btnDeleteManual" class="btn btn-danger" style="display:none;">Excluir</button>
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <!-- Lembretes de Limpeza -->
-        <section class="step">
-            <h2 class="step-title"><span>5</span>Lembrete de Limpeza</h2>
-            <p>Lembre seu cliente de fazer a limpeza e manutenção preventiva.</p>
-            <div class="lembrete-group">
-                <label for="cfgReminderMonths">Meses para lembrete de Limpeza (ex: 12)</label>
-                <input type="number" id="cfgReminderMonths" min="1" value="12"/>
+            <!-- Lembretes de Limpeza -->
+            <div class="tab-pane" id="tab-lembretes">
+                <h2><i class="fas fa-bell"></i> Lembrete de Limpeza</h2>
+                <p>Lembre seu cliente de fazer a limpeza e manutenção preventiva.</p>
+                
+                <div class="form-group">
+                    <label for="cfgReminderMonths">Meses para lembrete de Limpeza (ex: 12)</label>
+                    <input type="number" id="cfgReminderMonths" class="form-control" min="1" value="12"/>
+                </div>
+                
+                <button id="btnRodarLembretes" class="btn btn-primary">
+                    <i class="fas fa-play"></i> Gerar Lembretes Agora
+                </button>
+                
+                <ul id="reminderLog" class="reminder-log"></ul>
             </div>
-            <button id="btnRodarLembretes" class="final-button"><span>Gerar Lembretes Agora</span></button>
-            <ul id="reminderLog" class="reminder-log"></ul>
-        </section>
-
+        </div>
     </section>
 </main>
 </body>
