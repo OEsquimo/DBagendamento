@@ -1,1 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Painel Admin - O Esquimó</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="assets/admin.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cogs"></i> Painel Administrativo</h1>
+            <p>Gerencie serviços, agendamentos e configurações</p>
+        </div>
 
+        <!-- Seção de Login -->
+        <div class="form-step active" id="loginSection">
+            <h2><i class="fas fa-lock"></i> Acesso Administrativo</h2>
+            
+            <div class="form-group">
+                <label for="adminEmail">E-mail</label>
+                <input type="email" id="adminEmail" class="form-control" placeholder="seu@email.com"/>
+            </div>
+            
+            <div class="form-group">
+                <label for="adminPassword">Senha</label>
+                <input type="password" id="adminPassword" class="form-control" placeholder="Sua senha"/>
+            </div>
+            
+            <button id="btnLogin" class="btn btn-primary" style="width: 100%">
+                <i class="fas fa-sign-in-alt"></i> Entrar
+            </button>
+            
+            <p id="loginMsg" class="form-message"></p>
+        </div>
+
+        <!-- Conteúdo do Admin (inicialmente oculto) -->
+        <div class="form-step" id="adminContent" style="display: none;">
+            <h2>Painel de Controle</h2>
+            <p>Bem-vindo ao painel administrativo</p>
+            
+            <div class="service-section">
+                <h3><i class="fas fa-concierge-bell"></i> Serviços Cadastrados</h3>
+                <div id="servicosList" class="services-grid">
+                    <!-- Serviços serão carregados aqui -->
+                </div>
+            </div>
+            
+            <div class="service-section">
+                <h3><i class="fas fa-cog"></i> Configurações</h3>
+                <div class="form-group">
+                    <label for="cfgCompanyName">Nome da Empresa</label>
+                    <input type="text" id="cfgCompanyName" class="form-control" placeholder="Nome da empresa"/>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cfgWhats">WhatsApp para Contato</label>
+                    <input type="text" id="cfgWhats" class="form-control" placeholder="(81) 99999-9999"/>
+                </div>
+                
+                <button class="btn btn-success">
+                    <i class="fas fa-save"></i> Salvar Configurações
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
