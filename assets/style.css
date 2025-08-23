@@ -282,11 +282,10 @@ body {
 
 .form-control {
     width: 100%;
-    padding: 14px 16px;
+    padding: 12px;
     border: 2px solid var(--cor-borda);
     border-radius: var(--radius-pequeno);
     font-size: 1rem;
-    font-family: var(--fonte-principal);
     transition: border-color 0.3s;
 }
 
@@ -299,8 +298,9 @@ body {
 /* Equipamentos */
 .equipment-section {
     margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--cor-borda);
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: var(--radius-pequeno);
 }
 
 .equipment-section h3 {
@@ -329,7 +329,7 @@ body {
 }
 
 .equipment-item {
-    background: #f8f9fa;
+    background: white;
     border: 1px solid var(--cor-borda);
     border-radius: var(--radius-pequeno);
     padding: 20px;
@@ -342,6 +342,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--cor-borda);
 }
 
 .equipment-header h4 {
@@ -358,13 +360,13 @@ body {
     font-size: 0.9rem;
 }
 
-.grid-form {
+.form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
 }
 
-.grid-form .full-width {
+.form-grid .full-width {
     grid-column: 1 / -1;
 }
 
@@ -429,7 +431,7 @@ body {
         justify-content: center;
     }
     
-    .grid-form {
+    .form-grid {
         grid-template-columns: 1fr;
     }
     
