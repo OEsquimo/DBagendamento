@@ -130,7 +130,11 @@ function avancarParaPasso(passo) {
     // Atualizar progresso
     appState.passoAtual = passo;
     atualizarIndicadorProgresso();
-    
+    // Se avançando para o passo de equipamentos, renderizar os campos
+    if (passo === 2) {
+    renderizarEquipamentos();
+    }
+
     // Mostrar próximo passo
     elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]].classList.add('active');
     
