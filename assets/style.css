@@ -35,7 +35,7 @@ body {
     border-radius: var(--radius);
     padding: 15px;
     box-shadow: var(--sombra-leve);
-    padding-top: 100px;
+    
     /* Adiciona um preenchimento superior para acomodar o cabeçalho fixo */
     
 }
