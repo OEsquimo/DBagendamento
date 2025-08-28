@@ -2,11 +2,7 @@
 const appState = {
     servicosSelecionados: [],
     passoAtual: 1,
-    orcamentoTotal: 0,
-    agendamento: {
-        data: null,
-        horario: ""
-    }
+    orcamentoTotal: 0
 };
 
 // Elementos DOM
@@ -45,8 +41,7 @@ const elementos = {
     whatsappInput: document.getElementById('whatsapp'),
     dataAgendamentoInput: document.getElementById('data_agendamento'),
     horarioAgendamentoSelect: document.getElementById('horario_agendamento'),
-    formaPagamentoSelect: document.getElementById('forma_pagamento'),
-    lastUpdateDateFooter: document.getElementById('lastUpdateDateFooter')
+    formaPagamentoSelect: document.getElementById('forma_pagamento')
 };
 
 // Dados de serviços
@@ -85,64 +80,12 @@ const servicosDisponiveis = [
     }
 ];
 
-// Dados de configuração (para um sistema real, viria de um backend)
-const configuracoes = {
-    whatsapp: '5581999999999', // Exemplo: 55 + DDD + Número
-    empresaNome: 'O Esquimó',
-    horariosDisponiveis: [
-        { hora: '08:00', ocupado: false },
-        { hora: '09:00', ocupado: false },
-        { hora: '10:00', ocupado: false },
-        { hora: '11:00', ocupado: false },
-        { hora: '13:00', ocupado: false },
-        { hora: '14:00', ocupado: false },
-        { hora: '15:00', ocupado: false },
-        { hora: '16:00', ocupado: false },
-    ]
-};
-
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     renderizarServicos();
     configurarEventListeners();
-    configurarFlatpickr();
-    atualizarDataFooter();
     elementos.btnNextToEquipamentos.disabled = true;
 });
-
-// Configurar Flatpickr para o campo de data
-function configurarFlatpickr() {
-    flatpickr(elementos.dataAgendamentoInput, {
-        dateFormat: "d/m/Y",
-        locale: "pt",
-        minDate: "today",
-        altInput: true,
-        altFormat: "d/m/Y",
-        onClose: function(selectedDates, dateStr) {
-            if (selectedDates.length > 0) {
-                appState.agendamento.data = dateStr;
-                atualizarHorariosDisponiveis();
-                elementos.horarioAgendamentoSelect.disabled = false;
-            } else {
-                elementos.horarioAgendamentoSelect.disabled = true;
-            }
-        }
-    });
-}
-
-// Atualiza as opções de horário com base na data selecionada
-function atualizarHorariosDisponiveis() {
-    elementos.horarioAgendamentoSelect.innerHTML = '<option value="">Selecione um horário</option>';
-    configuracoes.horariosDisponiveis.forEach(horario => {
-        // Exemplo: Simular alguns horários ocupados para demonstração
-        if (!horario.ocupado) {
-            const option = document.createElement('option');
-            option.value = horario.hora;
-            option.textContent = horario.hora;
-            elementos.horarioAgendamentoSelect.appendChild(option);
-        }
-    });
-}
 
 // Configurar event listeners
 function configurarEventListeners() {
@@ -187,7 +130,11 @@ function avancarParaPasso(passo) {
     // Atualizar progresso
     appState.passoAtual = passo;
     atualizarIndicadorProgresso();
-    
+    // Se avançando para o passo de equipamentos, renderizar os campos
+    if (passo === 2) {
+    renderizarEquipamentos();
+    }
+
     // Mostrar próximo passo
     elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]].classList.add('active');
     
@@ -249,6 +196,7 @@ function validarEquipamentos() {
 }
 
 function validarOrcamento() {
+    // Sempre válido após preenchimento dos equipamentos
     return true;
 }
 
@@ -257,27 +205,11 @@ function validarDadosCliente() {
     const enderecoValido = elementos.enderecoInput.value.trim().length > 5;
     const whatsappValido = elementos.whatsappInput.value.replace(/\D/g, "").length === 11;
     
-    if (!nomeValido) {
-        alert('Por favor, informe seu nome completo.');
-        return false;
-    }
-    if (!enderecoValido) {
-        alert('Por favor, informe seu endereço completo.');
-        return false;
-    }
-    if (!whatsappValido) {
-        alert('Por favor, informe um número de WhatsApp válido.');
+    if (!nomeValido || !enderecoValido || !whatsappValido) {
+        alert('Por favor, preencha todos os dados corretamente.');
         return false;
     }
     
-    return true;
-}
-
-function validarAgendamento() {
-    if (!elementos.dataAgendamentoInput.value || !elementos.horarioAgendamentoSelect.value) {
-        alert('Por favor, selecione uma data e horário para o agendamento.');
-        return false;
-    }
     return true;
 }
 
@@ -604,79 +536,25 @@ function calcularPrecoEquipamento(servico, equipamento) {
     return preco;
 }
 
-// Finalizar agendamento e enviar mensagem via WhatsApp
+// Finalizar agendamento
 function finalizarAgendamento(e) {
     e.preventDefault();
     
-    if (!validarAgendamento()) return;
+    if (!validarDadosCliente()) return;
     
+    // Desabilitar botão para evitar múltiplos cliques
     elementos.btnFinalizar.disabled = true;
     elementos.btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-
-    const cliente = {
-        nome: elementos.nomeInput.value,
-        endereco: elementos.enderecoInput.value,
-        whatsapp: elementos.whatsappInput.value.replace(/\D/g, "")
-    };
-
-    const agendamento = {
-        data: elementos.dataAgendamentoInput.value,
-        horario: elementos.horarioAgendamentoSelect.value,
-        formaPagamento: elementos.formaPagamentoSelect.value,
-        total: `R$ ${appState.orcamentoTotal.toFixed(2)}`
-    };
-
-    const servicosTexto = appState.servicosSelecionados.map(servico => {
-        const equipamentosTexto = servico.equipamentos.map((eq, index) => {
-            let obs = eq.observacoes ? `\n- Obs: ${eq.observacoes}` : '';
-            let eletrica = servico.name.toLowerCase().includes('instalação') ? `\n- Parte elétrica: ${eq.parteEletricaPronta}` : '';
-            return `Equipamento #${index + 1}: ${eq.tipoEquipamento} (${eq.capacidadeBtus} BTUs)${eletrica}${obs}`;
-        }).join('\n');
-        return `${servico.name} (${servico.quantidade} uni.):\n${equipamentosTexto}`;
-    }).join('\n\n');
-
-    const mensagem = `Olá, gostaria de fazer um agendamento para um serviço de climatização.
     
-    *Dados do Cliente:*
-    Nome: ${cliente.nome}
-    Endereço: ${cliente.endereco}
-    WhatsApp: ${elementos.whatsappInput.value}
-    
-    *Detalhes do Agendamento:*
-    Data: ${agendamento.data}
-    Horário: ${agendamento.horario}
-    Forma de Pagamento: ${agendamento.formaPagamento}
-    
-    *Serviços:*
-    ${servicosTexto}
-    
-    *Valor Total do Orçamento:*
-    ${agendamento.total}`;
-
-    const urlWhatsapp = `https://wa.me/${configuracoes.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-    
-    // Abrir o link em uma nova janela
-    window.open(urlWhatsapp, '_blank');
-    
-    // Simular reset de estado ou exibir mensagem de sucesso
+    // Simular envio
     setTimeout(() => {
+        alert('Solicitação enviada com sucesso! Entraremos em contato em breve.');
         elementos.btnFinalizar.disabled = false;
         elementos.btnFinalizar.innerHTML = '<i class="fab fa-whatsapp"></i> Finalizar Agendamento';
-        alert('Sua solicitação foi enviada para o WhatsApp de "O Esquimó"! Por favor, envie a mensagem pré-preenchida para confirmar o agendamento.');
-    }, 2000);
-}
-
-// Função para atualizar o rodapé com a data e hora atual
-function atualizarDataFooter() {
-    const elemento = elementos.lastUpdateDateFooter;
-    if (elemento) {
-        const data = new Date();
-        const dia = String(data.getDate()).padStart(2, '0');
-        const mes = String(data.getMonth() + 1).padStart(2, '0');
-        const ano = data.getFullYear();
-        const horas = String(data.getHours()).padStart(2, '0');
-        const minutos = String(data.getMinutes()).padStart(2, '0');
         
-        elemento.textContent = `${dia}/${mes}/${ano} ${horas}:${minutos}`;
-    }
+        // Recarregar a página após um tempo
+        setTimeout(() => {
+            window.location.reload();
+        }, 3000);
+    }, 2000);
 }
