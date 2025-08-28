@@ -82,7 +82,8 @@ async function showLastUpdateDate() {
     // Substitua os placeholders com o nome do seu usuário e repositório
     const owner = 'oesquimo';
     const repo = 'DBagendamento';
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits`;
+    const apiUrl = `https://cors-anywhere.herokuapp.com/https://api.github.com/repos/${owner}/${repo}/commits`;
+  //const apiUrl = `https://api.github.com/repos/${owner}/${repo}/commits`;
 
     try {
         const response = await fetch(apiUrl);
