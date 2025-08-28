@@ -130,16 +130,18 @@ function avancarParaPasso(passo) {
     // Atualizar progresso
     appState.passoAtual = passo;
     atualizarIndicadorProgresso();
+
     // Se avançando para o passo de equipamentos, renderizar os campos
     if (passo === 2) {
-    renderizarEquipamentos();
+        renderizarEquipamentos();
     }
 
     // Mostrar próximo passo
-    elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]].classList.add('active');
+    const proximoPassoElemento = elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]];
+    proximoPassoElemento.classList.add('active');
     
     // Rolar para o topo do formulário
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    proximoPassoElemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function retrocederParaPasso(passo) {
@@ -151,10 +153,11 @@ function retrocederParaPasso(passo) {
     atualizarIndicadorProgresso();
     
     // Mostrar passo anterior
-    elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]].classList.add('active');
+    const passoAnteriorElemento = elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]];
+    passoAnteriorElemento.classList.add('active');
     
     // Rolar para o topo do formulário
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    passoAnteriorElemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function atualizarIndicadorProgresso() {
