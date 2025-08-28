@@ -36,7 +36,7 @@ body {
     padding: 15px;
     box-shadow: var(--sombra-leve);
     /* Adiciona um preenchimento superior para acomodar o cabeçalho fixo */
-    padding-top: 100px;
+    
 }
 
 h1, h2, h3 {
@@ -140,6 +140,7 @@ h1, h2, h3 {
 .form-step {
     display: none;
     animation: fadeIn 0.5s ease;
+    padding-top: 100px;
 }
 
 .form-step.active {
