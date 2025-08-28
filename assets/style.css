@@ -140,7 +140,7 @@ h1, h2, h3 {
 .form-step {
     display: none;
     animation: fadeIn 0.5s ease;
-    padding-top: 100px;
+    padding-top: 50px;
 }
 
 .form-step.active {
