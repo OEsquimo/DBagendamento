@@ -80,6 +80,7 @@ const servicosDisponiveis = [
     }
 ];
 
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     renderizarServicos();
@@ -558,3 +559,14 @@ function finalizarAgendamento(e) {
         }, 3000);
     }, 2000);
 }
+
+.footer-info {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--cor-borda);
+    color: var(--cor-texto-claro);
+    font-size: 0.9em;
+}
+
+
