@@ -55,6 +55,14 @@ h1, h2, h3 {
     position: relative;
     margin-bottom: 40px;
     counter-reset: step;
+
+    position: sticky;
+    top: 0;
+    background-color: var(--cor-fundo); /* Adicione um fundo para cobrir o conteúdo por baixo */
+    z-index: 1000; /* Garante que o elemento fique na frente de outros */
+    box-shadow: var(--sombra-leve); /* Opcional: Adiciona uma sombra para destacar */
+}
+    
 }
 
 .progress-container::before {
