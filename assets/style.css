@@ -35,6 +35,8 @@ body {
     border-radius: var(--radius);
     padding: 15px;
     box-shadow: var(--sombra-leve);
+    /* Adiciona um preenchimento superior para acomodar o cabeçalho fixo */
+    padding-top: 100px;
 }
 
 h1, h2, h3 {
@@ -56,13 +58,12 @@ h1, h2, h3 {
     margin-bottom: 40px;
     counter-reset: step;
 
+    /* Estilos para fixar a barra de progresso no topo */
     position: sticky;
     top: 0;
-    background-color: var(--cor-fundo); /* Adicione um fundo para cobrir o conteúdo por baixo */
-    z-index: 1000; /* Garante que o elemento fique na frente de outros */
-    box-shadow: var(--sombra-leve); /* Opcional: Adiciona uma sombra para destacar */
-}
-    
+    background-color: var(--cor-fundo);
+    z-index: 1000;
+    box-shadow: var(--sombra-leve);
 }
 
 .progress-container::before {
@@ -390,10 +391,3 @@ h1, h2, h3 {
     color: var(--cor-texto-claro);
     font-size: 0.9em;
 }
-
-
-
-
-
-
-
