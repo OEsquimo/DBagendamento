@@ -1,4 +1,3 @@
-
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface de agendamento do cliente.
@@ -35,7 +34,7 @@ let configuracoes = {};
 // Elementos HTML das seções
 const servicosSection = document.getElementById('servicosSection');
 const camposAdicionaisSection = document.getElementById('camposAdicionaisSection');
-const dadosAgendamentoSection = document.getElementById('dadosAgendamentoSection');
+const dadosPessoaisSection = document.getElementById('dadosPessoaisSection');
 
 // Elementos HTML dos formulários e botões
 const formServicos = document.getElementById('formServicos');
@@ -47,7 +46,6 @@ const camposAdicionaisList = document.getElementById('camposAdicionaisList');
 const summaryServicosList = document.getElementById('summaryServicosList');
 const totalPriceElement = document.getElementById('totalPrice');
 const btnVoltarCampos = document.getElementById('btnVoltarCampos');
-const btnProximoCampos = document.querySelector('#formCamposAdicionais .btn-primary');
 
 const formDadosAgendamento = document.getElementById('formDadosAgendamento');
 const dataInput = document.getElementById('data');
@@ -111,11 +109,11 @@ function setupEventListeners() {
     formCamposAdicionais.addEventListener('submit', (e) => {
         e.preventDefault();
         camposAdicionaisSection.classList.add('hidden');
-        dadosAgendamentoSection.classList.remove('hidden');
+        dadosPessoaisSection.classList.remove('hidden');
     });
 
     btnVoltarDados.addEventListener('click', () => {
-        dadosAgendamentoSection.classList.add('hidden');
+        dadosPessoaisSection.classList.add('hidden');
         camposAdicionaisSection.classList.remove('hidden');
     });
 
@@ -133,6 +131,7 @@ function renderServicos() {
     servicosList.innerHTML = '';
     for (const key in servicosDisponiveis) {
         const servico = servicosDisponiveis[key];
+        const isSelected = servicosSelecionados.some(s => s.id === key);
         const li = document.createElement('li');
         li.dataset.key = key;
         li.innerHTML = `
@@ -141,8 +140,8 @@ function renderServicos() {
                 <p>${servico.descricao}</p>
                 <p><strong>Preço Base:</strong> R$ ${servico.precoBase.toFixed(2)}</p>
             </div>
-            <button type="button" class="btn btn-primary btn-select-service" data-key="${key}">
-                Selecionar
+            <button type="button" class="btn btn-primary btn-select-service" data-key="${key}" ${isSelected ? 'disabled' : ''}>
+                ${isSelected ? 'Adicionado' : 'Selecionar'}
             </button>
         `;
         li.querySelector('.btn-select-service').addEventListener('click', (e) => {
@@ -156,19 +155,23 @@ function handleServiceSelection(key) {
     if (!servicosSelecionados.find(s => s.id === key)) {
         const servico = { ...servicosDisponiveis[key], id: key };
         servicosSelecionados.push(servico);
-        document.querySelector(`li[data-key="${key}"] .btn-select-service`).disabled = true;
-        document.querySelector(`li[data-key="${key}"] .btn-select-service`).textContent = 'Adicionado';
+        const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Adicionado';
+        }
     }
     btnContinuar.disabled = servicosSelecionados.length === 0;
 }
 
-window.removeService = function(key) {
+function removeService(key) {
     servicosSelecionados = servicosSelecionados.filter(s => s.id !== key);
     const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
     if (btn) {
         btn.disabled = false;
         btn.textContent = 'Selecionar';
     }
+    updateSummary();
     btnContinuar.disabled = servicosSelecionados.length === 0;
 }
 
@@ -216,7 +219,7 @@ function renderCamposAdicionaisForm() {
             camposAdicionaisList.appendChild(serviceDiv);
         }
     });
-    updateSummary(); // Inicializa o orçamento
+    updateSummary();
 }
 
 function updateSummary() {
@@ -257,10 +260,14 @@ function updateSummary() {
         li.innerHTML = `
             <span><strong>${servico.nome}</strong></span>
             <span>R$ ${precoServico.toFixed(2)}</span>
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeService('${servico.id}')">Remover</button>
+            <button type="button" class="btn btn-danger btn-sm remove-service" data-key="${servico.id}">Remover</button>
             <div class="additional-info">${additionalHtml}</div>
         `;
         summaryServicosList.appendChild(li);
+    });
+
+    document.querySelectorAll('.remove-service').forEach(btn => {
+        btn.addEventListener('click', (e) => removeService(e.target.dataset.key));
     });
 
     totalPriceElement.textContent = `Total: R$ ${total.toFixed(2)}`;
