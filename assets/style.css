@@ -1,147 +1,239 @@
+/*
+ * Arquivo: style.css
+ * Descrição: Folha de estilos para o agendamento e o painel administrativo.
+ * Versão: 3.0 (Estilos para agendamento por dia da semana)
+ */
+
+/* ==========================================================================
+   1. ESTILOS GERAIS
+   ========================================================================== */
+
 :root {
-    --cor-primaria: #3498db;
-    --cor-secundaria: #2c3e50;
-    --cor-fundo: #f4f7f9;
-    --cor-container: #ffffff;
-    --cor-borda: #e1e8ed;
-    --cor-sucesso: #27ae60;
-    --cor-erro: #e74c3c;
-    --cor-texto: #555;
-    --cor-texto-claro: #888;
-    --sombra-leve: 0 4px 15px rgba(0, 0, 0, 0.05);
-    --sombra-media: 0 8px 25px rgba(0, 0, 0, 0.1);
-    --radius: 12px;
-    --radius-pequeno: 8px;
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --background-color: #f8f9fa;
+    --text-color: #343a40;
+    --card-bg: #ffffff;
+    --border-color: #e9ecef;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-    background-color: var(--cor-fundo);
-    color: var(--cor-texto);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
-    padding: 20px;
+    color: var(--text-color);
+    background-color: var(--background-color);
 }
 
 .container {
-    max-width: 1000px;
-    margin: 0 auto;
-    background: white;
-    border-radius: var(--radius);
-    padding: 15px;
-    box-shadow: var(--sombra-leve);
-    
-    /* Adiciona um preenchimento superior para acomodar o cabeçalho fixo */
-    
+    max-width: 800px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
 }
 
-h1, h2, h3 {
-    color: var(--cor-secundaria);
-    margin-bottom: 8px;
+/* ==========================================================================
+   2. COMPONENTES REUTILIZÁVEIS
+   ========================================================================== */
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-whatsapp {
+    background-color: #25d366;
+    color: white;
+}
+
+.btn-whatsapp:hover {
+    background-color: #1eac51;
+}
+
+.btn-logout {
+    background-color: transparent;
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+}
+
+.btn-logout:hover {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--secondary-color);
+}
+
+.loading-state i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   3. ESTILOS DO FORMULÁRIO DE AGENDAMENTO (CLIENTE)
+   ========================================================================== */
 
 .header {
     text-align: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--cor-borda);
+    margin-bottom: 2rem;
 }
 
-.progress-container {
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.header p {
+    color: var(--secondary-color);
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+/* Indicadores de Progresso */
+.steps-progress {
     display: flex;
     justify-content: space-between;
+    margin-bottom: 2rem;
     position: relative;
-    margin-bottom: 40px;
-    counter-reset: step;
-
-    /* Estilos para fixar a barra de progresso no topo */
-    position: sticky;
-    top: 0;
-    background-color: var(--cor-fundo);
-    z-index: 1000;
-    box-shadow: var(--sombra-leve);
+    padding-bottom: 2rem;
 }
 
-.progress-container::before {
+.steps-progress::before {
     content: '';
     position: absolute;
-    top: 15px;
+    bottom: 1.25rem;
     left: 0;
     width: 100%;
-    height: 4px;
-    background: var(--cor-borda);
+    height: 3px;
+    background-color: var(--border-color);
+}
+
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     z-index: 1;
+    font-size: 0.875rem;
+    color: var(--secondary-color);
 }
 
-.progress-bar {
-    position: absolute;
-    top: 15px;
-    left: 0;
-    height: 4px;
-    background: var(--cor-sucesso);
-    z-index: 2;
-    transition: width 0.5s ease;
-    width: 0%;
-}
-
-.progress-step {
-    position: relative;
-    z-index: 3;
-    text-align: center;
-    width: 40px;
-    height: 40px;
-}
-
-.progress-step::before {
-    counter-increment: step;
-    content: counter(step);
+.step-indicator::before {
+    content: attr(data-step);
+    display: block;
+    width: 30px;
+    height: 30px;
+    background-color: var(--border-color);
+    color: white;
+    font-weight: 700;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: white;
-    border: 3px solid var(--cor-borda);
-    border-radius: 50%;
-    font-weight: bold;
-    margin: 0 auto 10px;
-    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+    transition: background-color 0.3s ease;
 }
 
-.progress-step.active::before {
-    background: var(--cor-primaria);
-    color: white;
-    border-color: var(--cor-primaria);
+.step-indicator.active {
+    color: var(--primary-color);
+    font-weight: 700;
 }
 
-.progress-step.completed::before {
-    background: var(--cor-sucesso);
-    color: white;
-    border-color: var(--cor-sucesso);
-    content: '✓';
+.step-indicator.active::before {
+    background-color: var(--primary-color);
 }
 
-.progress-step-label {
-    font-size: 0.8rem;
-    color: var(--cor-texto-claro);
-    margin-top: 5px;
-    display: block;
-}
-
-.progress-step.active .progress-step-label {
-    color: var(--cor-primaria);
-    font-weight: 500;
-}
-
+/* Passos do Formulário */
 .form-step {
     display: none;
-    animation: fadeIn 0.5s ease;
-    padding-top: 30px;
+    animation: fadeIn 0.5s ease-in-out;
 }
 
 .form-step.active {
@@ -149,247 +241,362 @@ h1, h2, h3 {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
-.services-grid {
+.form-step h2 {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+}
+
+.service-cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-    margin: 20px 0;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
 }
 
 .service-card {
-    border: 2px solid var(--cor-borda);
-    border-radius: var(--radius-pequeno);
-    padding: 20px 15px;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background: white;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .service-card:hover {
     transform: translateY(-5px);
-    border-color: var(--cor-primaria);
-    box-shadow: var(--sombra-media);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 .service-card.selected {
-    border-color: var(--cor-primaria);
-    background-color: #e8f4fd;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
 }
 
 .service-card i {
-    font-size: 2.2rem;
-    color: var(--cor-primaria);
-    margin-bottom: 15px;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
 }
 
 .service-card h3 {
-    font-size: 1rem;
-    margin-bottom: 5px;
-    color: var(--cor-secundaria);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
 }
 
 .service-card p {
-    font-size: 0.85rem;
-    color: var(--cor-texto-claro);
+    font-size: 0.9rem;
+    color: var(--secondary-color);
 }
 
-.service-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: var(--radius-pequeno);
+/* Orçamento e Resumo */
+.resumo-orcamento, .resumo-final {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
 }
 
-.service-header {
+.resumo-orcamento h4, .resumo-final h4 {
+    margin-bottom: 1rem;
+}
+
+.resumo-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.resumo-list li {
+    margin-bottom: 0.5rem;
+}
+
+.resumo-list li ul {
+    list-style: none;
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.orcamento-total {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-color);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    gap: 1rem;
 }
 
-.service-quantity {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
+.orcamento-total label {
+    font-weight: 700;
 }
 
-.service-quantity input {
-    width: 70px;
-    padding: 8px;
-    border: 2px solid var(--cor-borda);
-    border-radius: var(--radius-pequeno);
+#orcamentoValor {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    border: none;
+    background: transparent;
+}
+
+.resumo-final p {
+    margin-bottom: 0.75rem;
+}
+
+.resumo-final .destaque-valor {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* ==========================================================================
+   4. ESTILOS DO PAINEL ADMIN
+   ========================================================================== */
+
+.admin-container {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 5rem auto;
+    padding: 2rem;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
     text-align: center;
 }
 
-.equipment-item {
-    background: white;
-    border: 1px solid var(--cor-borda);
-    border-radius: var(--radius-pequeno);
-    padding: 20px;
-    margin-bottom: 15px;
-    position: relative;
-}
-
-.equipment-header {
+.admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--cor-borda);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 2rem;
 }
 
-.remove-equipment {
-    background: var(--cor-erro);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: var(--radius-pequeno);
+.admin-header h1 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Alerta de Notificação */
+.alert-banner {
+    background-color: #ffeeba;
+    color: #856404;
+    padding: 1rem 1.5rem;
+    border: 1px solid #ffdf7c;
+    border-radius: 5px;
+    margin-bottom: 2rem;
     cursor: pointer;
-    font-size: 0.9rem;
+    animation: pulse 1.5s infinite;
 }
 
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+.alert-banner p {
+    margin: 0;
 }
 
-.full-width {
-    grid-column: 1 / -1;
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.01); }
+    100% { transform: scale(1); }
 }
 
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: var(--cor-secundaria);
-}
-
-.form-control {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid var(--cor-borda);
-    border-radius: var(--radius-pequeno);
-    font-size: 1rem;
-    transition: border-color 0.3s;
-}
-
-.form-control:focus {
-    border-color: var(--cor-primaria);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-}
-
-.budget-summary {
-    background: #f8f9fa;
-    border-radius: var(--radius-pequeno);
-    padding: 25px;
-    margin-bottom: 20px;
-}
-
-.budget-item {
+/* Navegação por abas */
+.tabs-nav {
     display: flex;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--cor-borda);
+    list-style: none;
+    padding: 0;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1.5rem;
 }
 
-.budget-total {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 15px;
-    margin-top: 15px;
-    border-top: 2px solid var(--cor-primaria);
-    font-weight: bold;
-    font-size: 1.2rem;
-    color: var(--cor-secundaria);
-}
-
-.btn {
-    padding: 12px 20px;
-    border-radius: var(--radius-pequeno);
+.tab-item {
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
     font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: none;
-    display: inline-flex;
+    color: var(--secondary-color);
+    transition: color 0.3s, border-bottom 0.3s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; /* Compensar a borda inferior */
+    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
-.btn-primary {
-    background: var(--cor-primaria);
-    color: white;
+.tab-item:hover {
+    color: var(--primary-color);
 }
 
-.btn-primary:hover {
-    background: #2980b9;
-    transform: translateY(-2px);
+.tab-item.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
 }
 
-.btn-secondary {
-    background: white;
-    color: var(--cor-primaria);
-    border: 2px solid var(--cor-borda);
+.tab-content {
+    display: none;
 }
 
-.btn-secondary:hover {
-    background: #f8f9fa;
-    border-color: var(--cor-primaria);
+.tab-content.active {
+    display: block;
 }
 
-.btn-success {
-    background: var(--cor-sucesso);
-    color: white;
+.tab-content h2 {
+    margin-bottom: 1.5rem;
 }
 
-.btn-success:hover {
-    background: #219653;
-    transform: translateY(-2px);
+/* Formulários Admin */
+.add-form {
+    margin-bottom: 2rem;
 }
 
-.navigation {
+.service-list {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.list-group {
+    list-style: none;
+    padding: 0;
+}
+
+.list-group-item {
     display: flex;
     justify-content: space-between;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid var(--cor-borda);
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    margin-bottom: 0.75rem;
 }
+
+.list-group-item span strong {
+    font-size: 1.1rem;
+}
+
+.list-group-item div {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Tabelas de Agendamento */
+.agendamentos-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+}
+
+.agendamentos-table th, .agendamentos-table td {
+    border: 1px solid var(--border-color);
+    padding: 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.agendamentos-table th {
+    background-color: #e9ecef;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.agendamentos-table ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Configuração de Horários */
+.day-config {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.day-config label {
+    font-weight: 600;
+    width: 150px;
+}
+
+.time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-input {
+    width: 100px;
+}
+
+/* ==========================================================================
+   5. RESPONSIVIDADE
+   ========================================================================== */
 
 @media (max-width: 768px) {
-    .form-grid {
+    .container, .admin-container {
+        padding: 1rem;
+        margin: 1rem;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .steps-progress {
+        flex-wrap: wrap;
+        padding-bottom: 0.5rem;
+    }
+
+    .step-indicator {
+        margin-bottom: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .btn {
+        width: 100%;
+    }
+    
+    .service-cards-container {
         grid-template-columns: 1fr;
     }
-    
-    .container {
-        padding: 15px;
-    }
-    
-    .services-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .progress-step-label {
-        display: none;
-    }
-}
 
-.footer-info {
-    text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--cor-borda);
-    color: var(--cor-texto-claro);
-    font-size: 0.9em;
+    .admin-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .agendamentos-table th, .agendamentos-table td {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+    }
+
+    .list-group-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 }
