@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 5.0 (Fluxo de 4 etapas: Seleção, Detalhes, Cliente e Agendamento)
+ * Versão: 7.0 (Totalmente refeito com fluxo de 4 etapas, cálculo dinâmico e navegação corrigida)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -168,7 +168,7 @@ function renderServiceForms() {
         formGroup.innerHTML = `
             <h3>${service.nome}</h3>
             ${optionsHtml}
-            <div class="service-price">Valor: R$ ${service.precoBase.toFixed(2)}</div>
+            <div class="service-price">Valor: R$ 0.00</div>
         `;
         servicosFormContainer.appendChild(formGroup);
     });
@@ -193,7 +193,7 @@ function updatePrice(e) {
 }
 
 function calculatePrice(serviceData, container) {
-    let preco = serviceData.precoBase;
+    let preco = 0; // O valor inicial agora é 0,00
     const selectElements = container.querySelectorAll('.additional-field-select');
     
     selectElements.forEach(select => {
@@ -209,11 +209,30 @@ function calculatePrice(serviceData, container) {
 }
 
 document.getElementById('nextStep2').addEventListener('click', () => {
+    let allFieldsFilled = true;
     servicosSelecionados.forEach(service => {
-        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`).closest('.service-form-group');
-        const selectedOptions = getSelectedOptions(formGroup, service);
-        service.camposAdicionaisSelecionados = selectedOptions;
-        service.precoCalculado = calculatePrice(service, formGroup);
+        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
+        if (formGroup) {
+            formGroup.querySelectorAll('.additional-field-select').forEach(select => {
+                if (select.value === "") {
+                    allFieldsFilled = false;
+                }
+            });
+        }
+    });
+
+    if (!allFieldsFilled) {
+        alert("Por favor, preencha todos os campos para continuar.");
+        return;
+    }
+
+    servicosSelecionados.forEach(service => {
+        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
+        if (formGroup) {
+            const selectedOptions = getSelectedOptions(formGroup, service);
+            service.camposAdicionaisSelecionados = selectedOptions;
+            service.precoCalculado = calculatePrice(service, formGroup);
+        }
     });
     
     servicosFormSection.classList.add('hidden');
@@ -257,7 +276,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// 6. ETAPA 4: AGENDAMENTO
+// 6. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
 // ==========================================================================
 
 async function handleDateSelection() {
@@ -376,7 +395,7 @@ async function handleFormSubmit(e) {
 function showConfirmation() {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5); // Seta para 5 para mostrar que o processo foi concluído
+    updateProgressBar(5);
     
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
@@ -424,11 +443,10 @@ function createWhatsAppMessage() {
 function sendWhatsAppMessage(data) {
     const message = createWhatsAppMessage(data);
     const whatsappUrl = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(message)}`;
-    // window.open(whatsappUrl, '_blank');
 }
 
 // ==========================================================================
-// 7. NAVEGAÇÃO ENTRE ETAPAS E FUNÇÕES AUXILIARES
+// 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
 // ==========================================================================
 
 function setupEventListeners() {
@@ -465,7 +483,7 @@ function updateProgressBar(step) {
 }
 
 function updateOrcamentoTotal() {
-    const total = servicosSelecionados.reduce((sum, service) => sum + (service.precoCalculado || service.precoBase), 0);
+    const total = servicosSelecionados.reduce((sum, service) => sum + (service.precoCalculado || 0), 0);
     orcamentoTotalDisplay.textContent = `R$ ${total.toFixed(2)}`;
 }
 
