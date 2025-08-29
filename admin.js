@@ -1,11 +1,11 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 2.0 (Com suporte a campos adicionais e valores)
+ * Versão: 4.0 (Com funcionalidade CRUD e flexibilidade de tipos de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, set, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
 // 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupServicoForm() {
     servicoForm.addEventListener('submit', handleServicoFormSubmit);
-    addFieldBtn.addEventListener('click', addAdditionalFieldForm);
+    addFieldBtn.addEventListener('click', () => addAdditionalFieldForm());
 }
 
 function setupConfigForm() {
@@ -87,32 +87,26 @@ function setupConfigForm() {
 }
 
 // ==========================================================================
-// 3. GERENCIAMENTO DE SERVIÇOS
+// 3. GERENCIAMENTO DE SERVIÇOS (CRUD)
 // ==========================================================================
 
-function addAdditionalFieldForm() {
-    const fieldIndex = additionalFieldsContainer.children.length;
+function addAdditionalFieldForm(fieldData = {}) {
     const fieldHtml = `
-        <div class="additional-field" data-index="${fieldIndex}">
+        <div class="additional-field" data-type="${fieldData.tipo || 'select'}">
             <div class="form-group">
                 <label>Nome do Campo</label>
-                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" required>
+                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" value="${fieldData.nome || ''}" required>
             </div>
             <div class="form-group">
                 <label>Tipo do Campo</label>
                 <select class="form-control field-type">
-                    <option value="select">Lista de Opções</option>
+                    <option value="select" ${fieldData.tipo === 'select' ? 'selected' : ''}>Lista de Opções (select)</option>
+                    <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto (input)</option>
+                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico (input)</option>
                 </select>
             </div>
             <div class="options-container">
-                <p>Opções:</p>
-                <div class="option-list">
-                    <div class="option-item">
-                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" required>
-                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
+                ${fieldData.tipo === 'select' || !fieldData.tipo ? generateOptionsHTML(fieldData.opcoes) : ''}
             </div>
             <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
         </div>
@@ -123,8 +117,47 @@ function addAdditionalFieldForm() {
     const fieldElement = tempDiv.firstElementChild;
     additionalFieldsContainer.appendChild(fieldElement);
 
-    fieldElement.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+    const fieldTypeSelect = fieldElement.querySelector('.field-type');
+    const optionsContainer = fieldElement.querySelector('.options-container');
+
+    fieldTypeSelect.addEventListener('change', (e) => {
+        const selectedType = e.target.value;
+        fieldElement.dataset.type = selectedType;
+        if (selectedType === 'select') {
+            optionsContainer.innerHTML = generateOptionsHTML();
+            optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+            optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
+        } else {
+            optionsContainer.innerHTML = '';
+        }
+    });
+
+    if (fieldElement.dataset.type === 'select') {
+        optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+        optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
+    }
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
+}
+
+function generateOptionsHTML(opcoes = ['']) {
+    return `
+        <p>Opções:</p>
+        <div class="option-list">
+            ${opcoes.map(option => {
+                const parts = option.split(', R$ ');
+                const optionValue = parts[0] || '';
+                const optionPrice = parts[1] || '0.00';
+                return `
+                    <div class="option-item">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
+                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
+    `;
 }
 
 function addOptionForm(e) {
@@ -133,11 +166,18 @@ function addOptionForm(e) {
         <div class="option-item mt-2">
             <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
             <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+            <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
         </div>
     `;
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = optionHtml;
-    optionList.appendChild(tempDiv.firstElementChild);
+    const newOption = tempDiv.firstElementChild;
+    optionList.appendChild(newOption);
+    newOption.querySelector('.remove-option-btn').addEventListener('click', removeOptionForm);
+}
+
+function removeOptionForm(e) {
+    e.target.closest('.option-item').remove();
 }
 
 function removeAdditionalFieldForm(e) {
@@ -150,24 +190,29 @@ function handleServicoFormSubmit(e) {
     const nome = servicoNomeInput.value;
     const descricao = servicoDescricaoInput.value;
     const precoBase = parseFloat(servicoPrecoInput.value) || 0;
+    const servicoKey = servicoForm.dataset.key;
     
     const camposAdicionais = [];
     document.querySelectorAll('.additional-field').forEach(fieldElement => {
         const fieldName = fieldElement.querySelector('.field-name').value;
         const fieldType = fieldElement.querySelector('.field-type').value;
-        const opcoes = [];
         
-        fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
-            const optionValue = optionItem.querySelector('.option-value').value;
-            const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-            opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
-        });
-
-        camposAdicionais.push({
+        const campoData = {
             nome: fieldName,
-            tipo: fieldType,
-            opcoes: opcoes
-        });
+            tipo: fieldType
+        };
+
+        if (fieldType === 'select') {
+            const opcoes = [];
+            fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
+                const optionValue = optionItem.querySelector('.option-value').value;
+                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
+                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+            });
+            campoData.opcoes = opcoes;
+        }
+
+        camposAdicionais.push(campoData);
     });
 
     const servico = {
@@ -177,17 +222,36 @@ function handleServicoFormSubmit(e) {
         camposAdicionais
     };
 
-    const servicosRef = ref(database, 'servicos');
-    push(servicosRef, servico)
-        .then(() => {
-            alert('Serviço cadastrado com sucesso!');
-            servicoForm.reset();
-            additionalFieldsContainer.innerHTML = '';
-        })
-        .catch(error => {
-            console.error("Erro ao cadastrar serviço:", error);
-            alert("Ocorreu um erro. Verifique o console.");
-        });
+    const servicosRef = ref(database, `servicos/${servicoKey || ''}`);
+    
+    if (servicoKey) {
+        set(servicosRef, servico)
+            .then(() => {
+                alert('Serviço atualizado com sucesso!');
+                resetServicoForm();
+            })
+            .catch(error => {
+                console.error("Erro ao atualizar serviço:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    } else {
+        push(servicosRef, servico)
+            .then(() => {
+                alert('Serviço cadastrado com sucesso!');
+                resetServicoForm();
+            })
+            .catch(error => {
+                console.error("Erro ao cadastrar serviço:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
+function resetServicoForm() {
+    servicoForm.reset();
+    servicoForm.removeAttribute('data-key');
+    additionalFieldsContainer.innerHTML = '';
+    servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
 }
 
 function loadServices() {
@@ -209,26 +273,53 @@ function loadServices() {
 function createServicoCard(servico, key) {
     const card = document.createElement('div');
     card.className = 'card mb-3';
+    
+    let camposAdicionaisHtml = '';
+    if (servico.camposAdicionais) {
+        camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
+            let opcoesHtml = '';
+            if (campo.tipo === 'select' && campo.opcoes) {
+                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
+            } else {
+                opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
+            }
+            return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
+        }).join('');
+    }
+
     card.innerHTML = `
         <div class="card-body">
             <h5 class="card-title">${servico.nome}</h5>
             <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
             <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
             <h6>Campos Adicionais:</h6>
-            <ul>
-                ${servico.camposAdicionais ? servico.camposAdicionais.map(campo => `
-                    <li><strong>${campo.nome}</strong>:
-                        <ul>
-                            ${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}
-                        </ul>
-                    </li>
-                `).join('') : '<p>Nenhum campo adicional.</p>'}
-            </ul>
-            <button class="btn btn-danger btn-sm float-right delete-service-btn" data-key="${key}">Excluir</button>
+            <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
+            <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
+            <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
     servicosList.appendChild(card);
+    card.querySelector('.edit-service-btn').addEventListener('click', editService);
     card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
+}
+
+function editService(e) {
+    const key = e.target.dataset.key;
+    const servicoRef = ref(database, `servicos/${key}`);
+    get(servicoRef).then(snapshot => {
+        const servicoData = snapshot.val();
+        servicoNomeInput.value = servicoData.nome;
+        servicoDescricaoInput.value = servicoData.descricao;
+        servicoPrecoInput.value = servicoData.precoBase || 0;
+        servicoForm.dataset.key = key;
+        
+        additionalFieldsContainer.innerHTML = '';
+        if (servicoData.camposAdicionais) {
+            servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
+        }
+        servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 }
 
 function deleteService(e) {
@@ -254,6 +345,7 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
+            const agendamentosArray = Object.values(agendamentos).sort((a,b) => new Date(a.data) - new Date(b.data));
             for (const key in agendamentos) {
                 const agendamento = agendamentos[key];
                 createAgendamentoCard(agendamento, key);
@@ -269,15 +361,17 @@ function createAgendamentoCard(agendamento, key) {
     card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
     
     let servicosHtml = '<ul>';
-    agendamento.servicos.forEach(servico => {
-        servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
-            <ul>
-                ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
-                    <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
-                `).join('') : ''}
-            </ul>
-        </li>`;
-    });
+    if (agendamento.servicos) {
+        agendamento.servicos.forEach(servico => {
+            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
+                <ul>
+                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
+                        <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
+                    `).join('') : ''}
+                </ul>
+            </li>`;
+        });
+    }
     servicosHtml += '</ul>';
 
     card.innerHTML = `
@@ -307,12 +401,15 @@ function createAgendamentoCard(agendamento, key) {
 
 function updateBookingStatus(key, newStatus) {
     const agendamentoRef = ref(database, `agendamentos/${key}`);
-    set(agendamentoRef, { ...agendamento, status: newStatus })
-        .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
-        .catch(error => {
-            console.error("Erro ao atualizar status:", error);
-            alert("Ocorreu um erro. Verifique o console.");
-        });
+    get(agendamentoRef).then(snapshot => {
+        const agendamentoData = snapshot.val();
+        set(agendamentoRef, { ...agendamentoData, status: newStatus })
+            .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
+            .catch(error => {
+                console.error("Erro ao atualizar status:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    });
 }
 
 // ==========================================================================
