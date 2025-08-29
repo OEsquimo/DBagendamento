@@ -1,155 +1,117 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Sistema de Orçamento - O Esquimó</title>
+    <title>O Esquimó - Agendamento de Serviços</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
-    <script type="module" src="assets/script.js"></script>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-tools"></i> Sistema de Orçamento - O Esquimó</h1>
-            <p>Preencha as informações para gerar seu orçamento</p>
-        </div>
+        <header class="header">
+            <h1>O Esquimó</h1>
+            <p>Agendamento de Serviços de Climatização</p>
+            <a id="whatsappLink" href="#" class="btn btn-whatsapp" target="_blank">
+                <i class="fab fa-whatsapp"></i> Fale Conosco
+            </a>
+        </header>
 
-        <div class="progress-container">
-            <div class="progress-bar" id="progressBar"></div>
-            <div class="progress-step active" id="step-1">
-                <span class="progress-step-label">Serviços</span>
+        <form id="agendamentoForm">
+            <div class="steps-progress">
+                <span class="step-indicator active" data-step="1">1. Serviços</span>
+                <span class="step-indicator" data-step="2">2. Orçamento</span>
+                <span class="step-indicator" data-step="3">3. Horário</span>
+                <span class="step-indicator" data-step="4">4. Dados Pessoais</span>
+                <span class="step-indicator" data-step="5">5. Revisão</span>
             </div>
-            <div class="progress-step" id="step-2">
-                <span class="progress-step-label">Equipamentos</span>
-            </div>
-            <div class="progress-step" id="step-3">
-                <span class="progress-step-label">Orçamento</span>
-            </div>
-            <div class="progress-step" id="step-4">
-                <span class="progress-step-label">Dados</span>
-            </div>
-            <div class="progress-step" id="step-5">
-                <span class="progress-step-label">Agendamento</span>
-            </div>
-        </div>
 
-        <div class="form-step active" id="step-servicos">
-            <h2><i class="fas fa-concierge-bell"></i> Selecione os Serviços</h2>
-            <p>Escolha um ou mais serviços que você precisa</p>
-            
-            <div class="services-grid" id="servicosGrid">
+            <div id="step1" class="form-step active">
+                <h2>1. Escolha seus serviços</h2>
+                <div id="servicosList" class="service-cards-container">
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Carregando serviços...</p>
+                    </div>
                 </div>
-            
-            <div class="navigation">
-                <div></div>
-                <button class="btn btn-primary" id="btnNextToEquipamentos">
-                    Próximo <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="form-step" id="step-equipamentos">
-            <h2><i class="fas fa-tools"></i> Detalhes dos Equipamentos</h2>
-            <p>Informe os detalhes de cada equipamento para o serviço</p>
-            
-            <div id="equipamentos-container">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-next">Próximo <i class="fas fa-arrow-right"></i></button>
                 </div>
-            
-            <div class="navigation">
-                <button class="btn btn-secondary" id="btnBackToServicos">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-                <button class="btn btn-primary" id="btnNextToOrcamento">
-                    Próximo <i class="fas fa-arrow-right"></i>
-                </button>
             </div>
-        </div>
 
-        <div class="form-step" id="step-orcamento">
-            <h2><i class="fas fa-calculator"></i> Seu Orçamento</h2>
-            <p>Confira o resumo do seu orçamento</p>
-            
-            <div class="budget-summary" id="relatorio-orcamento">
+            <div id="step2" class="form-step">
+                <h2>2. Detalhes e Orçamento</h2>
+                <div id="dynamicFieldsContainer">
+                    </div>
+                <div class="resumo-orcamento">
+                    <h4>Seu Carrinho:</h4>
+                    <ul id="resumoServicosList" class="resumo-list">
+                        </ul>
+                    <div class="orcamento-total">
+                        <label for="orcamentoValor">Valor Total Estimado:</label>
+                        <input type="text" id="orcamentoValor" readonly/>
+                    </div>
                 </div>
-            
-            <div class="navigation">
-                <button class="btn btn-secondary" id="btnBackToEquipamentos">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-                <button class="btn btn-success" id="btnConfirmarOrcamento">
-                    Confirmar <i class="fas fa-check"></i>
-                </button>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-prev"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <button type="button" class="btn btn-next">Próximo <i class="fas fa-arrow-right"></i></button>
+                </div>
             </div>
-        </div>
 
-        <div class="form-step" id="step-dados">
-            <h2><i class="fas fa-user"></i> Seus Dados</h2>
-            <p>Informe seus dados para contato</p>
-            
-            <div class="form-group">
-                <label for="nome">Nome completo</label>
-                <input type="text" id="nome" class="form-control" placeholder="Informe seu nome completo" required>
+            <div id="step3" class="form-step">
+                <h2>3. Escolha a data e o horário</h2>
+                <div class="form-group">
+                    <label for="agendamentoData">Data:</label>
+                    <input type="date" id="agendamentoData" class="form-control" required/>
+                </div>
+                <div class="form-group">
+                    <label for="agendamentoHora">Horário:</label>
+                    <select id="agendamentoHora" class="form-control" required>
+                        <option value="" disabled selected>Selecione uma data</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-prev"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <button type="button" class="btn btn-next">Próximo <i class="fas fa-arrow-right"></i></button>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label for="endereco">Endereço completo</label>
-                <input type="text" id="endereco" class="form-control" placeholder="Informe seu endereço" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="whatsapp">Telefone (WhatsApp)</label>
-                <input type="tel" id="whatsapp" class="form-control" placeholder="(81) 99999-9999" required>
-            </div>
-            
-            <div class="navigation">
-                <button class="btn btn-secondary" id="btnBackToOrcamento">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-                <button class="btn btn-primary" id="btnNextToAgendamento">
-                    Próximo <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        </div>
 
-        <div class="form-step" id="step-agendamento">
-            <h2><i class="fas fa-calendar-alt"></i> Agendamento</h2>
-            <p>Escolha a data e horário para o serviço</p>
-            
-            <div class="form-group">
-                <label for="data_agendamento">Data do Serviço</label>
-                <input type="text" id="data_agendamento" class="form-control" placeholder="Escolha uma data disponível" readonly required>
+            <div id="step4" class="form-step">
+                <h2>4. Seus dados</h2>
+                <div class="form-group">
+                    <label for="clienteNome">Nome Completo</label>
+                    <input type="text" id="clienteNome" class="form-control" required/>
+                </div>
+                <div class="form-group">
+                    <label for="clienteTelefone">Telefone (WhatsApp)</label>
+                    <input type="tel" id="clienteTelefone" class="form-control" placeholder="(DD) 99999-9999" required/>
+                </div>
+                <div class="form-group">
+                    <label for="clienteEndereco">Endereço Completo</label>
+                    <input type="text" id="clienteEndereco" class="form-control" required/>
+                </div>
+                <div class="form-group">
+                    <label for="clienteObservacoes">Observações (opcional)</label>
+                    <textarea id="clienteObservacoes" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-prev"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <button type="button" class="btn btn-next">Próximo <i class="fas fa-arrow-right"></i></button>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label for="horario_agendamento">Horário do Serviço</label>
-                <select id="horario_agendamento" class="form-control" required disabled>
-                    <option value="">Primeiro, escolha a data</option>
-                </select>
+
+            <div id="step5" class="form-step">
+                <h2>5. Revise e finalize</h2>
+                <div id="resumoAgendamento" class="resumo-final">
+                    </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-prev"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <button type="button" id="btnEnviarWhatsapp" class="btn btn-success"><i class="fab fa-whatsapp"></i> Finalizar e Enviar por WhatsApp</button>
+                </div>
             </div>
-            
-            <div class="form-group">
-                <label for="forma_pagamento">Forma de Pagamento</label>
-                <select id="forma_pagamento" class="form-control" required>
-                    <option value="">Selecione como prefere pagar</option>
-                    <option>Pix</option>
-                    <option>Dinheiro</option>
-                    <option>Cartão de Crédito</option>
-                    <option>Cartão de Débito</option>
-                </select>
-            </div>
-            
-            <div class="navigation">
-                <button class="btn btn-secondary" id="btnBackToDados">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-                <button class="btn btn-success" id="btnFinalizar">
-                    <i class="fab fa-whatsapp"></i> Finalizar Agendamento
-                </button>
-            </div>
-        </div>
+        </form>
     </div>
 
-    <p class="text-center mt-4 text-muted">Última atualização do sistema: <span id="lastUpdate">Carregando...</span></p>
+    <script type="module" src="assets/script.js"></script>
 </body>
 </html>
