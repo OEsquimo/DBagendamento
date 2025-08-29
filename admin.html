@@ -1,159 +1,73 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administração - O Esquimó</title>
+    <title>Admin - O Esquimó</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
 
-    <div id="adminContainer">
-        <div id="loginForm" class="login-container hidden">
-            <h2>Login do Administrador</h2>
-            <form id="loginFormInner">
-                <div class="form-group">
-                    <label for="username">Usuário</label>
-                    <input type="text" id="username" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Senha</label>
-                    <input type="password" id="password" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Entrar</button>
-            </form>
-        </div>
+    <div class="container">
+        <h2>Painel Administrativo</h2>
 
-        <div id="adminPanel" class="admin-panel hidden">
-            <header class="admin-header">
-                <h1>Painel de Administração</h1>
-                <div class="header-actions">
-                    <div id="pendingAppointmentsNotification" class="notification hidden">
-                        <i class="fas fa-bell"></i>
-                        <p>Você tem X agendamento(s) pendente(s)!</p>
+        <section id="addServico">
+            <h3>Cadastrar Novo Serviço</h3>
+            <form id="servicoForm">
+                <div class="form-group">
+                    <label for="servicoNome">Nome do Serviço</label>
+                    <input type="text" id="servicoNome" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="servicoDescricao">Descrição do Serviço</label>
+                    <textarea id="servicoDescricao" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="servicoPreco">Preço Base (se houver)</label>
+                    <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00">
+                </div>
+
+                <h4>Campos Adicionais</h4>
+                <div id="additionalFieldsContainer">
                     </div>
-                    <button id="logoutButton" class="btn btn-danger">Sair</button>
+                <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
+
+                <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
+            </form>
+        </section>
+        
+        <hr>
+
+        <section id="listaServicos">
+            <h3>Serviços Cadastrados</h3>
+            <div id="servicosList">
                 </div>
-            </header>
+        </section>
         
-            <div class="admin-tabs">
-                <button class="tab-item active" data-tab="servicos">
-                    <i class="fas fa-cogs"></i> Serviços
-                </button>
-                <button class="tab-item" data-tab="agendamentos">
-                    <i class="fas fa-calendar-check"></i> Agendamentos
-                </button>
-                <button class="tab-item" data-tab="configuracoes">
-                    <i class="fas fa-sliders-h"></i> Configurações
-                </button>
-            </div>
-        
-            <div class="tab-content-container">
-                <div id="tabServicos" class="tab-content active">
-                    <h2>Gerenciar Serviços</h2>
-                    <form id="addServiceForm" class="service-form">
-                        <div class="form-group">
-                            <label for="serviceName">Nome do Serviço</label>
-                            <input type="text" id="serviceName" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceDescription">Descrição</label>
-                            <textarea id="serviceDescription" class="form-control" rows="3" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="servicePrice">Preço Base (R$)</label>
-                            <input type="number" id="servicePrice" class="form-control" step="0.01" required>
-                        </div>
-                        <h3>Campos Adicionais <button type="button" class="btn btn-secondary btn-add-field"><i class="fas fa-plus"></i></button></h3>
-                        <div id="additionalFieldsContainer">
-                            </div>
-                        <button type="submit" class="btn btn-primary">Salvar Serviço</button>
-                    </form>
-        
-                    <hr>
-                    <h3>Serviços Existentes</h3>
-                    <ul id="servicosListAdmin" class="list-group">
-                        </ul>
+        <hr>
+
+        <section id="listaAgendamentos">
+            <h3>Agendamentos</h3>
+            <div id="agendamentosList">
                 </div>
-        
-                <div id="tabAgendamentos" class="tab-content">
-                    <h2>Agendamentos</h2>
-                    <div id="agendamentosList">
-                        </div>
+        </section>
+
+        <section id="configuracoes">
+            <h3>Configurações de Horário</h3>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="whatsappNumber">Número do WhatsApp (ex: 55987654321)</label>
+                    <input type="tel" id="whatsappNumber" class="form-control" required>
                 </div>
-        
-                <div id="tabConfiguracoes" class="tab-content">
-                    <h2>Configurações do Sistema</h2>
-                    <form id="configForm">
-                        <div class="form-group">
-                            <label for="whatsappNumber">Número do WhatsApp (Ex: 5541999998888)</label>
-                            <input type="text" id="whatsappNumber" class="form-control" placeholder="5541999998888">
-                        </div>
-                        <div class="form-group">
-                            <label for="duracaoServico">Duração padrão do serviço (minutos)</label>
-                            <input type="number" id="duracaoServico" class="form-control" value="60" required>
-                        </div>
-                        <hr>
-                        <h3>Horários de Funcionamento</h3>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="segunda" id="segundaCheckbox"> Segunda-feira</label>
-                            <div class="time-inputs hidden" id="segundaTimeInputs">
-                                <input type="time" class="form-control time-input" id="segundaInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="segundaFim" value="18:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="terca" id="tercaCheckbox"> Terça-feira</label>
-                            <div class="time-inputs hidden" id="tercaTimeInputs">
-                                <input type="time" class="form-control time-input" id="tercaInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="tercaFim" value="18:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="quarta" id="quartaCheckbox"> Quarta-feira</label>
-                            <div class="time-inputs hidden" id="quartaTimeInputs">
-                                <input type="time" class="form-control time-input" id="quartaInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="quartaFim" value="18:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="quinta" id="quintaCheckbox"> Quinta-feira</label>
-                            <div class="time-inputs hidden" id="quintaTimeInputs">
-                                <input type="time" class="form-control time-input" id="quintaInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="quintaFim" value="18:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="sexta" id="sextaCheckbox"> Sexta-feira</label>
-                            <div class="time-inputs hidden" id="sextaTimeInputs">
-                                <input type="time" class="form-control time-input" id="sextaInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="sextaFim" value="18:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="sabado" id="sabadoCheckbox"> Sábado</label>
-                            <div class="time-inputs hidden" id="sabadoTimeInputs">
-                                <input type="time" class="form-control time-input" id="sabadoInicio" value="09:00">
-                                <input type="time" class="form-control time-input" id="sabadoFim" value="13:00">
-                            </div>
-                        </div>
-                        <div class="day-config">
-                            <label><input type="checkbox" class="day-checkbox" data-day="domingo" id="domingoCheckbox"> Domingo</label>
-                            <div class="time-inputs hidden" id="domingoTimeInputs">
-                                <input type="time" class="form-control time-input" id="domingoInicio" value="00:00">
-                                <input type="time" class="form-control time-input" id="domingoFim" value="00:00">
-                            </div>
-                        </div>
-        
-                        <button type="submit" class="btn btn-primary">Salvar Configurações</button>
-                    </form>
-                </div>
-        
-            </div>
-        </div>
+                <h4>Horários de Atendimento por Dia</h4>
+                <div id="horariosContainer">
+                    </div>
+                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+            </form>
+        </section>
+
     </div>
 
-    <script src="admin.js" type="module"></script>
+    <script type="module" src="admin.js"></script>
 </body>
 </html>
