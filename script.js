@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 7.0 (Totalmente refeito com fluxo de 4 etapas, cálculo dinâmico e navegação corrigida)
+ * Versão: 8.0 (Atualizações de UI, validação, WhatsApp e contagem)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -39,10 +39,11 @@ const backButton2 = document.getElementById('backButton2');
 const backButton3 = document.getElementById('backButton3');
 const confirmationPopup = document.getElementById('confirmation');
 const whatsappLink = document.getElementById('whatsappLink');
-const whatsappNumberDisplay = document.getElementById('whatsappNumberDisplay');
 const progressSteps = document.querySelectorAll('.progress-step');
 const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+const telefoneInput = document.getElementById('telefone');
+const selectedServicesCount = document.getElementById('selectedServicesCount');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllData();
     setupEventListeners();
     updateProgressBar(1);
+    setupPhoneMask();
 });
 
 async function loadAllData() {
@@ -69,7 +71,6 @@ async function loadConfig() {
     const snapshot = await get(configRef);
     if (snapshot.exists()) {
         configGlobais = snapshot.val();
-        whatsappNumberDisplay.textContent = formatPhoneNumber(configGlobais.whatsappNumber || 'N/A');
     }
 }
 
@@ -118,6 +119,7 @@ function createServiceCard(service, key) {
             card.querySelector('.btn-select-service').textContent = 'Adicionar';
         }
         
+        updateSelectedServicesCount();
         const nextButton = document.getElementById('nextStep1');
         if (servicosSelecionados.length > 0) {
             nextButton.style.display = 'block';
@@ -127,6 +129,10 @@ function createServiceCard(service, key) {
     });
 
     servicosContainer.appendChild(card);
+}
+
+function updateSelectedServicesCount() {
+    selectedServicesCount.textContent = servicosSelecionados.length;
 }
 
 document.getElementById('nextStep1').addEventListener('click', () => {
@@ -156,7 +162,7 @@ function renderServiceForms() {
                 if (field.tipo === 'select' && field.opcoes) {
                     return `
                         <label>${field.nome}</label>
-                        <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}">
+                        <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
                             <option value="">Selecione...</option>
                             ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
                         </select>
@@ -164,12 +170,12 @@ function renderServiceForms() {
                 } else if (field.tipo === 'text') {
                     return `
                         <label>${field.nome}</label>
-                        <input type="text" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}">
+                        <input type="text" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" required>
                     `;
                 } else if (field.tipo === 'number') {
                     return `
                         <label>${field.nome}</label>
-                        <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01">
+                        <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01" required>
                     `;
                 }
             }).join('');
@@ -297,11 +303,37 @@ function getSelectedOptions(container, serviceData) {
 // 5. ETAPA 3: INFORMAÇÕES DO CLIENTE
 // ==========================================================================
 
+function setupPhoneMask() {
+    telefoneInput.addEventListener('input', (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+        let maskedValue = '';
+
+        if (value.length > 0) {
+            maskedValue += `(${value.substring(0, 2)}`;
+        }
+        if (value.length > 2) {
+            maskedValue += `) ${value.substring(2, 7)}`;
+        }
+        if (value.length > 7) {
+            maskedValue += `-${value.substring(7, 11)}`;
+        }
+        
+        e.target.value = maskedValue;
+    });
+}
+
 document.getElementById('nextStep3').addEventListener('click', () => {
     const nome = document.getElementById('nome').value;
     const telefone = document.getElementById('telefone').value;
+    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
+
     if (!nome || !telefone) {
         alert("Por favor, preencha nome e telefone para continuar.");
+        return;
+    }
+
+    if (!telefoneRegex.test(telefone)) {
+        alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
         return;
     }
 
@@ -420,7 +452,6 @@ async function handleFormSubmit(e) {
         const agendamentosRef = ref(database, 'agendamentos');
         await push(agendamentosRef, agendamentoData);
         showConfirmation();
-        sendWhatsAppMessage(agendamentoData);
     } catch (error) {
         console.error("Erro ao salvar agendamento:", error);
         alert("Ocorreu um erro ao salvar o agendamento. Por favor, tente novamente.");
@@ -473,11 +504,6 @@ function createWhatsAppMessage() {
     ${observacoes ? `Observações: ${observacoes}` : ''}
     
     Obrigado!`;
-}
-
-function sendWhatsAppMessage(data) {
-    const message = createWhatsAppMessage(data);
-    const whatsappUrl = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(message)}`;
 }
 
 // ==========================================================================
@@ -536,13 +562,4 @@ function getDayOfWeek(dateString) {
 function capitalize(s) {
     if (typeof s !== 'string') return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function formatPhoneNumber(number) {
-    const cleaned = ('' + number).replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{2})(\d{2})(\d{5})(\d{4})$/);
-    if (match) {
-        return `+${match[1]} (${match[2]}) ${match[3]}-${match[4]}`;
-    }
-    return number;
 }
