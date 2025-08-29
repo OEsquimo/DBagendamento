@@ -34,15 +34,18 @@ const agendamentoSection = document.getElementById('agendamento');
 const servicosFormContainer = document.getElementById('servicosFormContainer');
 const agendamentoForm = document.getElementById('agendamentoForm');
 const orcamentoTotalDisplay = document.getElementById('orcamentoTotal');
-const backButton = document.getElementById('backButton');
+const backButton1 = document.getElementById('backButton1');
+const backButton2 = document.getElementById('backButton2');
+const backButton3 = document.getElementById('backButton3');
 const confirmationPopup = document.getElementById('confirmation');
 const whatsappLink = document.getElementById('whatsappLink');
 const whatsappNumberDisplay = document.getElementById('whatsappNumberDisplay');
 const progressSteps = document.querySelectorAll('.progress-step');
+const datePicker = document.getElementById('datePicker');
+const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
-let horariosDisponiveis = [];
 let servicosGlobais = {};
 let configGlobais = {};
 
@@ -115,7 +118,6 @@ function createServiceCard(service, key) {
             card.querySelector('.btn-select-service').textContent = 'Adicionar';
         }
         
-        // Ativa o botão de "Próximo" se houver serviços selecionados
         const nextButton = document.getElementById('nextStep1');
         if (servicosSelecionados.length > 0) {
             nextButton.style.display = 'block';
@@ -207,7 +209,6 @@ function calculatePrice(serviceData, container) {
 }
 
 document.getElementById('nextStep2').addEventListener('click', () => {
-    // Salva os campos selecionados antes de avançar
     servicosSelecionados.forEach(service => {
         const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`).closest('.service-form-group');
         const selectedOptions = getSelectedOptions(formGroup, service);
@@ -243,7 +244,6 @@ function getSelectedOptions(container, serviceData) {
 // ==========================================================================
 
 document.getElementById('nextStep3').addEventListener('click', () => {
-    // Validação básica do formulário de cliente
     const nome = document.getElementById('nome').value;
     const telefone = document.getElementById('telefone').value;
     if (!nome || !telefone) {
@@ -261,7 +261,6 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 // ==========================================================================
 
 async function handleDateSelection() {
-    // ... (mesmo código da versão anterior)
     const selectedDate = datePicker.value;
     if (!selectedDate) return;
 
@@ -290,12 +289,11 @@ async function handleDateSelection() {
         });
     }
 
-    horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia);
-    displayTimeSlots();
+    const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia);
+    displayTimeSlots(horariosDisponiveis);
 }
 
 function generateTimeSlots(startTime, endTime, interval, existingAppointments) {
-    // ... (mesmo código da versão anterior)
     const slots = [];
     let currentTime = new Date(`2000-01-01T${startTime}:00`);
     const end = new Date(`2000-01-01T${endTime}:00`);
@@ -311,8 +309,7 @@ function generateTimeSlots(startTime, endTime, interval, existingAppointments) {
     return slots;
 }
 
-function displayTimeSlots() {
-    // ... (mesmo código da versão anterior)
+function displayTimeSlots(horariosDisponiveis) {
     if (horariosDisponiveis.length === 0) {
         timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para a data selecionada. Por favor, escolha outro dia.</p>';
         return;
@@ -329,7 +326,6 @@ function displayTimeSlots() {
 }
 
 function selectTimeSlot(selectedSlot) {
-    // ... (mesmo código da versão anterior)
     document.querySelectorAll('.time-slot').forEach(slot => {
         slot.classList.remove('selected');
     });
@@ -380,6 +376,7 @@ async function handleFormSubmit(e) {
 function showConfirmation() {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
+    updateProgressBar(5); // Seta para 5 para mostrar que o processo foi concluído
     
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
@@ -431,8 +428,31 @@ function sendWhatsAppMessage(data) {
 }
 
 // ==========================================================================
-// 7. FUNÇÕES AUXILIARES
+// 7. NAVEGAÇÃO ENTRE ETAPAS E FUNÇÕES AUXILIARES
 // ==========================================================================
+
+function setupEventListeners() {
+    datePicker.addEventListener('change', handleDateSelection);
+    agendamentoForm.addEventListener('submit', handleFormSubmit);
+
+    backButton1.addEventListener('click', () => {
+        servicosFormSection.classList.add('hidden');
+        servicosSection.classList.remove('hidden');
+        updateProgressBar(1);
+    });
+
+    backButton2.addEventListener('click', () => {
+        clienteFormSection.classList.add('hidden');
+        servicosFormSection.classList.remove('hidden');
+        updateProgressBar(2);
+    });
+    
+    backButton3.addEventListener('click', () => {
+        agendamentoSection.classList.add('hidden');
+        clienteFormSection.classList.remove('hidden');
+        updateProgressBar(3);
+    });
+}
 
 function updateProgressBar(step) {
     progressSteps.forEach((s, index) => {
