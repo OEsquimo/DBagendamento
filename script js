@@ -1,17 +1,17 @@
 /*
  * Arquivo: script.js
- * Descrição: Lógica principal para a interface de agendamento do cliente.
- * Versão: 3.3 (Fluxo de agendamento com orçamento na segunda etapa)
+ * Descrição: Lógica principal para a interface do cliente e agendamento.
+ * Versão: 3.1 (Com melhorias de UI e gestão de horários por dia da semana)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
 // 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
 // ==========================================================================
 
-// Configuração do Firebase - Substitua pelos seus dados
+// Substitua com seus dados do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
     authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -26,423 +26,414 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Variáveis de estado
-let servicosDisponiveis = {};
+// Variáveis para elementos do DOM
+const servicosContainer = document.getElementById('servicosContainer');
+const agendamentoSection = document.getElementById('agendamento');
+const servicosSection = document.getElementById('servicos');
+const selectedServicesList = document.getElementById('selectedServicesList');
+const datePicker = document.getElementById('datePicker');
+const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+const agendamentoForm = document.getElementById('agendamentoForm');
+const orcamentoTotalDisplay = document.getElementById('orcamentoTotal');
+const backButton = document.getElementById('backButton');
+const confirmationPopup = document.getElementById('confirmation');
+const whatsappLink = document.getElementById('whatsappLink');
+const whatsappNumberDisplay = document.getElementById('whatsappNumberDisplay');
+
+// Dados do agendamento
 let servicosSelecionados = [];
-let configuracoes = {};
-
-// Elementos HTML das seções
-const servicosSection = document.getElementById('servicosSection');
-const camposAdicionaisSection = document.getElementById('camposAdicionaisSection');
-const dadosPessoaisSection = document.getElementById('dadosPessoaisSection');
-
-// Elementos HTML dos formulários e botões
-const formServicos = document.getElementById('formServicos');
-const servicosList = document.getElementById('servicosList');
-const btnContinuar = document.getElementById('btnContinuar');
-
-const formCamposAdicionais = document.getElementById('formCamposAdicionais');
-const camposAdicionaisList = document.getElementById('camposAdicionaisList');
-const summaryServicosList = document.getElementById('summaryServicosList');
-const totalPriceElement = document.getElementById('totalPrice');
-const btnVoltarCampos = document.getElementById('btnVoltarCampos');
-
-const formDadosAgendamento = document.getElementById('formDadosAgendamento');
-const dataInput = document.getElementById('data');
-const horaSelect = document.getElementById('hora');
-const btnVoltarDados = document.getElementById('btnVoltarDados');
-const btnFinalizar = document.getElementById('btnFinalizar');
-const orcamentoTotalInput = document.getElementById('orcamentoTotal');
-
-const loadingMessage = document.getElementById('loadingMessage');
-const successMessage = document.getElementById('successMessage');
-const errorMessage = document.getElementById('errorMessage');
+let horariosDisponiveis = [];
+let servicosGlobais = {};
+let configGlobais = {};
 
 // ==========================================================================
-// 2. FUNÇÕES DE INICIALIZAÇÃO
+// 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await loadConfig();
-        await loadServicos();
-        setupEventListeners();
-    } catch (error) {
-        console.error("Erro ao inicializar a aplicação:", error);
-        showError('Não foi possível carregar os dados. Tente novamente mais tarde.');
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllData();
+    setupEventListeners();
 });
+
+async function loadAllData() {
+    await loadConfig();
+    loadServices();
+}
 
 async function loadConfig() {
     const configRef = ref(database, 'configuracoes');
     const snapshot = await get(configRef);
     if (snapshot.exists()) {
-        configuracoes = snapshot.val();
-    } else {
-        throw new Error("Configurações não encontradas.");
+        configGlobais = snapshot.val();
+        whatsappNumberDisplay.textContent = formatPhoneNumber(configGlobais.whatsappNumber || 'N/A');
     }
 }
 
-async function loadServicos() {
+function loadServices() {
     const servicosRef = ref(database, 'servicos');
-    const snapshot = await get(servicosRef);
-    if (snapshot.exists()) {
-        servicosDisponiveis = snapshot.val();
-        renderServicos();
-    } else {
-        showError('Nenhum serviço disponível no momento.');
-    }
-}
-
-function setupEventListeners() {
-    btnContinuar.addEventListener('click', () => {
-        servicosSection.classList.add('hidden');
-        renderCamposAdicionaisForm();
-        camposAdicionaisSection.classList.remove('hidden');
-    });
-
-    btnVoltarCampos.addEventListener('click', () => {
-        camposAdicionaisSection.classList.add('hidden');
-        servicosSection.classList.remove('hidden');
-    });
-
-    formCamposAdicionais.addEventListener('submit', (e) => {
-        e.preventDefault();
-        camposAdicionaisSection.classList.add('hidden');
-        dadosPessoaisSection.classList.remove('hidden');
-    });
-
-    btnVoltarDados.addEventListener('click', () => {
-        dadosPessoaisSection.classList.add('hidden');
-        camposAdicionaisSection.classList.remove('hidden');
-    });
-
-    formDadosAgendamento.addEventListener('submit', handleFormSubmit);
-    dataInput.addEventListener('change', updateHorarios);
-    dataInput.min = new Date().toISOString().split('T')[0];
-    horaSelect.addEventListener('change', () => btnFinalizar.disabled = !horaSelect.value);
-}
-
-// ==========================================================================
-// 3. RENDERIZAÇÃO E ATUALIZAÇÃO DA UI
-// ==========================================================================
-
-function renderServicos() {
-    servicosList.innerHTML = '';
-    for (const key in servicosDisponiveis) {
-        const servico = servicosDisponiveis[key];
-        const isSelected = servicosSelecionados.some(s => s.id === key);
-        const li = document.createElement('li');
-        li.dataset.key = key;
-        li.innerHTML = `
-            <div>
-                <h4>${servico.nome}</h4>
-                <p>${servico.descricao}</p>
-                <p><strong>Preço Base:</strong> R$ ${servico.precoBase.toFixed(2)}</p>
-            </div>
-            <button type="button" class="btn btn-primary btn-select-service" data-key="${key}" ${isSelected ? 'disabled' : ''}>
-                ${isSelected ? 'Adicionado' : 'Selecionar'}
-            </button>
-        `;
-        li.querySelector('.btn-select-service').addEventListener('click', (e) => {
-            handleServiceSelection(e.target.dataset.key);
-        });
-        servicosList.appendChild(li);
-    }
-}
-
-function handleServiceSelection(key) {
-    if (!servicosSelecionados.find(s => s.id === key)) {
-        const servico = { ...servicosDisponiveis[key], id: key };
-        servicosSelecionados.push(servico);
-        const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Adicionado';
+    onValue(servicosRef, (snapshot) => {
+        servicosContainer.innerHTML = '';
+        if (snapshot.exists()) {
+            servicosGlobais = snapshot.val();
+            for (const key in servicosGlobais) {
+                const service = servicosGlobais[key];
+                createServiceCard(service, key);
+            }
+        } else {
+            servicosContainer.innerHTML = '<p>Nenhum serviço disponível no momento. Por favor, volte mais tarde.</p>';
         }
-    }
-    btnContinuar.disabled = servicosSelecionados.length === 0;
+    });
 }
 
-function removeService(key) {
-    servicosSelecionados = servicosSelecionados.filter(s => s.id !== key);
-    const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
-    if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Selecionar';
-    }
-    updateSummary();
-    btnContinuar.disabled = servicosSelecionados.length === 0;
-}
+// ==========================================================================
+// 3. GERENCIAMENTO DE SERVIÇOS
+// ==========================================================================
 
-function renderCamposAdicionaisForm() {
-    camposAdicionaisList.innerHTML = '';
-    servicosSelecionados.forEach(servico => {
-        if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
-            const serviceDiv = document.createElement('div');
-            serviceDiv.className = 'additional-service-form';
-            serviceDiv.innerHTML = `<h3>${servico.nome}</h3>`;
-            
-            servico.camposAdicionais.forEach(campo => {
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
+function createServiceCard(service, key) {
+    const card = document.createElement('div');
+    card.className = 'service-card';
+    card.innerHTML = `
+        <h3>${service.nome}</h3>
+        <p>${service.descricao}</p>
+        <div class="price">R$ ${service.precoBase.toFixed(2)}</div>
+        <div class="service-options" id="options-${key}"></div>
+        <button class="btn btn-primary btn-select-service" data-key="${key}">Adicionar</button>
+    `;
+
+    const optionsContainer = card.querySelector(`#options-${key}`);
+    if (service.camposAdicionais) {
+        service.camposAdicionais.forEach(field => {
+            if (field.tipo === 'select' && field.opcoes) {
                 const label = document.createElement('label');
-                label.textContent = campo.nome;
-                formGroup.appendChild(label);
-
-                if (campo.tipo === 'select') {
-                    const select = document.createElement('select');
-                    select.className = 'form-control additional-field-select';
-                    select.dataset.serviceId = servico.id;
-                    select.dataset.fieldName = campo.nome;
-                    campo.opcoes.forEach(opcao => {
-                        const [nomeOpcao, preco] = opcao.split(', R$');
-                        const option = document.createElement('option');
-                        option.value = preco ? parseFloat(preco.trim()) : 0;
-                        option.textContent = nomeOpcao.trim();
-                        select.appendChild(option);
-                    });
-                    select.addEventListener('change', updateSummary);
-                    formGroup.appendChild(select);
-                } else if (campo.tipo === 'text') {
-                    const input = document.createElement('input');
-                    input.type = 'number';
-                    input.className = 'form-control additional-field-input';
-                    input.dataset.serviceId = servico.id;
-                    input.dataset.fieldName = campo.nome;
-                    input.placeholder = 'Valor (R$)';
-                    input.addEventListener('input', updateSummary);
-                    formGroup.appendChild(input);
-                }
-                serviceDiv.appendChild(formGroup);
-            });
-            camposAdicionaisList.appendChild(serviceDiv);
-        }
-    });
-    updateSummary();
+                label.textContent = field.nome;
+                const select = document.createElement('select');
+                select.className = 'form-control additional-field-select';
+                select.dataset.fieldName = field.nome;
+                select.innerHTML = `<option value="">Selecione...</option>`;
+                field.opcoes.forEach(option => {
+                    select.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+                optionsContainer.appendChild(label);
+                optionsContainer.appendChild(select);
+            }
+        });
+    }
+    
+    card.querySelector('.btn-select-service').addEventListener('click', () => addServiceToCart(key));
+    servicosContainer.appendChild(card);
 }
 
-function updateSummary() {
-    summaryServicosList.innerHTML = '';
-    let total = 0;
-
-    servicosSelecionados.forEach(servico => {
-        let precoServico = parseFloat(servico.precoBase);
-        const camposAdicionaisSelecionados = {};
-
-        document.querySelectorAll(`.additional-field-select[data-service-id="${servico.id}"]`).forEach(select => {
-            const fieldName = select.dataset.fieldName;
-            const value = parseFloat(select.value);
-            if (!isNaN(value)) {
-                precoServico += value;
-                camposAdicionaisSelecionados[fieldName] = value;
+function addServiceToCart(key) {
+    const serviceData = { ...servicosGlobais[key], key };
+    
+    // Captura os valores dos campos adicionais
+    const selectedOptions = {};
+    const card = document.querySelector(`[data-key="${key}"]`).closest('.service-card');
+    const selectElements = card.querySelectorAll('.additional-field-select');
+    let precoAdicional = 0;
+    
+    for (const select of selectElements) {
+        const selectedValue = select.value;
+        const fieldName = select.dataset.fieldName;
+        if (selectedValue) {
+            const parts = selectedValue.split(', R$ ');
+            if (parts.length === 2) {
+                const valor = parseFloat(parts[1]);
+                if (!isNaN(valor)) {
+                    precoAdicional += valor;
+                    selectedOptions[fieldName] = valor;
+                }
+            } else {
+                selectedOptions[fieldName] = selectedValue;
             }
-        });
-        document.querySelectorAll(`.additional-field-input[data-service-id="${servico.id}"]`).forEach(input => {
-            const fieldName = input.dataset.fieldName;
-            const value = parseFloat(input.value);
-            if (!isNaN(value)) {
-                precoServico += value;
-                camposAdicionaisSelecionados[fieldName] = value;
+        }
+    }
+    
+    serviceData.precoCalculado = serviceData.precoBase + precoAdicional;
+    serviceData.camposAdicionaisSelecionados = selectedOptions;
+    
+    servicosSelecionados.push(serviceData);
+    updateSelectedServicesList();
+    updateOrcamentoTotal();
+    
+    // Mostra a seção de agendamento e esconde a de serviços
+    servicosSection.classList.add('hidden');
+    agendamentoSection.classList.remove('hidden');
+}
+
+function removeServiceFromCart(index) {
+    servicosSelecionados.splice(index, 1);
+    updateSelectedServicesList();
+    updateOrcamentoTotal();
+
+    if (servicosSelecionados.length === 0) {
+        servicosSection.classList.remove('hidden');
+        agendamentoSection.classList.add('hidden');
+    }
+}
+
+function updateSelectedServicesList() {
+    selectedServicesList.innerHTML = '';
+    servicosSelecionados.forEach((service, index) => {
+        const listItem = document.createElement('div');
+        listItem.className = 'list-item';
+        
+        let detalhesHtml = '';
+        if (service.camposAdicionaisSelecionados) {
+            for (const campo in service.camposAdicionaisSelecionados) {
+                const valor = service.camposAdicionaisSelecionados[campo];
+                detalhesHtml += `<span>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</span><br>`;
             }
-        });
-
-        servico.precoCalculado = precoServico;
-        servico.camposAdicionaisSelecionados = camposAdicionaisSelecionados;
-        total += precoServico;
-
-        const li = document.createElement('li');
-        let additionalHtml = '';
-        for (const campo in camposAdicionaisSelecionados) {
-            additionalHtml += `<br><small> - ${campo}: R$ ${camposAdicionaisSelecionados[campo].toFixed(2)}</small>`;
         }
         
-        li.innerHTML = `
-            <span><strong>${servico.nome}</strong></span>
-            <span>R$ ${precoServico.toFixed(2)}</span>
-            <button type="button" class="btn btn-danger btn-sm remove-service" data-key="${servico.id}">Remover</button>
-            <div class="additional-info">${additionalHtml}</div>
+        listItem.innerHTML = `
+            <div class="list-item-header">
+                <span>${service.nome}</span>
+                <button class="remove-btn" data-index="${index}"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="list-item-details">
+                ${detalhesHtml}
+                <div class="service-price">Valor: R$ ${service.precoCalculado.toFixed(2)}</div>
+            </div>
         `;
-        summaryServicosList.appendChild(li);
+        selectedServicesList.appendChild(listItem);
     });
 
-    document.querySelectorAll('.remove-service').forEach(btn => {
-        btn.addEventListener('click', (e) => removeService(e.target.dataset.key));
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = e.target.closest('button').dataset.index;
+            removeServiceFromCart(index);
+        });
     });
-
-    totalPriceElement.textContent = `Total: R$ ${total.toFixed(2)}`;
-    orcamentoTotalInput.value = total.toFixed(2);
 }
 
+function updateOrcamentoTotal() {
+    const total = servicosSelecionados.reduce((sum, service) => sum + service.precoCalculado, 0);
+    orcamentoTotalDisplay.textContent = `R$ ${total.toFixed(2)}`;
+}
 
 // ==========================================================================
-// 4. LÓGICA DE FLUXO E AGENDAMENTO
+// 4. GERENCIAMENTO DE HORÁRIOS
 // ==========================================================================
 
-async function updateHorarios() {
-    const dataSelecionada = dataInput.value;
-    const diaDaSemana = new Date(dataSelecionada + 'T00:00:00').getDay();
-    const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const diaCorrente = dias[diaDaSemana];
+function setupEventListeners() {
+    datePicker.addEventListener('change', handleDateSelection);
+    backButton.addEventListener('click', handleBackButton);
+    agendamentoForm.addEventListener('submit', handleFormSubmit);
+}
+
+function handleBackButton() {
+    servicosSelecionados = [];
+    updateSelectedServicesList();
+    updateOrcamentoTotal();
+    servicosSection.classList.remove('hidden');
+    agendamentoSection.classList.add('hidden');
+    datePicker.value = '';
+    timeSlotsContainer.innerHTML = '';
+}
+
+async function handleDateSelection() {
+    const selectedDate = datePicker.value;
+    if (!selectedDate) return;
+
+    timeSlotsContainer.innerHTML = '<p>Carregando horários...</p>';
     
-    horaSelect.innerHTML = '<option value="">-- Selecione uma hora --</option>';
-    horaSelect.disabled = true;
-    btnFinalizar.disabled = true;
-
-    if (dataSelecionada && configuracoes.horariosPorDia) {
-        const configDia = configuracoes.horariosPorDia[diaCorrente];
-        if (configDia && configDia.ativo) {
-            await gerarHorarios(dataSelecionada, configDia.horarioInicio, configDia.horarioFim, configuracoes.duracaoServico);
-        }
+    const [year, month, day] = selectedDate.split('-');
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    
+    // Verifica se o dia da semana está ativo nas configurações
+    const diaConfig = configGlobais.horariosPorDia[dayOfWeek];
+    if (!diaConfig || !diaConfig.ativo) {
+        timeSlotsContainer.innerHTML = `<p>Não há agendamentos disponíveis para ${capitalize(dayOfWeek)}.</p>`;
+        return;
     }
-}
-
-async function gerarHorarios(data, inicio, fim, duracaoServico) {
+    
+    const { horarioInicio, horarioFim, duracaoServico } = diaConfig;
     const agendamentosRef = ref(database, 'agendamentos');
     const snapshot = await get(agendamentosRef);
-    const agendamentosExistentes = snapshot.exists() ? snapshot.val() : {};
-    
-    const horariosReservados = Object.values(agendamentosExistentes)
-        .filter(agendamento => agendamento.data === formatarDataParaExibicao(new Date(data + 'T00:00:00')))
-        .map(agendamento => agendamento.hora);
-    
-    const horariosDisponiveis = [];
-    const [startHour, startMinute] = inicio.split(':').map(Number);
-    const [endHour, endMinute] = fim.split(':').map(Number);
-    
-    let currentTime = new Date();
-    currentTime.setHours(startHour, startMinute, 0, 0);
+    const agendamentosDoDia = [];
 
-    const endTime = new Date();
-    endTime.setHours(endHour, endMinute, 0, 0);
-    endTime.setMinutes(endTime.getMinutes() - duracaoServico);
-
-    while (currentTime <= endTime) {
-        const horaFormatada = formatarHora(currentTime);
-        if (data === new Date().toISOString().split('T')[0] && currentTime <= new Date()) {
-            currentTime.setMinutes(currentTime.getMinutes() + duracaoServico);
-            continue;
-        }
-
-        if (!horariosReservados.includes(horaFormatada)) {
-            horariosDisponiveis.push(horaFormatada);
-            const option = document.createElement('option');
-            option.value = horaFormatada;
-            option.textContent = horaFormatada;
-            horaSelect.appendChild(option);
-        }
-        currentTime.setMinutes(currentTime.getMinutes() + duracaoServico);
+    if (snapshot.exists()) {
+        snapshot.forEach(childSnapshot => {
+            const agendamento = childSnapshot.val();
+            if (agendamento.data === `${day}/${month}/${year}` && agendamento.status !== 'Cancelado') {
+                agendamentosDoDia.push(agendamento.hora);
+            }
+        });
     }
-    horaSelect.disabled = false;
-    btnFinalizar.disabled = horariosDisponiveis.length === 0;
 
+    horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia);
+    displayTimeSlots();
+}
+
+function generateTimeSlots(startTime, endTime, interval, existingAppointments) {
+    const slots = [];
+    let currentTime = new Date(`2000-01-01T${startTime}:00`);
+    const end = new Date(`2000-01-01T${endTime}:00`);
+
+    while (currentTime < end) {
+        const timeString = currentTime.toTimeString().slice(0, 5);
+        if (!existingAppointments.includes(timeString)) {
+            slots.push(timeString);
+        }
+        currentTime.setMinutes(currentTime.getMinutes() + interval);
+    }
+
+    return slots;
+}
+
+function displayTimeSlots() {
     if (horariosDisponiveis.length === 0) {
-        const option = document.createElement('option');
-        option.value = "";
-        option.textContent = "Nenhum horário disponível";
-        horaSelect.appendChild(option);
-        horaSelect.disabled = true;
+        timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para a data selecionada. Por favor, escolha outro dia.</p>';
+        return;
     }
+
+    timeSlotsContainer.innerHTML = '';
+    horariosDisponiveis.forEach(time => {
+        const slot = document.createElement('div');
+        slot.className = 'time-slot';
+        slot.textContent = time;
+        slot.addEventListener('click', () => selectTimeSlot(slot));
+        timeSlotsContainer.appendChild(slot);
+    });
 }
 
-function formatarHora(date) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+function selectTimeSlot(selectedSlot) {
+    document.querySelectorAll('.time-slot').forEach(slot => {
+        slot.classList.remove('selected');
+    });
+    selectedSlot.classList.add('selected');
 }
 
-function formatarDataParaExibicao(date) {
-    const dia = String(date.getDate()).padStart(2, '0');
-    const mes = String(date.getMonth() + 1).padStart(2, '0');
-    const ano = date.getFullYear();
-    return `${dia}/${mes}/${ano}`;
-}
+// ==========================================================================
+// 5. ENVIO E CONFIRMAÇÃO DO AGENDAMENTO
+// ==========================================================================
 
 async function handleFormSubmit(e) {
     e.preventDefault();
-    showLoading();
 
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const endereco = document.getElementById('endereco').value;
-    const data = formatarDataParaExibicao(new Date(dataInput.value + 'T00:00:00'));
-    const hora = horaSelect.value;
-    const orcamentoTotal = parseFloat(orcamentoTotalInput.value);
+    if (servicosSelecionados.length === 0) {
+        alert("Por favor, adicione pelo menos um serviço para agendar.");
+        return;
+    }
 
-    const novoAgendamento = {
-        cliente: { nome, telefone, endereco },
-        servicos: servicosSelecionados.map(s => ({
-            id: s.id,
-            nome: s.nome,
-            precoBase: s.precoBase,
-            precoCalculado: s.precoCalculado,
-            camposAdicionaisSelecionados: s.camposAdicionaisSelecionados || {}
+    const selectedTimeSlot = document.querySelector('.time-slot.selected');
+    if (!selectedTimeSlot) {
+        alert("Por favor, selecione um horário para o agendamento.");
+        return;
+    }
+
+    const clienteData = {
+        nome: document.getElementById('nome').value,
+        telefone: document.getElementById('telefone').value,
+        endereco: document.getElementById('endereco').value,
+    };
+    
+    const agendamentoData = {
+        cliente: clienteData,
+        servicos: servicosSelecionados.map(({ key, nome, precoCalculado, camposAdicionaisSelecionados }) => ({
+            key,
+            nome,
+            precoCalculado,
+            camposAdicionaisSelecionados
         })),
-        data: data,
-        hora: hora,
-        orcamentoTotal: orcamentoTotal,
-        status: 'Pendente' // Novo agendamento é sempre pendente
+        data: formatDate(datePicker.value),
+        hora: selectedTimeSlot.textContent,
+        observacoes: document.getElementById('observacoes').value,
+        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
+        status: 'Pendente'
     };
 
     try {
         const agendamentosRef = ref(database, 'agendamentos');
-        await push(agendamentosRef, novoAgendamento);
-        hideLoading();
-        showSuccess();
-        setTimeout(() => {
-            sendWhatsAppMessage(novoAgendamento);
-            window.location.reload();
-        }, 3000);
+        await push(agendamentosRef, agendamentoData);
+        showConfirmation();
+        sendWhatsAppMessage(agendamentoData);
     } catch (error) {
-        hideLoading();
-        showError('Erro ao salvar o agendamento. Por favor, tente novamente.');
         console.error("Erro ao salvar agendamento:", error);
+        alert("Ocorreu um erro ao salvar o agendamento. Por favor, tente novamente.");
     }
 }
 
-function sendWhatsAppMessage(agendamento) {
-    const whatsappNumber = configuracoes.whatsappNumber;
-    if (!whatsappNumber) {
-        console.error("Número do WhatsApp não configurado.");
-        return;
-    }
+function showConfirmation() {
+    agendamentoSection.classList.add('hidden');
+    confirmationPopup.classList.remove('hidden');
+    
+    const whatsappMsg = createWhatsAppMessage();
+    whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
+}
 
-    let message = `Olá! Meu nome é ${agendamento.cliente.nome} e gostaria de confirmar o agendamento de um serviço.\n\n`;
-    message += `*Detalhes do Agendamento:*\n`;
-    message += `Data: ${agendamento.data}\n`;
-    message += `Hora: ${agendamento.hora}\n`;
-    message += `Endereço: ${agendamento.cliente.endereco}\n\n`;
-    message += `*Serviços Solicitados:*\n`;
-    agendamento.servicos.forEach(servico => {
-        message += `- ${servico.nome} (R$ ${servico.precoCalculado.toFixed(2)})\n`;
+function createWhatsAppMessage() {
+    const nome = document.getElementById('nome').value;
+    const telefone = document.getElementById('telefone').value;
+    const endereco = document.getElementById('endereco').value;
+    const data = formatDate(datePicker.value);
+    const hora = document.querySelector('.time-slot.selected').textContent;
+    const observacoes = document.getElementById('observacoes').value;
+    const total = orcamentoTotalDisplay.textContent;
+
+    let servicosTexto = 'Serviços:\n';
+    servicosSelecionados.forEach(servico => {
+        servicosTexto += `  - ${servico.nome} (R$ ${servico.precoCalculado.toFixed(2)})\n`;
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
-                message += `  - ${campo}: R$ ${servico.camposAdicionaisSelecionados[campo].toFixed(2)}\n`;
+                const valor = servico.camposAdicionaisSelecionados[campo];
+                servicosTexto += `    * ${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}\n`;
             }
         }
     });
-    message += `\n*Valor Total Estimado:* R$ ${agendamento.orcamentoTotal.toFixed(2)}\n\n`;
-    message += `Por favor, confirme a disponibilidade. Obrigado!`;
 
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    return `Olá, gostaria de confirmar um agendamento.
+    
+    *Dados do Cliente:*
+    Nome: ${nome}
+    Telefone: ${telefone}
+    Endereço: ${endereco}
+    
+    *Detalhes do Agendamento:*
+    Data: ${data}
+    Hora: ${hora}
+    ${servicosTexto}
+    
+    Orçamento Total: ${total}
+    
+    ${observacoes ? `Observações: ${observacoes}` : ''}
+    
+    Obrigado!`;
 }
 
-function showLoading() {
-    loadingMessage.classList.remove('hidden');
-    successMessage.classList.add('hidden');
-    errorMessage.classList.add('hidden');
+function sendWhatsAppMessage(data) {
+    const message = createWhatsAppMessage(data);
+    const whatsappUrl = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(message)}`;
+    // Apenas mostra o link na tela, não abre automaticamente
+    // window.open(whatsappUrl, '_blank');
 }
 
-function hideLoading() {
-    loadingMessage.classList.add('hidden');
+// ==========================================================================
+// 6. FUNÇÕES AUXILIARES
+// ==========================================================================
+
+function formatDate(dateString) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
 }
 
-function showSuccess() {
-    successMessage.classList.remove('hidden');
+function getDayOfWeek(dateString) {
+    const days = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const date = new Date(dateString + 'T00:00:00'); // Garante que a data é tratada corretamente
+    return days[date.getDay()];
 }
 
-function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.classList.remove('hidden');
+function capitalize(s) {
+    if (typeof s !== 'string') return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatPhoneNumber(number) {
+    const cleaned = ('' + number).replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{2})(\d{2})(\d{5})(\d{4})$/);
+    if (match) {
+        return `+${match[1]} (${match[2]}) ${match[3]}-${match[4]}`;
+    }
+    return number;
 }
