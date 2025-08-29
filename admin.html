@@ -11,61 +11,65 @@
     <div class="container">
         <h2>Painel Administrativo</h2>
 
-        <section id="addServico">
-            <h3>Cadastrar Novo Serviço</h3>
-            <form id="servicoForm">
-                <div class="form-group">
-                    <label for="servicoNome">Nome do Serviço</label>
-                    <input type="text" id="servicoNome" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="servicoDescricao">Descrição do Serviço</label>
-                    <textarea id="servicoDescricao" class="form-control" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="servicoPreco">Preço Base (se houver)</label>
-                    <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00">
-                </div>
-
-                <h4>Campos Adicionais</h4>
-                <div id="additionalFieldsContainer">
-                    </div>
-                <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
-
-                <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
-            </form>
-        </section>
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="addServicoTab">Cadastrar Serviço</button>
+            <button class="tab-btn" data-tab="listaServicosTab">Serviços Cadastrados</button>
+            <button class="tab-btn" data-tab="agendamentosTab">Agendamentos</button>
+            <button class="tab-btn" data-tab="configuracoesTab">Configurações</button>
+        </div>
         
-        <hr>
-
-        <section id="listaServicos">
-            <h3>Serviços Cadastrados</h3>
-            <div id="servicosList">
-                </div>
-        </section>
-        
-        <hr>
-
-        <section id="listaAgendamentos">
-            <h3>Agendamentos</h3>
-            <div id="agendamentosList">
-                </div>
-        </section>
-
-        <section id="configuracoes">
-            <h3>Configurações de Horário</h3>
-            <form id="configForm">
-                <div class="form-group">
-                    <label for="whatsappNumber">Número do WhatsApp</label>
-                    <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
-                </div>
-                <h4>Horários de Atendimento por Dia</h4>
-                <div id="horariosContainer">
+        <div class="tab-content">
+            <section id="addServicoTab" class="tab-pane active">
+                <h3>Cadastrar Novo Serviço</h3>
+                <form id="servicoForm">
+                    <div class="form-group">
+                        <label for="servicoNome">Nome do Serviço</label>
+                        <input type="text" id="servicoNome" class="form-control" required>
                     </div>
-                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
-            </form>
-        </section>
+                    <div class="form-group">
+                        <label for="servicoDescricao">Descrição do Serviço</label>
+                        <textarea id="servicoDescricao" class="form-control" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicoPreco">Preço Base (se houver)</label>
+                        <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00">
+                    </div>
 
+                    <h4>Campos Adicionais</h4>
+                    <div id="additionalFieldsContainer">
+                    </div>
+                    <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
+
+                    <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
+                </form>
+            </section>
+            
+            <section id="listaServicosTab" class="tab-pane hidden">
+                <h3>Serviços Cadastrados</h3>
+                <div id="servicosList">
+                </div>
+            </section>
+            
+            <section id="agendamentosTab" class="tab-pane hidden">
+                <h3>Agendamentos</h3>
+                <div id="agendamentosList">
+                </div>
+            </section>
+
+            <section id="configuracoesTab" class="tab-pane hidden">
+                <h3>Configurações Gerais</h3>
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="whatsappNumber">Número do WhatsApp do Administrador</label>
+                        <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
+                    </div>
+                    <h4>Horários de Atendimento por Dia</h4>
+                    <div id="horariosContainer">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+                </form>
+            </section>
+        </div>
     </div>
 
     <script type="module" src="admin.js"></script>
