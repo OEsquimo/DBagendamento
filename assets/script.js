@@ -13,19 +13,32 @@ import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/fireba
 
 // Configuração do Firebase
 // ATENÇÃO: Substitua os dados abaixo pelos dados do seu projeto no Firebase Console
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_AUTH_DOMAIN",
-    databaseURL: "SUA_DATABASE_URL",
-    projectId: "SEU_PROJECT_ID",
-    storageBucket: "SEU_STORAGE_BUCKET",
-    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-    appId: "SEU_APP_ID"
+  apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
+  authDomain: "agendamento-esquimo.firebaseapp.com",
+  databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
+  projectId: "agendamento-esquimo",
+  storageBucket: "agendamento-esquimo.firebasestorage.app",
+  messagingSenderId: "348946727206",
+  appId: "1:348946727206:web:f5989788f13c259be0c1e7",
+  measurementId: "G-Z0EMQ3XQ1D"
 };
 
-// Inicializa o Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const analytics = getAnalytics(app);
+
+
+
 
 // Variáveis de estado global
 let currentStep = 1; // Controla o passo atual do formulário
