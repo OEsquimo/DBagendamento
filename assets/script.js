@@ -1,212 +1,334 @@
-// Estado da aplicação
-const appState = {
-    servicosSelecionados: [],
-    passoAtual: 1,
-    orcamentoTotal: 0
+/*
+ * Arquivo: script.js
+ * Descrição: Lógica principal do formulário de agendamento do cliente.
+ * Versão: 3.0 (Com funcionalidade de agendamento por dia da semana)
+ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ==========================================================================
+// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+// ==========================================================================
+
+// Configuração do Firebase
+// ATENÇÃO: Substitua os dados abaixo pelos dados do seu projeto no Firebase Console
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_AUTH_DOMAIN",
+    databaseURL: "SUA_DATABASE_URL",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+    appId: "SEU_APP_ID"
 };
 
-// Elementos DOM
-const elementos = {
-    progressBar: document.getElementById('progressBar'),
-    steps: {
-        1: document.getElementById('step-1'),
-        2: document.getElementById('step-2'),
-        3: document.getElementById('step-3'),
-        4: document.getElementById('step-4'),
-        5: document.getElementById('step-5')
-    },
-    formSteps: {
-        servicos: document.getElementById('step-servicos'),
-        equipamentos: document.getElementById('step-equipamentos'),
-        orcamento: document.getElementById('step-orcamento'),
-        dados: document.getElementById('step-dados'),
-        agendamento: document.getElementById('step-agendamento')
-    },
-    servicosGrid: document.getElementById('servicosGrid'),
-    equipamentosContainer: document.getElementById('equipamentos-container'),
-    relatorioOrcamento: document.getElementById('relatorio-orcamento'),
-    // Botões de navegação
-    btnNextToEquipamentos: document.getElementById('btnNextToEquipamentos'),
-    btnBackToServicos: document.getElementById('btnBackToServicos'),
-    btnNextToOrcamento: document.getElementById('btnNextToOrcamento'),
-    btnBackToEquipamentos: document.getElementById('btnBackToEquipamentos'),
-    btnConfirmarOrcamento: document.getElementById('btnConfirmarOrcamento'),
-    btnBackToOrcamento: document.getElementById('btnBackToOrcamento'),
-    btnNextToAgendamento: document.getElementById('btnNextToAgendamento'),
-    btnBackToDados: document.getElementById('btnBackToDados'),
-    btnFinalizar: document.getElementById('btnFinalizar'),
-    // Campos de formulário
-    nomeInput: document.getElementById('nome'),
-    enderecoInput: document.getElementById('endereco'),
-    whatsappInput: document.getElementById('whatsapp'),
-    dataAgendamentoInput: document.getElementById('data_agendamento'),
-    horarioAgendamentoSelect: document.getElementById('horario_agendamento'),
-    formaPagamentoSelect: document.getElementById('forma_pagamento')
-};
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
-// Dados de serviços
-const servicosDisponiveis = [
-    {
-        id: "1",
-        name: "Limpeza Técnica",
-        description: "Limpeza completa do equipamento",
-        basePrice: 120,
-        permiteMultiplos: true,
-        icon: "fas fa-soap"
-    },
-    {
-        id: "2",
-        name: "Instalação",
-        description: "Instalação profissional",
-        basePrice: 300,
-        permiteMultiplos: true,
-        icon: "fas fa-tools"
-    },
-    {
-        id: "3",
-        name: "Manutenção",
-        description: "Manutenção preventiva",
-        basePrice: 150,
-        permiteMultiplos: true,
-        icon: "fas fa-wrench"
-    },
-    {
-        id: "4",
-        name: "Higienização",
-        description: "Higienização completa",
-        basePrice: 100,
-        permiteMultiplos: true,
-        icon: "fas fa-spray-can"
-    }
-];
+// Variáveis de estado global
+let currentStep = 1; // Controla o passo atual do formulário
+let cart = []; // O "carrinho de compras" que armazena os serviços selecionados
+let allServicesData = {}; // Armazena todos os dados dos serviços carregados do Firebase
+let systemConfig = {}; // Armazena as configurações do sistema (horários, número do WhatsApp, etc.)
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    renderizarServicos();
-    configurarEventListeners();
-    elementos.btnNextToEquipamentos.disabled = true;
+// Elementos HTML
+const form = document.getElementById('agendamentoForm');
+const steps = document.querySelectorAll('.form-step');
+const stepIndicators = document.querySelectorAll('.step-indicator');
+const servicosList = document.getElementById('servicosList');
+const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
+const resumoServicosList = document.getElementById('resumoServicosList');
+const orcamentoValorInput = document.getElementById('orcamentoValor');
+const agendamentoDataInput = document.getElementById('agendamentoData');
+const agendamentoHoraSelect = document.getElementById('agendamentoHora');
+const resumoAgendamentoDiv = document.getElementById('resumoAgendamento');
+const whatsappLinkBtn = document.getElementById('whatsappLink');
 
-    // --- CÓDIGO PARA MOSTRAR A DATA DE ATUALIZAÇÃO ---
-    const lastUpdateElement = document.getElementById('lastUpdate');
-    if (lastUpdateElement) {
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        lastUpdateElement.textContent = formattedDate;
-    }
-    // ----------------------------------------------------
-});
+// ==========================================================================
+// 2. FUNÇÕES DE INICIALIZAÇÃO E DADOS
+// ==========================================================================
 
-// Configurar event listeners
-function configurarEventListeners() {
-    // Navegação
-    elementos.btnNextToEquipamentos.addEventListener('click', () => avancarParaPasso(2));
-    elementos.btnBackToServicos.addEventListener('click', () => retrocederParaPasso(1));
-    elementos.btnNextToOrcamento.addEventListener('click', () => avancarParaPasso(3));
-    elementos.btnBackToEquipamentos.addEventListener('click', () => retrocederParaPasso(2));
-    elementos.btnConfirmarOrcamento.addEventListener('click', () => avancarParaPasso(4));
-    elementos.btnBackToOrcamento.addEventListener('click', () => retrocederParaPasso(3));
-    elementos.btnNextToAgendamento.addEventListener('click', () => avancarParaPasso(5));
-    elementos.btnBackToDados.addEventListener('click', () => retrocederParaPasso(4));
-    elementos.btnFinalizar.addEventListener('click', finalizarAgendamento);
-
-    // Máscara de telefone
-    elementos.whatsappInput.addEventListener('input', mascararTelefone);
+/**
+ * Função principal que inicia a aplicação.
+ * Carrega a configuração do sistema e os serviços do Firebase.
+ */
+async function initApp() {
+    await loadConfig();
+    await loadServices();
+    setupEventListeners();
+    updateUI();
 }
 
-// Máscara de telefone
-function mascararTelefone(e) {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
-    if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
-    if (v.length > 9) v = `${v.substring(0, 9)}-${v.substring(9)}`;
-    e.target.value = v;
-}
-
-// Navegação entre passos
-function avancarParaPasso(passo) {
-    if (passo === 2 && !validarServicosSelecionados()) return;
-    if (passo === 3 && !validarEquipamentos()) return;
-    if (passo === 4 && !validarOrcamento()) return;
-    if (passo === 5 && !validarDadosCliente()) return;
-
-    // Se avançando para o orçamento, calcular e exibir
-    if (passo === 3) {
-        calcularOrcamento();
-    }
-
-    // Esconder passo atual
-    elementos.formSteps[Object.keys(elementos.formSteps)[appState.passoAtual - 1]].classList.remove('active');
-
-    // Atualizar progresso
-    appState.passoAtual = passo;
-    atualizarIndicadorProgresso();
-
-    // Se avançando para o passo de equipamentos, renderizar os campos
-    if (passo === 2) {
-        renderizarEquipamentos();
-    }
-
-    // Mostrar próximo passo
-    const proximoPassoElemento = elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]];
-    proximoPassoElemento.classList.add('active');
-
-    // Rolar para o topo do formulário
-    proximoPassoElemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function retrocederParaPasso(passo) {
-    // Esconder passo atual
-    elementos.formSteps[Object.keys(elementos.formSteps)[appState.passoAtual - 1]].classList.remove('active');
-
-    // Atualizar progresso
-    appState.passoAtual = passo;
-    atualizarIndicadorProgresso();
-
-    // Mostrar passo anterior
-    const passoAnteriorElemento = elementos.formSteps[Object.keys(elementos.formSteps)[passo - 1]];
-    passoAnteriorElemento.classList.add('active');
-
-    // Rolar para o topo do formulário
-    passoAnteriorElemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function atualizarIndicadorProgresso() {
-    // Atualizar barra de progresso
-    const progresso = ((appState.passoAtual - 1) / 4) * 100;
-    elementos.progressBar.style.width = `${progresso}%`;
-
-    // Atualizar steps
-    Object.keys(elementos.steps).forEach(passo => {
-        elementos.steps[passo].classList.remove('active', 'completed');
-        if (parseInt(passo) < appState.passoAtual) {
-            elementos.steps[passo].classList.add('completed');
-        } else if (parseInt(passo) === appState.passoAtual) {
-            elementos.steps[passo].classList.add('active');
+/**
+ * Carrega as configurações do sistema do Firebase (WhatsApp, horários, etc.).
+ */
+async function loadConfig() {
+    try {
+        const configRef = ref(database, 'configuracoes');
+        const snapshot = await get(configRef);
+        if (snapshot.exists()) {
+            systemConfig = snapshot.val();
+            // Atualiza o link do WhatsApp no cabeçalho
+            if (systemConfig.whatsappNumber) {
+                whatsappLinkBtn.href = `https://wa.me/${systemConfig.whatsappNumber.replace(/\D/g, '')}`;
+            }
         }
+    } catch (error) {
+        console.error("Erro ao carregar configurações:", error);
+    }
+}
+
+/**
+ * Carrega todos os serviços do Firebase e os renderiza na tela.
+ */
+async function loadServices() {
+    const servicosRef = ref(database, 'servicos');
+    const servicosLoader = servicosList.querySelector('.loading-state');
+
+    try {
+        const snapshot = await get(servicosRef);
+        if (snapshot.exists()) {
+            const servicos = snapshot.val();
+            allServicesData = servicos; // Armazena todos os serviços para uso posterior
+            servicosList.innerHTML = ''; // Limpa o estado de carregamento
+            
+            // Renderiza cada serviço como um card clicável
+            for (const key in servicos) {
+                const service = servicos[key];
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                card.dataset.serviceKey = key;
+                card.innerHTML = `
+                    <i class="fas fa-tools"></i>
+                    <h3>${service.nome}</h3>
+                    <p>R$ ${parseFloat(service.precoBase).toFixed(2)}</p>
+                `;
+                card.addEventListener('click', () => toggleServiceSelection(key, service));
+                servicosList.appendChild(card);
+            }
+        } else {
+            servicosList.innerHTML = '<p class="loading-state">Nenhum serviço disponível.</p>';
+        }
+    } catch (error) {
+        console.error("Erro ao carregar serviços:", error);
+        servicosList.innerHTML = '<p class="loading-state">Erro ao carregar serviços.</p>';
+    }
+}
+
+// ==========================================================================
+// 3. LÓGICA DO CARRINHO DE COMPRAS E ORÇAMENTO
+// ==========================================================================
+
+/**
+ * Adiciona ou remove um serviço do carrinho.
+ * @param {string} key - A chave única do serviço no Firebase.
+ * @param {object} service - O objeto do serviço.
+ */
+function toggleServiceSelection(key, service) {
+    const index = cart.findIndex(item => item.key === key);
+    const card = document.querySelector(`[data-service-key="${key}"]`);
+    
+    if (index === -1) {
+        // Adiciona o serviço ao carrinho
+        cart.push({ key, ...service, camposAdicionaisSelecionados: {} });
+        card.classList.add('selected');
+    } else {
+        // Remove o serviço do carrinho
+        cart.splice(index, 1);
+        card.classList.remove('selected');
+    }
+
+    updateSummary(); // Atualiza o resumo do orçamento
+}
+
+/**
+ * Gera e renderiza os campos adicionais para os serviços no carrinho.
+ */
+function renderDynamicFields() {
+    dynamicFieldsContainer.innerHTML = ''; // Limpa a seção
+    if (cart.length === 0) {
+        dynamicFieldsContainer.innerHTML = '<p>Selecione um serviço para ver os detalhes.</p>';
+        return;
+    }
+
+    cart.forEach(service => {
+        const serviceDiv = document.createElement('div');
+        serviceDiv.className = 'service-dynamic-fields mt-3';
+        serviceDiv.innerHTML = `<h4>Detalhes para: ${service.nome}</h4>`;
+        
+        // Verifica se o serviço tem campos adicionais
+        if (service.camposAdicionais && service.camposAdicionais.length > 0) {
+            service.camposAdicionais.forEach(field => {
+                const fieldGroup = document.createElement('div');
+                fieldGroup.className = 'form-group';
+                
+                if (field.tipo === 'text') {
+                    fieldGroup.innerHTML = `
+                        <label for="field-${service.key}-${field.nome}">${field.nome}</label>
+                        <input type="text" id="field-${service.key}-${field.nome}" class="form-control dynamic-field" data-service-key="${service.key}" data-field-name="${field.nome}" required>
+                    `;
+                } else if (field.tipo === 'select') {
+                    let optionsHtml = field.opcoes.map(option => {
+                        const [text, priceStr] = option.split(', R$ ');
+                        return `<option value="${priceStr}">${text} (R$ ${priceStr})</option>`;
+                    }).join('');
+                    
+                    fieldGroup.innerHTML = `
+                        <label for="field-${service.key}-${field.nome}">${field.nome}</label>
+                        <select id="field-${service.key}-${field.nome}" class="form-control dynamic-field" data-service-key="${service.key}" data-field-name="${field.nome}" required>
+                            <option value="" disabled selected>Selecione uma opção</option>
+                            ${optionsHtml}
+                        </select>
+                    `;
+                }
+                
+                fieldGroup.querySelector('.dynamic-field').addEventListener('change', (e) => {
+                    // Salva a seleção do usuário e recalcula o orçamento
+                    const selectedService = cart.find(s => s.key === service.key);
+                    selectedService.camposAdicionaisSelecionados[field.nome] = e.target.value;
+                    updateSummary();
+                });
+                
+                serviceDiv.appendChild(fieldGroup);
+            });
+        } else {
+            serviceDiv.innerHTML += '<p>Não há campos adicionais para este serviço.</p>';
+        }
+        
+        dynamicFieldsContainer.appendChild(serviceDiv);
     });
 }
 
-// Validações
-function validarServicosSelecionados() {
-    if (appState.servicosSelecionados.length === 0) {
-        alert('Por favor, selecione pelo menos um serviço para continuar.');
-        return false;
-    }
-    return true;
+/**
+ * Calcula o valor total do orçamento com base nos serviços e campos adicionais selecionados.
+ */
+function calculateOrcamento() {
+    let total = 0;
+    cart.forEach(service => {
+        total += parseFloat(service.precoBase);
+        
+        // Adiciona o valor dos campos adicionais
+        for (const fieldName in service.camposAdicionaisSelecionados) {
+            const value = parseFloat(service.camposAdicionaisSelecionados[fieldName]);
+            if (!isNaN(value)) {
+                total += value;
+            }
+        }
+    });
+    return total;
 }
 
-function validarEquipamentos() {
-    // Verificar se todos os equipamentos têm dados válidos
-    for (const servico of appState.servicosSelecionados) {
-        for (const equipamento of servico.equipamentos) {
-            if (!equipamento.tipoEquipamento || !equipamento.capacidadeBtus) {
-                alert('Por favor, preencha todos os dados dos equipamentos para continuar.');
+/**
+ * Atualiza o resumo do orçamento na interface.
+ */
+function updateSummary() {
+    resumoServicosList.innerHTML = ''; // Limpa a lista
+    
+    if (cart.length === 0) {
+        resumoServicosList.innerHTML = '<li>Nenhum serviço selecionado.</li>';
+    } else {
+        cart.forEach(service => {
+            const serviceItem = document.createElement('li');
+            
+            // Calcula o preço total do serviço individual
+            let serviceTotal = parseFloat(service.precoBase);
+            for (const fieldName in service.camposAdicionaisSelecionados) {
+                const value = parseFloat(service.camposAdicionaisSelecionados[fieldName]);
+                if (!isNaN(value)) {
+                    serviceTotal += value;
+                }
+            }
+            
+            let html = `<strong>${service.nome}</strong>: R$ ${serviceTotal.toFixed(2)}`;
+            
+            // Adiciona os detalhes dos campos adicionais
+            if (Object.keys(service.camposAdicionaisSelecionados).length > 0) {
+                html += '<ul>';
+                for (const fieldName in service.camposAdicionaisSelecionados) {
+                    const value = parseFloat(service.camposAdicionaisSelecionados[fieldName]);
+                    const field = service.camposAdicionais.find(f => f.nome === fieldName);
+                    const optionText = field.opcoes.find(o => o.endsWith(value.toFixed(2)));
+                    html += `<li>- ${fieldName}: ${optionText ? optionText.split(', R$')[0] : 'Valor não especificado'} (R$ ${value.toFixed(2)})</li>`;
+                }
+                html += '</ul>';
+            }
+            serviceItem.innerHTML = html;
+            resumoServicosList.appendChild(serviceItem);
+        });
+    }
+
+    const total = calculateOrcamento();
+    orcamentoValorInput.value = `R$ ${total.toFixed(2)}`;
+}
+
+// ==========================================================================
+// 4. LÓGICA DO FORMULÁRIO E NAVEGAÇÃO
+// ==========================================================================
+
+/**
+ * Configura todos os ouvintes de evento para os botões e campos do formulário.
+ */
+function setupEventListeners() {
+    document.querySelectorAll('.btn-next').forEach(button => {
+        button.addEventListener('click', () => changeStep(1));
+    });
+    document.querySelectorAll('.btn-prev').forEach(button => {
+        button.addEventListener('click', () => changeStep(-1));
+    });
+    
+    agendamentoDataInput.addEventListener('change', updateHorarios);
+    document.getElementById('btnEnviarWhatsapp').addEventListener('click', handleSubmit);
+}
+
+/**
+ * Altera o passo do formulário.
+ * @param {number} direction - 1 para próximo, -1 para anterior.
+ */
+function changeStep(direction) {
+    if (validateStep(currentStep)) {
+        steps[currentStep - 1].classList.remove('active');
+        stepIndicators[currentStep - 1].classList.remove('active');
+        currentStep += direction;
+        steps[currentStep - 1].classList.add('active');
+        stepIndicators[currentStep - 1].classList.add('active');
+        updateUI();
+    }
+}
+
+/**
+ * Valida o passo atual do formulário.
+ * @param {number} step - O número do passo a ser validado.
+ */
+function validateStep(step) {
+    if (step === 1 && cart.length === 0) {
+        alert('Selecione pelo menos um serviço para continuar!');
+        return false;
+    }
+    if (step === 2) {
+        // Valida se todos os campos dinâmicos obrigatórios foram preenchidos
+        const dynamicFields = document.querySelectorAll('.dynamic-field[required]');
+        for (let field of dynamicFields) {
+            if (!field.value) {
+                alert('Por favor, preencha todos os campos adicionais obrigatórios.');
+                return false;
+            }
+        }
+    }
+    if (step === 3) {
+        // Valida se a data e a hora foram selecionadas
+        if (!agendamentoDataInput.value || !agendamentoHoraSelect.value) {
+            alert('Por favor, selecione uma data e um horário.');
+            return false;
+        }
+    }
+    if (step === 4) {
+        // Valida os campos de dados do cliente
+        const requiredInputs = document.querySelectorAll('#step4 input[required], #step4 textarea[required]');
+        for (let input of requiredInputs) {
+            if (!input.value) {
+                alert('Por favor, preencha todos os seus dados.');
                 return false;
             }
         }
@@ -214,366 +336,209 @@ function validarEquipamentos() {
     return true;
 }
 
-function validarOrcamento() {
-    // Sempre válido após preenchimento dos equipamentos
-    return true;
-}
-
-function validarDadosCliente() {
-    const nomeValido = elementos.nomeInput.value.trim().length > 2;
-    const enderecoValido = elementos.enderecoInput.value.trim().length > 5;
-    const whatsappValido = elementos.whatsappInput.value.replace(/\D/g, "").length === 11;
-
-    if (!nomeValido || !enderecoValido || !whatsappValido) {
-        alert('Por favor, preencha todos os dados corretamente.');
-        return false;
+/**
+ * Atualiza a interface do usuário com base no passo atual.
+ */
+function updateUI() {
+    if (currentStep === 2) {
+        renderDynamicFields();
+        updateSummary();
     }
-
-    return true;
-}
-
-// Renderizar serviços
-function renderizarServicos() {
-    elementos.servicosGrid.innerHTML = '';
-
-    servicosDisponiveis.forEach(servico => {
-        const card = document.createElement('div');
-        card.className = 'service-card';
-        card.setAttribute('data-servico-id', servico.id);
-        card.innerHTML = `
-            <i class="${servico.icon}"></i>
-            <h3>${servico.name}</h3>
-            <p>${servico.description}</p>
-        `;
-
-        card.addEventListener('click', () => {
-            selecionarServico(servico.id, card);
-        });
-
-        elementos.servicosGrid.appendChild(card);
-    });
-}
-
-// Selecionar serviço
-function selecionarServico(servicoId, elemento) {
-    const servico = servicosDisponiveis.find(s => s.id === servicoId);
-    const index = appState.servicosSelecionados.findIndex(s => s.id === servicoId);
-
-    if (index === -1) {
-        // Adicionar serviço
-        appState.servicosSelecionados.push({
-            ...servico,
-            quantidade: 1,
-            equipamentos: [{
-                tipoEquipamento: "",
-                capacidadeBtus: "",
-                parteEletricaPronta: "Não",
-                observacoes: ""
-            }]
-        });
-
-        elemento.classList.add('selected');
-    } else {
-        // Remover serviço
-        appState.servicosSelecionados.splice(index, 1);
-        elemento.classList.remove('selected');
-    }
-
-    // Se há serviços selecionados, habilitar próximo passo
-    elementos.btnNextToEquipamentos.disabled = appState.servicosSelecionados.length === 0;
-
-    // Se voltando da tela de equipamentos, renderizar novamente
-    if (appState.passoAtual === 2) {
-        renderizarEquipamentos();
+    if (currentStep === 5) {
+        generateFinalSummary();
     }
 }
 
-// Renderizar equipamentos
-function renderizarEquipamentos() {
-    elementos.equipamentosContainer.innerHTML = '';
+// ==========================================================================
+// 5. LÓGICA DE AGENDAMENTO AVANÇADO E ENVIO
+// ==========================================================================
 
-    if (appState.servicosSelecionados.length === 0) {
-        elementos.equipamentosContainer.innerHTML = `
-            <div class="service-section">
-                <h2>Nenhum serviço selecionado</h2>
-                <p>Volte à tela anterior para selecionar os serviços desejados.</p>
-            </div>
-        `;
+/**
+ * Mapeamento de números de dia da semana para chaves de objeto.
+ * 0 = Domingo, 1 = Segunda, etc.
+ */
+const diasDaSemana = {
+    0: 'domingo',
+    1: 'segunda',
+    2: 'terca',
+    3: 'quarta',
+    4: 'quinta',
+    5: 'sexta',
+    6: 'sabado'
+};
+
+/**
+ * Gera os horários disponíveis com base na data selecionada e nas regras do admin.
+ */
+function updateHorarios() {
+    agendamentoHoraSelect.innerHTML = '<option value="" disabled selected>Selecione uma hora</option>';
+    const selectedDate = agendamentoDataInput.value;
+    const selectedDay = new Date(selectedDate);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Converte a data selecionada para um formato de comparação
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+
+    // 1. Impede a seleção de datas passadas
+    if (selectedDateObj < today) {
+        agendamentoDataInput.value = '';
+        alert('Não é possível agendar em uma data passada.');
         return;
     }
 
-    appState.servicosSelecionados.forEach((servico, servicoIndex) => {
-        const servicoSection = document.createElement('div');
-        servicoSection.className = 'service-section';
-        servicoSection.innerHTML = `
-            <div class="service-header">
-                <h2>${servico.name}</h2>
-            </div>
-            <div class="service-quantity">
-                <label for="quantidade-${servicoIndex}"><strong>Quantidade:</strong></label>
-                <input type="number" id="quantidade-${servicoIndex}" min="1"
-                       value="${servico.quantidade}" data-servico-index="${servicoIndex}">
-            </div>
-        `;
+    // 2. Verifica se o dia da semana selecionado é um dia útil
+    const diaDaSemana = diasDaSemana[selectedDay.getDay()];
+    const horarioDoDia = systemConfig.horariosPorDia[diaDaSemana];
 
-        // Adicionar equipamentos
-        servico.equipamentos.forEach((equipamento, equipamentoIndex) => {
-            const equipmentItem = criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex);
-            servicoSection.appendChild(equipmentItem);
-        });
-
-        elementos.equipamentosContainer.appendChild(servicoSection);
-    });
-
-    // Adicionar event listeners após renderizar
-    adicionarEventListenersEquipamentos();
-}
-
-// Criar elemento de equipamento
-function criarEquipmentItem(servico, servicoIndex, equipamento, equipamentoIndex) {
-    const equipmentItem = document.createElement('div');
-    equipmentItem.className = 'equipment-item';
-    equipmentItem.setAttribute('data-servico-index', servicoIndex);
-    equipmentItem.setAttribute('data-equipamento-index', equipamentoIndex);
-
-    let equipmentHTML = `
-        <div class="equipment-header">
-            <h3>${servico.name} #${equipamentoIndex + 1}</h3>
-            ${equipamentoIndex > 0 ?
-                `<button type="button" class="remove-equipment"
-                         data-servico-index="${servicoIndex}"
-                         data-equipamento-index="${equipamentoIndex}">
-                    <i class="fas fa-trash"></i> Remover
-                 </button>` :
-                ''}
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Tipo de equipamento</label>
-                <select class="form-control tipo-equipamento" required>
-                    <option value="">Selecione...</option>
-                    <option value="Janela" ${equipamento.tipoEquipamento === "Janela" ? "selected" : ""}>Janela</option>
-                    <option value="Split" ${equipamento.tipoEquipamento === "Split" ? "selected" : ""}>Split (Hi-Wall)</option>
-                    <option value="Multi-Split" ${equipamento.tipoEquipamento === "Multi-Split" ? "selected" : ""}>Multi-Split</option>
-                    <option value="Cassete" ${equipamento.tipoEquipamento === "Cassete" ? "selected" : ""}>Cassete</option>
-                    <option value="Piso-Teto" ${equipamento.tipoEquipamento === "Piso-Teto" ? "selected" : ""}>Piso-Teto</option>
-                    <option value="Outro" ${equipamento.tipoEquipamento === "Outro" ? "selected" : ""}>Outro</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Capacidade (BTUs)</label>
-                <select class="form-control capacidade-btus" required>
-                    <option value="">Selecione...</option>
-                    <option value="9000" ${equipamento.capacidadeBtus === "9000" ? "selected" : ""}>9.000 BTUs</option>
-                    <option value="12000" ${equipamento.capacidadeBtus === "12000" ? "selected" : ""}>12.000 BTUs</option>
-                    <option value="18000" ${equipamento.capacidadeBtus === "18000" ? "selected" : ""}>18.000 BTUs</option>
-                    <option value="24000" ${equipamento.capacidadeBtus === "24000" ? "selected" : ""}>24.000 BTUs</option>
-                    <option value="30000" ${equipamento.capacidadeBtus === "30000" ? "selected" : ""}>30.000 BTUs</option>
-                    <option value="36000" ${equipamento.capacidadeBtus === "36000" ? "selected" : ""}>36.000 BTUs</option>
-                    <option value="48000" ${equipamento.capacidadeBtus === "48000" ? "selected" : ""}>48.000 BTUs</option>
-                </select>
-            </div>
-    `;
-
-    // Adicionar campo de parte elétrica apenas para serviços de instalação
-    if (servico.name.toLowerCase().includes('instalação') || servico.name.toLowerCase().includes('instalacao')) {
-        equipmentHTML += `
-            <div class="form-group">
-                <label>Parte elétrica pronta?</label>
-                <select class="form-control parte-eletrica">
-                    <option value="Sim" ${equipamento.parteEletricaPronta === "Sim" ? "selected" : ""}>Sim</option>
-                    <option value="Não" ${equipamento.parteEletricaPronta === "Não" ? "selected" : ""}>Não</option>
-                </select>
-            </div>
-        `;
-    }
-
-    equipmentHTML += `
-            <div class="form-group full-width">
-                <label>Observações (Opcional)</label>
-                <textarea class="form-control observacoes" placeholder="Detalhes adicionais, problemas ou instruções especiais">${equipamento.observacoes || ""}</textarea>
-            </div>
-        </div>
-    `;
-
-    equipmentItem.innerHTML = equipmentHTML;
-    return equipmentItem;
-}
-
-// Adicionar event listeners aos equipamentos
-function adicionarEventListenersEquipamentos() {
-    // Listeners para quantidade de serviços
-    document.querySelectorAll('.service-quantity input').forEach(input => {
-        input.addEventListener('change', alterarQuantidadeServico);
-    });
-
-    // Listeners para remover equipamentos
-    document.querySelectorAll('.remove-equipment').forEach(button => {
-        button.addEventListener('click', removerEquipamento);
-    });
-
-    // Listeners para atualizar dados dos equipamentos
-    document.querySelectorAll('.tipo-equipamento, .capacidade-btus, .parte-eletrica, .observacoes').forEach(input => {
-        input.addEventListener('change', atualizarDadosEquipamento);
-    });
-}
-
-// Alterar quantidade de um serviço
-function alterarQuantidadeServico(e) {
-    const servicoIndex = parseInt(e.target.dataset.servicoIndex);
-    const novaQuantidade = parseInt(e.target.value);
-
-    if (novaQuantidade < 1) {
-        e.target.value = 1;
+    if (!horarioDoDia || horarioDoDia.ativo === false) {
+        agendamentoHoraSelect.innerHTML = '<option value="" disabled selected>Dia indisponível</option>';
+        alert('Desculpe, este dia não está disponível para agendamento.');
         return;
     }
 
-    const servico = appState.servicosSelecionados[servicoIndex];
-    const quantidadeAtual = servico.equipamentos.length;
-
-    if (novaQuantidade > quantidadeAtual) {
-        // Adicionar equipamentos
-        for (let i = quantidadeAtual; i < novaQuantidade; i++) {
-            servico.equipamentos.push({
-                tipoEquipamento: "",
-                capacidadeBtus: "",
-                parteEletricaPronta: "Não",
-                observacoes: ""
-            });
-        }
-    } else if (novaQuantidade < quantidadeAtual) {
-        // Remover equipamentos
-        servico.equipamentos.splice(novaQuantidade);
+    // 3. Usa os horários específicos daquele dia para gerar as opções
+    const { horarioInicio, horarioFim, duracaoServico } = horarioDoDia;
+    if (!horarioInicio || !horarioFim || !duracaoServico) {
+        console.error("Configurações de horário ausentes para o dia selecionado.");
+        return;
     }
 
-    servico.quantidade = novaQuantidade;
-    renderizarEquipamentos();
-}
+    let [startHour, startMin] = horarioInicio.split(':').map(Number);
+    let [endHour, endMin] = horarioFim.split(':').map(Number);
+    
+    let current = new Date();
+    current.setHours(startHour, startMin, 0);
 
-// Remover equipamento
-function removerEquipamento(e) {
-    const servicoIndex = parseInt(e.target.dataset.servicoIndex);
-    const equipamentoIndex = parseInt(e.target.dataset.equipamentoIndex);
+    let end = new Date();
+    end.setHours(endHour, endMin, 0);
 
-    appState.servicosSelecionados[servicoIndex].equipamentos.splice(equipamentoIndex, 1);
-    appState.servicosSelecionados[servicoIndex].quantidade--;
+    while (current <= end) {
+        const hour = current.getHours().toString().padStart(2, '0');
+        const minute = current.getMinutes().toString().padStart(2, '0');
+        const timeValue = `${hour}:${minute}`;
+        
+        const option = document.createElement('option');
+        option.value = timeValue;
+        option.textContent = timeValue;
+        agendamentoHoraSelect.appendChild(option);
 
-    // Atualizar o campo de quantidade
-    const quantidadeInput = document.querySelector(`#quantidade-${servicoIndex}`);
-    if (quantidadeInput) {
-        quantidadeInput.value = appState.servicosSelecionados[servicoIndex].quantidade;
+        current.setMinutes(current.getMinutes() + duracaoServico);
     }
-
-    renderizarEquipamentos();
 }
 
-// Atualizar dados do equipamento
-function atualizarDadosEquipamento(e) {
-    const equipmentItem = e.target.closest('.equipment-item');
-    if (!equipmentItem) return;
-
-    const servicoIndex = parseInt(equipmentItem.dataset.servicoIndex);
-    const equipamentoIndex = parseInt(equipmentItem.dataset.equipamentoIndex);
-
-    const equipamento = appState.servicosSelecionados[servicoIndex].equipamentos[equipamentoIndex];
-    const inputs = equipmentItem.querySelectorAll('select, textarea');
-
-    inputs.forEach(input => {
-        if (input.classList.contains('tipo-equipamento')) {
-            equipamento.tipoEquipamento = input.value;
-        } else if (input.classList.contains('capacidade-btus')) {
-            equipamento.capacidadeBtus = input.value;
-        } else if (input.classList.contains('parte-eletrica')) {
-            equipamento.parteEletricaPronta = input.value;
-        } else if (input.classList.contains('observacoes')) {
-            equipamento.observacoes = input.value;
+/**
+ * Gera o resumo final antes de enviar o agendamento.
+ */
+function generateFinalSummary() {
+    const nome = document.getElementById('clienteNome').value;
+    const telefone = document.getElementById('clienteTelefone').value;
+    const endereco = document.getElementById('clienteEndereco').value;
+    const data = document.getElementById('agendamentoData').value;
+    const hora = document.getElementById('agendamentoHora').value;
+    const observacoes = document.getElementById('clienteObservacoes').value;
+    
+    let servicosHtml = '<ul>';
+    cart.forEach(service => {
+        let serviceTotal = parseFloat(service.precoBase);
+        let serviceDetails = `<li><strong>${service.nome}</strong>: R$ ${serviceTotal.toFixed(2)}`;
+        
+        if (Object.keys(service.camposAdicionaisSelecionados).length > 0) {
+            serviceDetails += '<ul>';
+            for (const fieldName in service.camposAdicionaisSelecionados) {
+                const value = parseFloat(service.camposAdicionaisSelecionados[fieldName]);
+                const field = service.camposAdicionais.find(f => f.nome === fieldName);
+                const optionText = field.opcoes.find(o => o.endsWith(value.toFixed(2)));
+                serviceDetails += `<li>- ${fieldName}: ${optionText ? optionText.split(', R$')[0] : 'Valor não especificado'} (R$ ${value.toFixed(2)})</li>`;
+                serviceTotal += value;
+            }
+            serviceDetails += '</ul>';
         }
+        serviceDetails += '</li>';
+        servicosHtml += serviceDetails;
     });
+    servicosHtml += '</ul>';
+    
+    const total = calculateOrcamento();
+    
+    resumoAgendamentoDiv.innerHTML = `
+        <p><strong>Nome:</strong> ${nome}</p>
+        <p><strong>Telefone:</strong> ${telefone}</p>
+        <p><strong>Endereço:</strong> ${endereco}</p>
+        <p><strong>Data:</strong> ${data}</p>
+        <p><strong>Hora:</strong> ${hora}</p>
+        <p><strong>Observações:</strong> ${observacoes || 'Nenhuma'}</p>
+        <hr>
+        <h4>Serviços Agendados</h4>
+        ${servicosHtml}
+        <hr>
+        <p><strong>Valor Total Estimado:</strong> <span class="destaque-valor">R$ ${total.toFixed(2)}</span></p>
+    `;
 }
 
-// Cálculo de orçamento
-function calcularOrcamento() {
-    appState.orcamentoTotal = 0;
-    let html = "<h3>Resumo do Orçamento</h3>";
+/**
+ * Salva o agendamento no Firebase e redireciona para o WhatsApp.
+ */
+async function handleSubmit() {
+    // Valida o último passo antes de enviar
+    if (!validateStep(5)) {
+        return;
+    }
 
-    appState.servicosSelecionados.forEach(servico => {
-        html += `<div class="budget-item"><strong>${servico.name} (${servico.quantidade} unidade(s))</strong></div>`;
-
-        servico.equipamentos.forEach((equipamento, index) => {
-            const preco = calcularPrecoEquipamento(servico, equipamento);
-            appState.orcamentoTotal += preco;
-
-            html += `
-                <div class="budget-item">
-                    <div>${servico.name} #${index + 1} - ${equipamento.tipoEquipamento} ${equipamento.capacidadeBtus} BTUs</div>
-                    <div>R$ ${preco.toFixed(2)}</div>
-                </div>
-            `;
-
-            if (equipamento.parteEletricaPronta === "Não" && servico.name.toLowerCase().includes('instalação')) {
-                const custoEletrica = 150;
-                appState.orcamentoTotal += custoEletrica;
-
-                html += `
-                    <div class="budget-item">
-                        <div>Preparação da parte elétrica</div>
-                        <div>R$ ${custoEletrica.toFixed(2)}</div>
-                    </div>
-                `;
+    const agendamentoData = {
+        cliente: {
+            nome: document.getElementById('clienteNome').value,
+            telefone: document.getElementById('clienteTelefone').value,
+            endereco: document.getElementById('clienteEndereco').value,
+            observacoes: document.getElementById('clienteObservacoes').value,
+        },
+        data: document.getElementById('agendamentoData').value,
+        hora: document.getElementById('agendamentoHora').value,
+        servicos: cart, // Salva o carrinho completo no Firebase
+        orcamentoTotal: calculateOrcamento(),
+        status: 'Pendente', // Novo agendamento tem o status 'Pendente'
+        timestamp: new Date().toISOString()
+    };
+    
+    try {
+        const agendamentosRef = ref(database, 'agendamentos');
+        await push(agendamentosRef, agendamentoData);
+        
+        // Mensagem para o WhatsApp
+        let whatsappMessage = `Olá! Tenho um novo agendamento de serviço:%0A%0A`;
+        whatsappMessage += `*Dados do Cliente:*%0A`;
+        whatsappMessage += `Nome: ${agendamentoData.cliente.nome}%0A`;
+        whatsappMessage += `Telefone: ${agendamentoData.cliente.telefone}%0A`;
+        whatsappMessage += `Endereço: ${agendamentoData.cliente.endereco}%0A`;
+        whatsappMessage += `Observações: ${agendamentoData.cliente.observacoes || 'Nenhuma'}%0A%0A`;
+        whatsappMessage += `*Detalhes do Agendamento:*%0A`;
+        whatsappMessage += `Data: ${agendamentoData.data}%0A`;
+        whatsappMessage += `Hora: ${agendamentoData.hora}%0A%0A`;
+        whatsappMessage += `*Serviços Contratados:*%0A`;
+        
+        agendamentoData.servicos.forEach(service => {
+            whatsappMessage += `- ${service.nome}%0A`;
+            if (Object.keys(service.camposAdicionaisSelecionados).length > 0) {
+                for (const fieldName in service.camposAdicionaisSelecionados) {
+                    const value = parseFloat(service.camposAdicionaisSelecionados[fieldName]);
+                    const field = service.camposAdicionais.find(f => f.nome === fieldName);
+                    const optionText = field.opcoes.find(o => o.endsWith(value.toFixed(2)));
+                    whatsappMessage += `  - ${fieldName}: ${optionText ? optionText.split(', R$')[0] : 'Valor não especificado'} (R$ ${value.toFixed(2)})%0A`;
+                }
             }
         });
-    });
 
-    html += `
-        <div class="budget-total">
-            <strong>Total:</strong>
-            <span>R$ ${appState.orcamentoTotal.toFixed(2)}</span>
-        </div>
-    `;
+        whatsappMessage += `%0A*Valor Total Estimado:* R$ ${agendamentoData.orcamentoTotal.toFixed(2)}`;
 
-    elementos.relatorioOrcamento.innerHTML = html;
-}
+        // Abre o link do WhatsApp
+        const whatsappUrl = `https://wa.me/${systemConfig.whatsappNumber.replace(/\D/g, '')}?text=${whatsappMessage}`;
+        window.open(whatsappUrl, '_blank');
 
-function calcularPrecoEquipamento(servico, equipamento) {
-    let preco = servico.basePrice;
-
-    // Ajustar preço com base na capacidade BTUs
-    const fatorBTU = {
-        "9000": 1.0,
-        "12000": 1.2,
-        "18000": 1.5,
-        "24000": 1.8,
-        "30000": 2.0,
-        "36000": 2.3,
-        "48000": 2.8
-    };
-
-    if (fatorBTU[equipamento.capacidadeBtus]) {
-        preco *= fatorBTU[equipamento.capacidadeBtus];
+    } catch (error) {
+        console.error("Erro ao salvar o agendamento:", error);
+        alert("Ocorreu um erro ao salvar seu agendamento. Por favor, tente novamente.");
     }
-
-    return preco;
 }
 
-// Finalizar agendamento
-function finalizarAgendamento(e) {
-    e.preventDefault();
-
-    if (!validarDadosCliente()) return;
-
-    // Desabilitar botão para evitar múltiplos cliques
-    elementos.btnFinalizar.disabled = true;
-    elementos.btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-
-    // Simular envio
-    setTimeout(() => {
-        alert('Solicitação enviada com sucesso! Entraremos em contato em breve.');
-        elementos.btnFinalizar.disabled = false;
-        elementos.btnFinalizar.innerHTML = '<i class="fab fa-whatsapp"></i> Finalizar Agendamento';
-
-        // Recarregar a página após um tempo
-        setTimeout(() => {
-            window.location.reload();
-        }, 3000);
-    }, 2000);
-}
+// Inicia a aplicação quando a página é carregada
+document.addEventListener('DOMContentLoaded', initApp);
