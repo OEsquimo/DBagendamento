@@ -9,14 +9,8 @@
 <body>
 
     <header>
-        <div class="header-logo">
-            <img src="https://firebasestorage.googleapis.com/v0/b/agendamento-esquimo.appspot.com/o/logo.png?alt=media" alt="O Esquimó Logo">
-        </div>
-        <div class="whatsapp-contact">
-            <a href="#" id="whatsappLinkHeader" target="_blank">
-                <img src="https://img.icons8.com/color/48/000000/whatsapp--v1.png" alt="WhatsApp Icon">
-                <span id="whatsappNumberDisplay">Carregando...</span>
-            </a>
+        <div class="header-text">
+            Selecione um ou mais serviço.
         </div>
     </header>
 
@@ -70,19 +64,19 @@
             <form id="clienteInfoForm">
                 <div class="form-group">
                     <label for="nome">Nome Completo</label>
-                    <input type="text" id="nome" class="form-control" required>
+                    <input type="text" id="nome" class="form-control" required placeholder="Digite seu nome completo">
                 </div>
                 <div class="form-group">
                     <label for="telefone">Telefone</label>
-                    <input type="tel" id="telefone" class="form-control" required>
+                    <input type="tel" id="telefone" class="form-control" required pattern="^\(\d{2}\)\s\d{5}-\d{4}$" placeholder="(xx) xxxxx-xxxx">
                 </div>
                 <div class="form-group">
                     <label for="endereco">Endereço</label>
-                    <input type="text" id="endereco" class="form-control">
+                    <input type="text" id="endereco" class="form-control" placeholder="Ex: Rua A, 123, Bairro B">
                 </div>
                 <div class="form-group">
                     <label for="observacoes">Observações (opcional)</label>
-                    <textarea id="observacoes" class="form-control"></textarea>
+                    <textarea id="observacoes" class="form-control" placeholder="Ex: Preferência de horário, detalhes do local."></textarea>
                 </div>
                 <div class="form-navigation">
                     <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
@@ -116,8 +110,8 @@
             <p>Seu agendamento foi enviado com sucesso.</p>
             <p>Em breve entraremos em contato para confirmar os detalhes.</p>
             <p>Para mais informações, fale conosco via WhatsApp:</p>
-            <p><a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Abrir WhatsApp</a></p>
-            <a href="index.html" class="btn btn-secondary mt-3">Novo Agendamento</a>
+            <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Enviar confirmação de agendamento e orçamento para o WhatsApp</a>
+            <a href="index.html" class="btn btn-secondary new-booking-btn">Novo Agendamento</a>
         </section>
         
     </div>
