@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 5.0 (Com funcionalidade CRUD, gerenciamento de agendamentos e configurações)
+ * Versão: 6.0 (Com navegação por abas)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -37,6 +37,8 @@ const whatsappNumberInput = document.getElementById('whatsappNumber');
 const horariosContainer = document.getElementById('horariosContainer');
 const addFieldBtn = document.getElementById('addFieldBtn');
 const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanes = document.querySelectorAll('.tab-pane');
 
 const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 
@@ -50,7 +52,25 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     setupConfigForm();
     setupServicoForm();
+    setupTabNavigation(); // Nova função para navegação por abas
 });
+
+function setupTabNavigation() {
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove a classe 'active' de todos os botões e 'tab-pane'
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.add('hidden'));
+
+            // Adiciona a classe 'active' ao botão clicado
+            button.classList.add('active');
+
+            // Exibe o painel de conteúdo correspondente
+            const targetId = button.dataset.tab;
+            document.getElementById(targetId).classList.remove('hidden');
+        });
+    });
+}
 
 function setupServicoForm() {
     servicoForm.addEventListener('submit', handleServicoFormSubmit);
@@ -318,7 +338,8 @@ function editService(e) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Alternar para a aba correta
+        document.querySelector('[data-tab="addServicoTab"]').click();
     });
 }
 
