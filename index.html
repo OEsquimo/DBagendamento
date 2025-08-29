@@ -5,110 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O Esquimó - Agendamento</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
     <header>
-        <img src="https://o-esquimo.github.io/DEFESA-TCC/logo_o_esquimo.png" alt="O Esquimó Logo" class="logo">
+        <div class="header-logo">
+            <img src="https://firebasestorage.googleapis.com/v0/b/agendamento-esquimo.appspot.com/o/logo.png?alt=media" alt="O Esquimó Logo">
+        </div>
         <div class="whatsapp-contact">
-            <a id="whatsappLinkTop" href="#" target="_blank">
-                <i class="fab fa-whatsapp"></i>
-                <span id="whatsappNumberDisplay"></span>
+            <a href="#" id="whatsappLinkHeader" target="_blank">
+                <img src="https://img.icons8.com/color/48/000000/whatsapp--v1.png" alt="WhatsApp Icon">
+                <span id="whatsappNumberDisplay">Carregando...</span>
             </a>
         </div>
     </header>
 
     <div class="container">
-
-        <div class="progress-bar-container">
-            <div class="progress-step active">
-                <i class="fas fa-hand-pointer"></i>
-                <span>Serviços</span>
+        
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <span class="step-number">1</span>
+                <span class="step-text">Serviços</span>
             </div>
-            <div class="progress-step">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Detalhes</span>
+            <div class="progress-step" data-step="2">
+                <span class="step-number">2</span>
+                <span class="step-text">Detalhes</span>
             </div>
-            <div class="progress-step">
-                <i class="fas fa-user-circle"></i>
-                <span>Cliente</span>
+            <div class="progress-step" data-step="3">
+                <span class="step-number">3</span>
+                <span class="step-text">Cliente</span>
             </div>
-            <div class="progress-step">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Agendar</span>
+            <div class="progress-step" data-step="4">
+                <span class="step-number">4</span>
+                <span class="step-text">Agendar</span>
             </div>
         </div>
 
-        <section id="servicos">
+        <section id="servicos" class="active-section">
             <h2>Nossos Serviços</h2>
-            <div id="servicosContainer" class="service-list">
+            <div id="servicosContainer">
                 </div>
-            <button id="nextStep1" class="btn btn-primary next-button" style="display: none;">Próximo</button>
+            <div class="total-summary-container">
+                <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
+                <button class="btn btn-primary" id="nextStep1" style="display:none;">Próximo</button>
+            </div>
         </section>
 
         <section id="servicosForm" class="hidden">
             <h2>Detalhes do Serviço</h2>
             <div id="servicosFormContainer">
                 </div>
-            <div class="orcamento-summary">
-                <strong>Orçamento Total:</strong> <span id="orcamentoTotal">R$ 0.00</span>
+            <div class="total-summary-container">
+                <span class="total-label">Orçamento Total:</span>
+                <span id="orcamentoTotal">R$ 0,00</span>
             </div>
-            <button id="nextStep2" class="btn btn-primary next-button">Próximo</button>
-            <button id="backButton1" class="btn btn-secondary back-button">Voltar</button>
+            <div class="form-navigation">
+                <button class="btn btn-secondary" id="backButton1">Voltar</button>
+                <button class="btn btn-primary" id="nextStep2">Próximo</button>
+            </div>
         </section>
 
         <section id="clienteForm" class="hidden">
             <h2>Suas Informações</h2>
-            <form>
+            <form id="clienteInfoForm">
                 <div class="form-group">
                     <label for="nome">Nome Completo</label>
                     <input type="text" id="nome" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="telefone">Telefone</label>
-                    <input type="tel" id="telefone" class="form-control" placeholder="(DD) 9XXXX-XXXX" required>
+                    <input type="tel" id="telefone" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="endereco">Endereço</label>
-                    <input type="text" id="endereco" class="form-control" required>
+                    <input type="text" id="endereco" class="form-control">
                 </div>
                 <div class="form-group">
                     <label for="observacoes">Observações (opcional)</label>
-                    <textarea id="observacoes" class="form-control" rows="3"></textarea>
+                    <textarea id="observacoes" class="form-control"></textarea>
                 </div>
-                <button id="nextStep3" class="btn btn-primary next-button">Próximo</button>
-                <button id="backButton2" class="btn btn-secondary back-button">Voltar</button>
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
+                    <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
+                </div>
             </form>
         </section>
 
         <section id="agendamento" class="hidden">
-            <h2>Agendamento</h2>
-            <div class="form-group">
-                <label for="datePicker">Escolha uma data</label>
-                <input type="date" id="datePicker" class="form-control">
-            </div>
-            <div id="timeSlotsContainer" class="time-slots">
-                </div>
+            <h2>Agendar</h2>
             <form id="agendamentoForm">
-                <button type="submit" class="btn btn-primary">Confirmar Agendamento</button>
+                <div class="form-group">
+                    <label for="datePicker">Escolha uma data</label>
+                    <input type="date" id="datePicker" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Horários disponíveis</label>
+                    <div id="timeSlotsContainer" class="time-slots-container">
+                        <p>Selecione uma data para ver os horários.</p>
+                    </div>
+                </div>
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar Agendamento</button>
+                </div>
             </form>
-            <button id="backButton3" class="btn btn-secondary back-button">Voltar</button>
         </section>
 
         <section id="confirmation" class="hidden">
             <h2>Agendamento Concluído!</h2>
-            <p>Seu agendamento foi enviado com sucesso. Por favor, clique no botão abaixo para nos enviar os detalhes via WhatsApp e confirmar seu horário.</p>
-            <a id="whatsappLink" class="btn btn-whatsapp" href="#" target="_blank">
-                <i class="fab fa-whatsapp"></i> Confirmar no WhatsApp
-            </a>
-            <p class="small-text">Sua confirmação é essencial para garantir o horário.</p>
+            <p>Seu agendamento foi enviado com sucesso.</p>
+            <p>Em breve entraremos em contato para confirmar os detalhes.</p>
+            <p>Para mais informações, fale conosco via WhatsApp:</p>
+            <p><a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Abrir WhatsApp</a></p>
+            <a href="index.html" class="btn btn-secondary mt-3">Novo Agendamento</a>
         </section>
-
+        
     </div>
 
     <script type="module" src="script.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-
 </body>
 </html>
