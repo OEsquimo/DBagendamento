@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 4.0 (Com funcionalidade CRUD e flexibilidade de tipos de campo)
+ * Versão: 5.0 (Com funcionalidade CRUD, gerenciamento de agendamentos e configurações)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -345,11 +345,11 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
-            const agendamentosArray = Object.values(agendamentos).sort((a,b) => new Date(a.data) - new Date(b.data));
-            for (const key in agendamentos) {
-                const agendamento = agendamentos[key];
+            // Inverter a ordem para mostrar os mais recentes primeiro
+            const agendamentosArray = Object.entries(agendamentos).reverse();
+            agendamentosArray.forEach(([key, agendamento]) => {
                 createAgendamentoCard(agendamento, key);
-            }
+            });
         } else {
             agendamentosList.innerHTML = '<p>Nenhum agendamento pendente.</p>';
         }
@@ -391,12 +391,14 @@ function createAgendamentoCard(agendamento, key) {
             <div class="mt-3">
                 <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
                 <button class="btn btn-danger btn-sm cancel-booking" data-key="${key}" ${agendamento.status === 'Cancelado' ? 'disabled' : ''}>Cancelar</button>
+                <button class="btn btn-danger btn-sm delete-booking" data-key="${key}">Excluir</button>
             </div>
         </div>
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
     card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
 function updateBookingStatus(key, newStatus) {
@@ -412,13 +414,25 @@ function updateBookingStatus(key, newStatus) {
     });
 }
 
+function deleteBooking(key) {
+    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível.')) {
+        const agendamentoRef = ref(database, `agendamentos/${key}`);
+        remove(agendamentoRef)
+            .then(() => alert('Agendamento excluído com sucesso!'))
+            .catch(error => {
+                console.error("Erro ao excluir agendamento:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
 // ==========================================================================
 // 5. GERENCIAMENTO DE CONFIGURAÇÕES
 // ==========================================================================
 
 function handleConfigFormSubmit(e) {
     e.preventDefault();
-    const whatsappNumber = whatsappNumberInput.value;
+    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Limpa o número
     const horariosPorDia = {};
 
     diasDaSemana.forEach(dia => {
