@@ -1,240 +1,492 @@
-/* Classes para controle via JS */
-.hidden {
-    display: none !important;
+/*
+ * Arquivo: style.css
+ * Descrição: Estilização unificada para a aplicação de agendamento (frontend e admin)
+ * Versão: 3.0 (Design moderno e responsivo)
+ */
+
+/* ==========================================================================
+   1. ESTILOS GERAIS E UTilitários
+   ========================================================================== */
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --background-color: #f4f7f6;
+    --card-background: #fff;
+    --text-color: #495057;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Base Style */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f7f6;
-    color: #333;
-    line-height: 1.6;
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-.container {
-    max-width: 800px;
-    margin: 20px auto;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
     padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-h1, h2, h3 {
-    color: #2c3e50;
-    margin-top: 0;
+.hidden {
+    display: none !important;
 }
 
-/* Form Styles */
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-control {
-    width: 100%;
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-.form-control:focus {
-    border-color: #3498db;
-    outline: none;
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-}
+/* ==========================================================================
+   2. ESTILOS DE COMPONENTES REUTILIZÁVEIS
+   ========================================================================== */
 
 .btn {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
+    display: inline-block;
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+    text-decoration: none;
 }
 
 .btn-primary {
-    background-color: #3498db;
     color: #fff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 .btn-primary:hover {
-    background-color: #2980b9;
+    background-color: #0056b3;
+    border-color: #0056b3;
 }
 
 .btn-secondary {
-    background-color: #95a5a6;
     color: #fff;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
 }
 
 .btn-secondary:hover {
-    background-color: #7f8c8d;
+    background-color: #5a6268;
+    border-color: #5a6268;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
 }
 
 .btn-danger {
-    background-color: #e74c3c;
     color: #fff;
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
 }
 
 .btn-danger:hover {
-    background-color: #c0392b;
+    background-color: #c82333;
+    border-color: #bd2130;
 }
 
 .btn-sm {
-    padding: 5px 10px;
-    font-size: 14px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+    border-radius: 0.3rem;
 }
 
-/* Services and Summary */
-.servicos-list, .summary-section ul {
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: var(--card-background);
+    background-clip: padding-box;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    color: var(--text-color);
+    background-color: var(--card-background);
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.card {
+    background-color: var(--card-background);
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px var(--shadow-color);
+    padding: 2rem;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 20px;
+    position: relative;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.list-group {
     list-style: none;
     padding: 0;
-    margin-top: 20px;
 }
 
-.servicos-list li, .summary-section li {
-    background: #ecf0f1;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 10px;
+.list-group-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.servicos-list li:hover {
-    background-color: #e0e6e9;
-}
+/* ==========================================================================
+   3. ESTILOS DO SITE DO CLIENTE (`index.html`)
+   ========================================================================== */
 
-.servicos-list li .service-details, .summary-item {
-    flex-grow: 1;
-}
-
-.servicos-list h4 {
-    margin: 0 0 5px 0;
-}
-
-.servicos-list p {
-    margin: 0;
-    font-size: 14px;
-    color: #555;
-}
-
-.servicos-list .btn {
-    margin-left: 10px;
-}
-
-/* Final Form */
-#contactForm {
-    margin-top: 20px;
-}
-
-#totalPrice {
-    font-size: 24px;
-    font-weight: bold;
-    color: #27ae60;
-    text-align: right;
-    margin-top: 20px;
-}
-
-/* Loading and Messages */
-#loadingMessage, #successMessage, #errorMessage {
-    text-align: center;
-    padding: 15px;
-    margin-top: 20px;
-    border-radius: 6px;
-    font-weight: bold;
-    display: none;
-}
-
-#loadingMessage {
-    background: #f1c40f;
-    color: #333;
-}
-
-#successMessage {
-    background: #2ecc71;
-    color: #fff;
-}
-
-#errorMessage {
-    background: #e74c3c;
-    color: #fff;
-}
-
-/* Adicionais */
-.additional-fields {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 6px;
-}
-
-.additional-fields .form-group {
-    margin-bottom: 10px;
-}
-
-/* ========================================= */
-/* ADMIN PANEL STYLES */
-/* ========================================= */
-
-.admin-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.header {
+    width: 100%;
     padding: 20px;
+    background-color: var(--card-background);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px var(--shadow-color);
+    margin-bottom: 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.logo {
+    height: 50px;
+}
+
+.contact-info {
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    color: var(--success-color);
+}
+
+.contact-info i {
+    margin-right: 8px;
+    font-size: 1.2rem;
+}
+
+.main-content {
+    padding-top: 90px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.section {
+    margin-bottom: 40px;
+}
+
+h2, h3, h4 {
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.servicos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.service-card {
+    background-color: var(--card-background);
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.service-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.service-card p {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.service-card .price {
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-top: auto;
+    margin-bottom: 1rem;
+}
+
+.service-options {
+    margin-bottom: 1rem;
+}
+
+.service-options select, .service-options input {
+    margin-bottom: 0.5rem;
+}
+
+.form-section {
+    background-color: #f8f9fa;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.selected-services-list .list-item {
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.list-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: var(--dark-color);
+}
+
+.list-item-header .remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+}
+
+.list-item-header .remove-btn:hover {
+    transform: scale(1.1);
+}
+
+.list-item-details {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+.date-selection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.date-selection label {
+    font-weight: 600;
+}
+
+.time-slot {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    margin: 5px;
+    background-color: #f0f0f0;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-slot:hover {
+    background-color: #e2e6ea;
+}
+
+.time-slot.selected {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+.orcamento-summary {
+    text-align: right;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.orcamento-summary h4 {
+    font-size: 1.5rem;
+}
+
+.confirmation-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup-content {
+    background-color: #fff;
+    padding: 3rem 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+}
+
+.popup-content h3 {
+    color: var(--success-color);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.success-icon {
+    font-size: 4rem;
+    color: var(--success-color);
+    margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   4. ESTILOS DO PAINEL DE ADMIN (`admin.html`)
+   ========================================================================== */
+
+#adminContainer {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+    margin: 0 auto;
 }
 
 .login-container {
+    width: 100%;
     max-width: 400px;
-    margin: 100px auto;
-    padding: 40px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    margin: 50px auto;
+    padding: 2rem;
+    background-color: var(--card-background);
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px var(--shadow-color);
+}
+
+.admin-panel {
+    background-color: var(--card-background);
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px var(--shadow-color);
+    padding: 2rem;
+    width: 100%;
+    min-height: 80vh;
 }
 
 .admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 20px;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
 }
 
-.admin-header h1 {
-    margin: 0;
-    color: #34495e;
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.notification {
+    display: flex;
+    align-items: center;
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+.notification i {
+    margin-right: 0.5rem;
 }
 
 .admin-tabs {
     display: flex;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #ecf0f1;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 2rem;
 }
 
-.admin-tabs .tab-item {
-    background: transparent;
+.tab-item {
+    background-color: transparent;
     border: none;
-    padding: 15px 25px;
-    font-size: 16px;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: color 0.3s, border-bottom 0.3s;
-    color: #7f8c8d;
     border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    color: var(--secondary-color);
 }
 
-.admin-tabs .tab-item.active {
-    color: #3498db;
-    border-bottom: 2px solid #3498db;
-    font-weight: bold;
+.tab-item:hover {
+    color: var(--primary-color);
+}
+
+.tab-item.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
 }
 
 .tab-content {
@@ -245,186 +497,119 @@ h1, h2, h3 {
     display: block;
 }
 
-.tab-content h2 {
-    color: #2c3e50;
-    margin-top: 0;
-    margin-bottom: 20px;
-}
-
-.list-group {
-    list-style: none;
-    padding: 0;
-}
-
-.list-group-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    background: #f9f9f9;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    margin-bottom: 10px;
-}
-
-.list-group-item span {
-    flex-grow: 1;
-}
-
-.list-group-item button {
-    margin-left: 10px;
-}
-
-/* Service Form */
 .service-form {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f0f4f7;
-    border-radius: 8px;
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
 }
 
-.service-form h3 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 25px;
-    margin-bottom: 15px;
+.btn-add-field {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
 }
 
 .field-entry {
-    background-color: #e9eef2;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    border-left: 4px solid #3498db;
-    position: relative;
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
-.field-entry .form-group {
-    margin-bottom: 10px;
-}
-
-.field-entry .btn-remove-field {
-    background-color: #e74c3c;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-}
-
-/* Agendamentos Table */
 .agendamentos-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 1.5rem;
 }
 
 .agendamentos-table th, .agendamentos-table td {
-    border: 1px solid #ddd;
-    padding: 12px;
+    padding: 1rem;
     text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    word-wrap: break-word;
 }
 
 .agendamentos-table th {
-    background-color: #34495e;
-    color: white;
+    background-color: #e9ecef;
     font-weight: bold;
+    color: var(--dark-color);
 }
 
-.agendamentos-table tbody tr:nth-child(even) {
-    background-color: #f2f2f2;
+.agendamentos-table tr:nth-child(even) {
+    background-color: #f8f9fa;
 }
 
-.agendamentos-table .status-select {
-    padding: 5px;
-    border-radius: 4px;
+.status-select {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
 }
 
-/* Notifications */
-.notification {
+.day-config {
     display: flex;
     align-items: center;
-    background-color: #f39c12;
-    color: #fff;
-    padding: 10px 15px;
-    border-radius: 50px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out;
-}
-
-.notification:hover {
-    transform: scale(1.03);
-}
-
-.notification i {
-    margin-right: 8px;
-}
-
-/* Day config */
-.day-config {
-    margin-bottom: 10px;
-}
-
-.day-config label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
+    gap: 15px;
+    margin-bottom: 1rem;
 }
 
 .time-inputs {
     display: flex;
     gap: 10px;
-    align-items: center;
 }
 
-.time-inputs .time-input {
-    width: 120px;
+.time-input {
+    width: 100px;
 }
 
-/* Responsive adjustments */
+/* ==========================================================================
+   5. MEDIA QUERIES (RESPONSIVIDADE)
+   ========================================================================== */
+
 @media (max-width: 768px) {
-    .admin-container {
+    body {
         padding: 10px;
     }
-
-    .admin-header {
+    
+    .header-content {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .admin-tabs {
-        flex-wrap: wrap;
-    }
-
-    .admin-tabs .tab-item {
-        flex: 1 1 auto;
         text-align: center;
     }
 
+    .contact-info {
+        margin-top: 10px;
+    }
+
+    .main-content {
+        padding-top: 140px;
+    }
+    
     .agendamentos-table, .agendamentos-table thead, .agendamentos-table tbody, .agendamentos-table th, .agendamentos-table td, .agendamentos-table tr {
         display: block;
     }
-
+    
     .agendamentos-table thead tr {
         position: absolute;
         top: -9999px;
         left: -9999px;
     }
-
+    
     .agendamentos-table tr {
-        border: 1px solid #ddd;
-        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
     }
-
+    
     .agendamentos-table td {
         border: none;
         position: relative;
         padding-left: 50%;
         text-align: right;
     }
-
+    
     .agendamentos-table td:before {
         content: attr(data-label);
         position: absolute;
@@ -435,4 +620,32 @@ h1, h2, h3 {
         text-align: left;
         font-weight: bold;
     }
+
+    .admin-tabs {
+        flex-direction: column;
+    }
+
+    .tab-item {
+        width: 100%;
+        text-align: left;
+    }
+
+    .login-container, .admin-panel {
+        padding: 1rem;
+    }
+
+    .admin-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .header-actions {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .notification {
+        width: 100%;
+        justify-content: center;
+    }
 }
+
