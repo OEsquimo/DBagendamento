@@ -1,3 +1,4 @@
+
 /*
  * Arquivo: admin.js
  * Descrição: Lógica principal do painel de administração.
