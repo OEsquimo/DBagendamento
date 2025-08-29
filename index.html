@@ -1,89 +1,94 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agende seu Serviço - O Esquimó</title>
+    <title>Agendamento - O Esquimó</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
 
-    <div class="container">
-        <header class="page-header">
+    <header class="header">
+        <div class="header-content">
             <img src="logo.png" alt="O Esquimó Logo" class="logo">
-            <h1>Agende seu Serviço</h1>
-        </header>
+            <div class="contact-info">
+                <i class="fab fa-whatsapp"></i>
+                <span id="whatsappNumberDisplay"></span>
+            </div>
+        </div>
+    </header>
 
-        <section id="servicosSection">
-            <h2>1. Escolha o(s) Serviço(s)</h2>
-            <form id="formServicos">
-                <div id="servicosList" class="servicos-list">
-                    </div>
-                <button type="button" id="btnContinuar" class="btn btn-primary" disabled>Continuar</button>
-            </form>
+    <main class="main-content">
+        <section id="servicos" class="section">
+            <h2>Nossos Serviços</h2>
+            <div id="servicosContainer" class="servicos-grid">
+                </div>
         </section>
 
-        <section id="camposAdicionaisSection" class="hidden">
-            <h2>2. Detalhes do(s) Serviço(s)</h2>
-            <form id="formCamposAdicionais">
-                <div id="camposAdicionaisList">
+        <section id="agendamento" class="section hidden">
+            <div class="card">
+                <div class="card-header">
+                    <button id="backButton" class="btn btn-secondary back-btn"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <h2>Seu Agendamento</h2>
+                </div>
+                <div id="selectedServicesList" class="selected-services-list">
                     </div>
-                <div id="summarySection" class="summary-section">
-                    <h3>Resumo do seu Orçamento</h3>
-                    <ul id="summaryServicosList">
-                        </ul>
-                    <p id="totalPrice">Total: R$ 0.00</p>
-                </div>
-                <div class="btn-group">
-                    <button type="button" id="btnVoltarCampos" class="btn btn-secondary">Voltar</button>
-                    <button type="submit" class="btn btn-primary">Próximo</button>
-                </div>
-            </form>
-        </section>
 
-        <section id="dadosPessoaisSection" class="hidden">
-            <h2>3. Seus Dados e Agendamento</h2>
-            <form id="formDadosAgendamento">
-                <div class="form-group">
-                    <label for="nome">Nome Completo</label>
-                    <input type="text" id="nome" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="telefone">Telefone (DDD + Número)</label>
-                    <input type="tel" id="telefone" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="endereco">Endereço Completo</label>
-                    <input type="text" id="endereco" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="data">Data Desejada</label>
-                    <input type="date" id="data" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="hora">Horário Desejado</label>
-                    <select id="hora" class="form-control" disabled required>
-                        <option value="">-- Selecione uma hora --</option>
-                    </select>
+                <div class="form-section">
+                    <h3>Escolha a Data e Horário</h3>
+                    <div class="date-selection">
+                        <label for="datePicker">Selecione a Data:</label>
+                        <input type="date" id="datePicker" class="form-control">
+                    </div>
+                    <div class="time-selection" id="timeSlotsContainer">
+                        </div>
                 </div>
                 
-                <input type="hidden" id="orcamentoTotal">
-                <div class="messages">
-                    <p id="loadingMessage" class="hidden">Enviando agendamento...</p>
-                    <p id="successMessage" class="hidden">Agendamento enviado com sucesso! Redirecionando para o WhatsApp...</p>
-                    <p id="errorMessage" class="hidden">Erro ao agendar. Tente novamente.</p>
+                <div class="form-section">
+                    <h3>Seus Dados</h3>
+                    <form id="agendamentoForm">
+                        <div class="form-group">
+                            <label for="nome">Nome Completo</label>
+                            <input type="text" id="nome" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="telefone">Telefone</label>
+                            <input type="tel" id="telefone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endereco">Endereço Completo</label>
+                            <input type="text" id="endereco" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="observacoes">Observações (Opcional)</label>
+                            <textarea id="observacoes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calendar-alt"></i> Agendar Agora
+                        </button>
+                    </form>
                 </div>
-
-                <div class="btn-group">
-                    <button type="button" id="btnVoltarDados" class="btn btn-secondary">Voltar</button>
-                    <button type="submit" id="btnFinalizar" class="btn btn-primary" disabled>Agendar</button>
+                
+                <div class="orcamento-summary">
+                    <h4>Orçamento Total: <span id="orcamentoTotal">R$ 0,00</span></h4>
                 </div>
-            </form>
+            </div>
         </section>
 
-    </div>
+        <div id="confirmation" class="confirmation-popup hidden">
+            <div class="popup-content">
+                <i class="fas fa-check-circle success-icon"></i>
+                <h3>Agendamento Concluído!</h3>
+                <p>Seu agendamento foi enviado. Em breve, entraremos em contato para confirmar os detalhes.</p>
+                <p>Se preferir, clique abaixo para falar conosco no WhatsApp:</p>
+                <a id="whatsappLink" href="#" class="btn btn-success" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Falar com a gente
+                </a>
+            </div>
+        </div>
+
+    </main>
 
     <script src="script.js" type="module"></script>
 </body>
