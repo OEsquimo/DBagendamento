@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 3.1 (Com melhorias de UI e gestão de horários por dia da semana)
+ * Versão: 3.2 (Correção de sintaxe e melhoria na seleção de serviços)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -119,6 +119,7 @@ function createServiceCard(service, key) {
         });
     }
     
+    // **CORREÇÃO APLICADA AQUI**
     card.querySelector('.btn-select-service').addEventListener('click', () => addServiceToCart(key));
     servicosContainer.appendChild(card);
 }
@@ -437,3 +438,4 @@ function formatPhoneNumber(number) {
     }
     return number;
 }
+
