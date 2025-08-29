@@ -1,8 +1,7 @@
-
 /*
  * Arquivo: admin.js
  * Descrição: Lógica principal do painel de administração.
- * Versão: 3.0 (Com gestão de agendamento por dia da semana)
+ * Versão: 3.1 (Com gestão de agendamento por dia da semana e melhorias de UI)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -32,8 +31,9 @@ const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin123";
 
 // Elementos HTML
-const loginForm = document.getElementById('loginForm');
-const adminPanel = document.getElementById('adminPanel');
+const loginFormContainer = document.getElementById('loginForm');
+const adminPanelContainer = document.getElementById('adminPanel');
+const loginForm = document.getElementById('loginFormInner');
 const logoutButton = document.getElementById('logoutButton');
 
 const tabs = document.querySelectorAll('.tab-item');
@@ -47,6 +47,7 @@ const serviceNameInput = document.getElementById('serviceName');
 const serviceDescriptionInput = document.getElementById('serviceDescription');
 const servicePriceInput = document.getElementById('servicePrice');
 const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
+const addFieldButton = document.querySelector('.btn-add-field');
 
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
@@ -54,24 +55,17 @@ const duracaoServicoInput = document.getElementById('duracaoServico');
 const dayCheckboxes = document.querySelectorAll('.day-checkbox');
 
 const pendingAppointmentsNotification = document.getElementById('pendingAppointmentsNotification');
-let currentEditingServiceKey = null; // Usado para saber se estamos editando um serviço
+let currentEditingServiceKey = null;
 
 // ==========================================================================
 // 2. FUNÇÕES DE AUTENTICAÇÃO E INICIALIZAÇÃO
 // ==========================================================================
 
-/**
- * Função principal para inicializar o painel.
- * Verifica a autenticação e carrega os dados.
- */
 document.addEventListener('DOMContentLoaded', () => {
     checkLogin();
     setupEventListeners();
 });
 
-/**
- * Verifica se o usuário já está logado.
- */
 function checkLogin() {
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
         showAdminPanel();
@@ -80,17 +74,11 @@ function checkLogin() {
     }
 }
 
-/**
- * Mostra o formulário de login.
- */
 function showLoginForm() {
-    loginForm.classList.remove('hidden');
-    adminPanel.classList.add('hidden');
+    loginFormContainer.classList.remove('hidden');
+    adminPanelContainer.classList.add('hidden');
 }
 
-/**
- * Gerencia o envio do formulário de login.
- */
 function handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('username').value;
@@ -104,18 +92,12 @@ function handleLogin(e) {
     }
 }
 
-/**
- * Mostra o painel de administração e carrega todos os dados.
- */
 function showAdminPanel() {
-    loginForm.classList.add('hidden');
-    adminPanel.classList.remove('hidden');
+    loginFormContainer.classList.add('hidden');
+    adminPanelContainer.classList.remove('hidden');
     loadAllData();
 }
 
-/**
- * Gerencia o logout do administrador.
- */
 function handleLogout() {
     sessionStorage.removeItem('adminLoggedIn');
     showLoginForm();
@@ -125,11 +107,8 @@ function handleLogout() {
 // 3. GERENCIAMENTO DE TABS E EVENTOS
 // ==========================================================================
 
-/**
- * Configura todos os ouvintes de evento para o painel de admin.
- */
 function setupEventListeners() {
-    if (!loginForm || !adminPanel) {
+    if (!loginForm || !adminPanelContainer) {
         console.error("Elementos principais do painel de admin não encontrados.");
         return;
     }
@@ -141,29 +120,23 @@ function setupEventListeners() {
         tab.addEventListener('click', () => {
             const targetTab = tab.dataset.tab;
             
-            // Remove a classe 'active' de todas as abas e conteúdos
             tabs.forEach(item => item.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             
-            // Adiciona a classe 'active' à aba e ao conteúdo selecionados
             tab.classList.add('active');
             document.getElementById(`tab${capitalize(targetTab)}`).classList.add('active');
         });
     });
 
-    // Lida com o formulário de adicionar/editar serviço
     serviceForm.addEventListener('submit', handleServiceFormSubmit);
-    document.querySelector('.btn-add-field').addEventListener('click', addAdditionalField);
+    addFieldButton.addEventListener('click', () => addAdditionalField());
     
-    // Lida com o formulário de configurações
     configForm.addEventListener('submit', handleConfigFormSubmit);
 
-    // Lida com o clique na notificação de agendamentos pendentes
     pendingAppointmentsNotification.addEventListener('click', () => {
         document.querySelector('[data-tab="agendamentos"]').click();
     });
 
-    // Lida com os checkboxes de dias da semana
     dayCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
             const day = e.target.dataset.day;
@@ -177,9 +150,6 @@ function setupEventListeners() {
     });
 }
 
-/**
- * Carrega todos os dados do Firebase (serviços, agendamentos, configurações).
- */
 function loadAllData() {
     loadServicesAdmin();
     loadAppointments();
@@ -190,37 +160,32 @@ function loadAllData() {
 // 4. GESTÃO DE SERVIÇOS
 // ==========================================================================
 
-/**
- * Adiciona um novo campo adicional ao formulário de serviço.
- */
 function addAdditionalField(fieldName = '', fieldType = 'text', fieldOptions = []) {
     const fieldEntry = document.createElement('div');
     fieldEntry.className = 'field-entry';
     fieldEntry.innerHTML = `
         <div class="form-group">
-            <label for="fieldName">Nome do Campo</label>
+            <label>Nome do Campo</label>
             <input type="text" class="form-control field-name" placeholder="BTUs" value="${fieldName}"/>
         </div>
         <div class="form-group">
-            <label for="fieldType">Tipo</label>
+            <label>Tipo</label>
             <select class="form-control field-type">
                 <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Texto</option>
                 <option value="select" ${fieldType === 'select' ? 'selected' : ''}>Lista de Opções</option>
             </select>
         </div>
         <div class="form-group field-options-group ${fieldType === 'text' ? 'hidden' : ''}">
-            <label for="fieldOptions">Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
+            <label>Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
             <textarea class="form-control field-options" rows="2">${fieldOptions.join('; ')}</textarea>
         </div>
-        <button type="button" class="btn btn-danger btn-remove-field"><i class="fas fa-trash"></i> Remover</button>
+        <button type="button" class="btn btn-danger btn-sm btn-remove-field"><i class="fas fa-trash"></i> Remover</button>
     `;
     
-    // Adiciona o listener para o botão de remover
     fieldEntry.querySelector('.btn-remove-field').addEventListener('click', () => {
         fieldEntry.remove();
     });
     
-    // Adiciona o listener para o tipo de campo para mostrar/ocultar opções
     fieldEntry.querySelector('.field-type').addEventListener('change', (e) => {
         const optionsGroup = e.target.closest('.field-entry').querySelector('.field-options-group');
         if (e.target.value === 'select') {
@@ -233,9 +198,6 @@ function addAdditionalField(fieldName = '', fieldType = 'text', fieldOptions = [
     additionalFieldsContainer.appendChild(fieldEntry);
 }
 
-/**
- * Envia o formulário de serviço para o Firebase.
- */
 async function handleServiceFormSubmit(e) {
     e.preventDefault();
     
@@ -246,21 +208,19 @@ async function handleServiceFormSubmit(e) {
         camposAdicionais: []
     };
     
-    // Coleta os campos adicionais
     const fieldEntries = additionalFieldsContainer.querySelectorAll('.field-entry');
     fieldEntries.forEach(entry => {
         const fieldName = entry.querySelector('.field-name').value;
         const fieldType = entry.querySelector('.field-type').value;
         const fieldOptions = entry.querySelector('.field-options').value;
         
-        // Verifica se o nome do campo não está vazio
         if(fieldName.trim() !== '') {
             const field = {
                 nome: fieldName,
                 tipo: fieldType
             };
             if (fieldType === 'select') {
-                field.opcoes = fieldOptions.split(';').map(o => o.trim());
+                field.opcoes = fieldOptions.split(';').map(o => o.trim()).filter(o => o !== '');
             }
             serviceData.camposAdicionais.push(field);
         }
@@ -270,37 +230,28 @@ async function handleServiceFormSubmit(e) {
 
     try {
         if (currentEditingServiceKey) {
-            // Se estiver editando, atualiza o serviço existente
             const serviceRef = ref(database, `servicos/${currentEditingServiceKey}`);
             await set(serviceRef, serviceData);
             alert('Serviço atualizado com sucesso!');
         } else {
-            // Se for um novo serviço, adiciona ao Firebase
             await push(servicosRef, serviceData);
             alert('Serviço adicionado com sucesso!');
         }
         
-        resetServiceForm(); // Reseta o formulário
-        loadServicesAdmin();
+        resetServiceForm();
     } catch (error) {
         console.error("Erro ao salvar serviço:", error);
         alert('Erro ao salvar serviço.');
     }
 }
 
-/**
- * Reseta o formulário de serviço.
- */
 function resetServiceForm() {
     serviceForm.reset();
     additionalFieldsContainer.innerHTML = '';
     currentEditingServiceKey = null;
-    addAdditionalField(); // Adiciona um campo vazio para o próximo
+    addFieldButton.textContent = 'Adicionar Campo';
 }
 
-/**
- * Carrega a lista de serviços para o painel de administração.
- */
 function loadServicesAdmin() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
@@ -334,9 +285,6 @@ function loadServicesAdmin() {
     });
 }
 
-/**
- * Preenche o formulário para editar um serviço.
- */
 function editService(key, service) {
     currentEditingServiceKey = key;
     serviceNameInput.value = service.nome;
@@ -349,13 +297,9 @@ function editService(key, service) {
             addAdditionalField(field.nome, field.tipo, field.opcoes || []);
         });
     }
-    // Adiciona um campo vazio para permitir a adição de mais
-    addAdditionalField(); 
+    addFieldButton.textContent = 'Adicionar mais';
 }
 
-/**
- * Exclui um serviço do Firebase.
- */
 async function deleteService(key) {
     if (confirm("Tem certeza que deseja excluir este serviço?")) {
         try {
@@ -373,9 +317,6 @@ async function deleteService(key) {
 // 5. GESTÃO DE AGENDAMENTOS
 // ==========================================================================
 
-/**
- * Carrega a lista de agendamentos para o painel de administração.
- */
 function loadAppointments() {
     const agendamentosRef = ref(database, 'agendamentos');
     onValue(agendamentosRef, (snapshot) => {
@@ -401,13 +342,12 @@ function loadAppointments() {
             `;
             const tbody = table.querySelector('tbody');
             
-            // Ordena os agendamentos por data e hora, do mais recente para o mais antigo
             const sortedAppointments = Object.entries(agendamentos).sort((a, b) => {
                 const [keyA, apptA] = a;
                 const [keyB, apptB] = b;
                 const dateA = new Date(`${apptA.data.split('/').reverse().join('-')}T${apptA.hora}:00`);
                 const dateB = new Date(`${apptB.data.split('/').reverse().join('-')}T${apptB.hora}:00`);
-                return dateB - dateA; // Ordena de forma decrescente (mais recente primeiro)
+                return dateB - dateA;
             });
 
             sortedAppointments.forEach(([key, agendamento]) => {
@@ -417,22 +357,20 @@ function loadAppointments() {
 
                 const tr = document.createElement('tr');
                 
-                // Formata a lista de serviços para exibição
                 let servicosHtml = '<ul>';
                 agendamento.servicos.forEach(servico => {
-                    let totalServico = parseFloat(servico.precoBase);
+                    let totalServico = parseFloat(servico.precoCalculado);
                     servicosHtml += `<li>- ${servico.nome} (R$ ${totalServico.toFixed(2)})</li>`;
                     if (servico.camposAdicionaisSelecionados) {
                          for (const campo in servico.camposAdicionaisSelecionados) {
-                            const valorCampo = parseFloat(servico.camposAdicionaisSelecionados[campo]);
-                            // Evita exibir R$ NaN caso o valor não seja numérico
-                            servicosHtml += `<li>&nbsp;&nbsp;&nbsp;&nbsp; - ${campo}: R$ ${isNaN(valorCampo) ? '0.00' : valorCampo.toFixed(2)}</li>`;
+                            const valorCampo = servico.camposAdicionaisSelecionados[campo];
+                            const valorDisplay = typeof valorCampo === 'number' ? `R$ ${valorCampo.toFixed(2)}` : valorCampo;
+                            servicosHtml += `<li>&nbsp;&nbsp;&nbsp;&nbsp; - ${campo}: ${valorDisplay}</li>`;
                         }
                     }
                 });
                 servicosHtml += '</ul>';
 
-                // Cria o menu de seleção de status
                 const statusOptions = ['Pendente', 'Confirmado', 'Finalizado', 'Cancelado'];
                 const statusSelect = document.createElement('select');
                 statusSelect.className = 'status-select';
@@ -449,18 +387,17 @@ function loadAppointments() {
                 statusSelect.addEventListener('change', (e) => updateAppointmentStatus(key, e.target.value));
                 
                 tr.innerHTML = `
-                    <td>${agendamento.cliente.nome}</td>
-                    <td>${servicosHtml}</td>
-                    <td>${agendamento.data} às ${agendamento.hora}</td>
-                    <td>${agendamento.cliente.endereco}</td>
-                    <td>R$ ${agendamento.orcamentoTotal.toFixed(2)}</td>
-                    <td></td>
-                    <td>
+                    <td data-label="Cliente">${agendamento.cliente.nome}</td>
+                    <td data-label="Serviços">${servicosHtml}</td>
+                    <td data-label="Data/Hora">${agendamento.data} às ${agendamento.hora}</td>
+                    <td data-label="Endereço">${agendamento.cliente.endereco}</td>
+                    <td data-label="Valor Total">R$ ${agendamento.orcamentoTotal.toFixed(2)}</td>
+                    <td data-label="Status"></td>
+                    <td data-label="Ações">
                         <button class="btn btn-danger btn-sm delete-appointment" data-key="${key}"><i class="fas fa-trash"></i> Excluir</button>
                     </td>
                 `;
                 
-                // Adiciona o select de status à célula
                 tr.querySelector('td:nth-child(6)').appendChild(statusSelect);
                 tr.querySelector('.delete-appointment').addEventListener('click', () => deleteAppointment(key));
                 tbody.appendChild(tr);
@@ -468,10 +405,9 @@ function loadAppointments() {
 
             agendamentosList.appendChild(table);
 
-            // Exibe ou oculta a notificação de agendamentos pendentes
             if (pendingCount > 0) {
                 pendingAppointmentsNotification.classList.remove('hidden');
-                pendingAppointmentsNotification.querySelector('p').textContent = `Você tem ${pendingCount} agendamento(s) pendente(s)! Clique aqui para ver.`;
+                pendingAppointmentsNotification.querySelector('p').textContent = `Você tem ${pendingCount} agendamento(s) pendente(s)!`;
             } else {
                 pendingAppointmentsNotification.classList.add('hidden');
             }
@@ -483,9 +419,6 @@ function loadAppointments() {
     });
 }
 
-/**
- * Atualiza o status de um agendamento no Firebase.
- */
 async function updateAppointmentStatus(key, newStatus) {
     try {
         const appointmentRef = ref(database, `agendamentos/${key}`);
@@ -495,9 +428,6 @@ async function updateAppointmentStatus(key, newStatus) {
     }
 }
 
-/**
- * Exclui um agendamento do Firebase.
- */
 async function deleteAppointment(key) {
     if (confirm("Tem certeza que deseja excluir este agendamento?")) {
         try {
@@ -515,9 +445,6 @@ async function deleteAppointment(key) {
 // 6. GESTÃO DE CONFIGURAÇÕES AVANÇADA
 // ==========================================================================
 
-/**
- * Carrega as configurações do sistema para o painel de admin.
- */
 async function loadConfigAdmin() {
     const configRef = ref(database, 'configuracoes');
     const snapshot = await get(configRef);
@@ -526,7 +453,6 @@ async function loadConfigAdmin() {
         whatsappNumberInput.value = config.whatsappNumber || '';
         duracaoServicoInput.value = config.duracaoServico || 60;
         
-        // Carrega as configurações de horários por dia da semana
         if (config.horariosPorDia) {
             for (const dia in config.horariosPorDia) {
                 const configDia = config.horariosPorDia[dia];
@@ -548,13 +474,9 @@ async function loadConfigAdmin() {
     }
 }
 
-/**
- * Envia o formulário de configurações para o Firebase.
- */
 async function handleConfigFormSubmit(e) {
     e.preventDefault();
     
-    // Objeto para armazenar os horários por dia
     const horariosPorDia = {};
     dayCheckboxes.forEach(checkbox => {
         const dia = checkbox.dataset.day;
@@ -563,14 +485,14 @@ async function handleConfigFormSubmit(e) {
             ativo: checkbox.checked,
             horarioInicio: timeInputs.querySelector('.time-input:first-child').value,
             horarioFim: timeInputs.querySelector('.time-input:last-child').value,
-            duracaoServico: parseInt(duracaoServicoInput.value) // Usar a duração padrão
+            duracaoServico: parseInt(duracaoServicoInput.value)
         };
     });
 
     const configData = {
         whatsappNumber: whatsappNumberInput.value,
         duracaoServico: parseInt(duracaoServicoInput.value),
-        horariosPorDia: horariosPorDia // Salva a nova estrutura de dados
+        horariosPorDia: horariosPorDia
     };
     
     try {
@@ -587,9 +509,6 @@ async function handleConfigFormSubmit(e) {
 // 7. FUNÇÕES AUXILIARES
 // ==========================================================================
 
-/**
- * Converte a primeira letra de uma string para maiúscula.
- */
 function capitalize(s) {
     if (typeof s !== 'string') return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
