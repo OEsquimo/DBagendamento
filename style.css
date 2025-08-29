@@ -163,16 +163,6 @@ header {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.service-card h3 {
-    margin: 0;
-    color: #333;
-}
-
-.service-card p {
-    margin: 0;
-    color: #666;
-}
-
 .service-card.selected {
     border-color: #007bff;
     background-color: #e7f0ff;
@@ -359,4 +349,39 @@ header {
 }
 .remove-option-btn {
     flex-shrink: 0;
+}
+
+/* Novos estilos para abas */
+.tab-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-btn {
+    flex-grow: 1;
+    padding: 15px 10px;
+    border: none;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    background-color: #fff;
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+.tab-btn:hover {
+    background-color: #e9ecef;
+}
+
+.tab-pane {
+    padding-top: 20px;
 }
