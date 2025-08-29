@@ -1,512 +1,368 @@
 /*
  * Arquivo: admin.js
- * Descrição: Lógica principal do painel de administração.
- * Versão: 3.1 (Com gestão de agendamento por dia da semana e melhorias de UI)
+ * Descrição: Lógica para o painel de administração.
+ * Versão: 2.0 (Com suporte a campos adicionais e valores)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, get, set, remove, push, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
 // 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
 // ==========================================================================
 
-// Configuração do Firebase - Substitua pelos seus dados
 const firebaseConfig = {
-  apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
-  authDomain: "agendamento-esquimo.firebaseapp.com",
-  databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
-  projectId: "agendamento-esquimo",
-  storageBucket: "agendamento-esquimo.firebasestorage.app",
-  messagingSenderId: "348946727206",
-  appId: "1:348946727206:web:f5989788f13c259be0c1e7",
-  measurementId: "G-Z0EMQ3XQ1D"
+    apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
+    authDomain: "agendamento-esquimo.firebaseapp.com",
+    databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
+    projectId: "agendamento-esquimo",
+    storageBucket: "agendamento-esquimo.firebasestorage.app",
+    messagingSenderId: "348946727206",
+    appId: "1:348946727206:web:f5989788f13c259be0c1e7",
+    measurementId: "G-Z0EMQ3XQ1D"
 };
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Usuário e senha de exemplo para o painel
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "admin123";
-
-// Elementos HTML
-const loginFormContainer = document.getElementById('loginForm');
-const adminPanelContainer = document.getElementById('adminPanel');
-const loginForm = document.getElementById('loginFormInner');
-const logoutButton = document.getElementById('logoutButton');
-
-const tabs = document.querySelectorAll('.tab-item');
-const tabContents = document.querySelectorAll('.tab-content');
-
-const servicosListAdmin = document.getElementById('servicosListAdmin');
+// Elementos do DOM
+const servicoForm = document.getElementById('servicoForm');
+const servicoNomeInput = document.getElementById('servicoNome');
+const servicoDescricaoInput = document.getElementById('servicoDescricao');
+const servicoPrecoInput = document.getElementById('servicoPreco');
+const servicosList = document.getElementById('servicosList');
 const agendamentosList = document.getElementById('agendamentosList');
-
-const serviceForm = document.getElementById('addServiceForm');
-const serviceNameInput = document.getElementById('serviceName');
-const serviceDescriptionInput = document.getElementById('serviceDescription');
-const servicePriceInput = document.getElementById('servicePrice');
-const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
-const addFieldButton = document.querySelector('.btn-add-field');
-
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
-const duracaoServicoInput = document.getElementById('duracaoServico');
-const dayCheckboxes = document.querySelectorAll('.day-checkbox');
+const horariosContainer = document.getElementById('horariosContainer');
+const addFieldBtn = document.getElementById('addFieldBtn');
+const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
 
-const pendingAppointmentsNotification = document.getElementById('pendingAppointmentsNotification');
-let currentEditingServiceKey = null;
+const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 
 // ==========================================================================
-// 2. FUNÇÕES DE AUTENTICAÇÃO E INICIALIZAÇÃO
+// 2. FUNÇÕES DE INICIALIZAÇÃO
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkLogin();
-    setupEventListeners();
+    loadServices();
+    loadBookings();
+    loadConfig();
+    setupConfigForm();
+    setupServicoForm();
 });
 
-function checkLogin() {
-    if (sessionStorage.getItem('adminLoggedIn') === 'true') {
-        showAdminPanel();
-    } else {
-        showLoginForm();
-    }
+function setupServicoForm() {
+    servicoForm.addEventListener('submit', handleServicoFormSubmit);
+    addFieldBtn.addEventListener('click', addAdditionalFieldForm);
 }
 
-function showLoginForm() {
-    loginFormContainer.classList.remove('hidden');
-    adminPanelContainer.classList.add('hidden');
-}
-
-function handleLogin(e) {
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-        sessionStorage.setItem('adminLoggedIn', 'true');
-        showAdminPanel();
-    } else {
-        alert('Usuário ou senha incorretos.');
-    }
-}
-
-function showAdminPanel() {
-    loginFormContainer.classList.add('hidden');
-    adminPanelContainer.classList.remove('hidden');
-    loadAllData();
-}
-
-function handleLogout() {
-    sessionStorage.removeItem('adminLoggedIn');
-    showLoginForm();
-}
-
-// ==========================================================================
-// 3. GERENCIAMENTO DE TABS E EVENTOS
-// ==========================================================================
-
-function setupEventListeners() {
-    if (!loginForm || !adminPanelContainer) {
-        console.error("Elementos principais do painel de admin não encontrados.");
-        return;
-    }
-    
-    loginForm.addEventListener('submit', handleLogin);
-    logoutButton.addEventListener('click', handleLogout);
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const targetTab = tab.dataset.tab;
-            
-            tabs.forEach(item => item.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            tab.classList.add('active');
-            document.getElementById(`tab${capitalize(targetTab)}`).classList.add('active');
-        });
+function setupConfigForm() {
+    diasDaSemana.forEach(dia => {
+        const div = document.createElement('div');
+        div.className = 'horario-dia';
+        div.innerHTML = `
+            <h5>${capitalize(dia)}</h5>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input dia-ativo" id="${dia}Ativo">
+                <label class="form-check-label" for="${dia}Ativo">Ativo</label>
+            </div>
+            <div class="form-group mt-2">
+                <label for="${dia}Inicio">Início:</label>
+                <input type="time" class="form-control horario-inicio" id="${dia}Inicio" value="08:00">
+            </div>
+            <div class="form-group">
+                <label for="${dia}Fim">Fim:</label>
+                <input type="time" class="form-control horario-fim" id="${dia}Fim" value="18:00">
+            </div>
+            <div class="form-group">
+                <label for="${dia}Duracao">Duração (minutos):</label>
+                <input type="number" class="form-control horario-duracao" id="${dia}Duracao" value="60" min="15" step="15">
+            </div>
+        `;
+        horariosContainer.appendChild(div);
     });
 
-    serviceForm.addEventListener('submit', handleServiceFormSubmit);
-    addFieldButton.addEventListener('click', () => addAdditionalField());
-    
     configForm.addEventListener('submit', handleConfigFormSubmit);
+}
 
-    pendingAppointmentsNotification.addEventListener('click', () => {
-        document.querySelector('[data-tab="agendamentos"]').click();
-    });
+// ==========================================================================
+// 3. GERENCIAMENTO DE SERVIÇOS
+// ==========================================================================
 
-    dayCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-            const day = e.target.dataset.day;
-            const timeInputs = document.getElementById(`${day}TimeInputs`);
-            if (e.target.checked) {
-                timeInputs.classList.remove('hidden');
-            } else {
-                timeInputs.classList.add('hidden');
-            }
+function addAdditionalFieldForm() {
+    const fieldIndex = additionalFieldsContainer.children.length;
+    const fieldHtml = `
+        <div class="additional-field" data-index="${fieldIndex}">
+            <div class="form-group">
+                <label>Nome do Campo</label>
+                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" required>
+            </div>
+            <div class="form-group">
+                <label>Tipo do Campo</label>
+                <select class="form-control field-type">
+                    <option value="select">Lista de Opções</option>
+                </select>
+            </div>
+            <div class="options-container">
+                <p>Opções:</p>
+                <div class="option-list">
+                    <div class="option-item">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" required>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
+        </div>
+    `;
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = fieldHtml;
+    const fieldElement = tempDiv.firstElementChild;
+    additionalFieldsContainer.appendChild(fieldElement);
+
+    fieldElement.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+    fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
+}
+
+function addOptionForm(e) {
+    const optionList = e.target.closest('.options-container').querySelector('.option-list');
+    const optionHtml = `
+        <div class="option-item mt-2">
+            <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+        </div>
+    `;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = optionHtml;
+    optionList.appendChild(tempDiv.firstElementChild);
+}
+
+function removeAdditionalFieldForm(e) {
+    e.target.closest('.additional-field').remove();
+}
+
+function handleServicoFormSubmit(e) {
+    e.preventDefault();
+
+    const nome = servicoNomeInput.value;
+    const descricao = servicoDescricaoInput.value;
+    const precoBase = parseFloat(servicoPrecoInput.value) || 0;
+    
+    const camposAdicionais = [];
+    document.querySelectorAll('.additional-field').forEach(fieldElement => {
+        const fieldName = fieldElement.querySelector('.field-name').value;
+        const fieldType = fieldElement.querySelector('.field-type').value;
+        const opcoes = [];
+        
+        fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
+            const optionValue = optionItem.querySelector('.option-value').value;
+            const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
+            opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+        });
+
+        camposAdicionais.push({
+            nome: fieldName,
+            tipo: fieldType,
+            opcoes: opcoes
         });
     });
-}
 
-function loadAllData() {
-    loadServicesAdmin();
-    loadAppointments();
-    loadConfigAdmin();
-}
-
-// ==========================================================================
-// 4. GESTÃO DE SERVIÇOS
-// ==========================================================================
-
-function addAdditionalField(fieldName = '', fieldType = 'text', fieldOptions = []) {
-    const fieldEntry = document.createElement('div');
-    fieldEntry.className = 'field-entry';
-    fieldEntry.innerHTML = `
-        <div class="form-group">
-            <label>Nome do Campo</label>
-            <input type="text" class="form-control field-name" placeholder="BTUs" value="${fieldName}"/>
-        </div>
-        <div class="form-group">
-            <label>Tipo</label>
-            <select class="form-control field-type">
-                <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Texto</option>
-                <option value="select" ${fieldType === 'select' ? 'selected' : ''}>Lista de Opções</option>
-            </select>
-        </div>
-        <div class="form-group field-options-group ${fieldType === 'text' ? 'hidden' : ''}">
-            <label>Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
-            <textarea class="form-control field-options" rows="2">${fieldOptions.join('; ')}</textarea>
-        </div>
-        <button type="button" class="btn btn-danger btn-sm btn-remove-field"><i class="fas fa-trash"></i> Remover</button>
-    `;
-    
-    fieldEntry.querySelector('.btn-remove-field').addEventListener('click', () => {
-        fieldEntry.remove();
-    });
-    
-    fieldEntry.querySelector('.field-type').addEventListener('change', (e) => {
-        const optionsGroup = e.target.closest('.field-entry').querySelector('.field-options-group');
-        if (e.target.value === 'select') {
-            optionsGroup.classList.remove('hidden');
-        } else {
-            optionsGroup.classList.add('hidden');
-        }
-    });
-
-    additionalFieldsContainer.appendChild(fieldEntry);
-}
-
-async function handleServiceFormSubmit(e) {
-    e.preventDefault();
-    
-    const serviceData = {
-        nome: serviceNameInput.value,
-        descricao: serviceDescriptionInput.value,
-        precoBase: parseFloat(servicePriceInput.value),
-        camposAdicionais: []
+    const servico = {
+        nome,
+        descricao,
+        precoBase,
+        camposAdicionais
     };
-    
-    const fieldEntries = additionalFieldsContainer.querySelectorAll('.field-entry');
-    fieldEntries.forEach(entry => {
-        const fieldName = entry.querySelector('.field-name').value;
-        const fieldType = entry.querySelector('.field-type').value;
-        const fieldOptions = entry.querySelector('.field-options').value;
-        
-        if(fieldName.trim() !== '') {
-            const field = {
-                nome: fieldName,
-                tipo: fieldType
-            };
-            if (fieldType === 'select') {
-                field.opcoes = fieldOptions.split(';').map(o => o.trim()).filter(o => o !== '');
-            }
-            serviceData.camposAdicionais.push(field);
-        }
-    });
-    
+
     const servicosRef = ref(database, 'servicos');
-
-    try {
-        if (currentEditingServiceKey) {
-            const serviceRef = ref(database, `servicos/${currentEditingServiceKey}`);
-            await set(serviceRef, serviceData);
-            alert('Serviço atualizado com sucesso!');
-        } else {
-            await push(servicosRef, serviceData);
-            alert('Serviço adicionado com sucesso!');
-        }
-        
-        resetServiceForm();
-    } catch (error) {
-        console.error("Erro ao salvar serviço:", error);
-        alert('Erro ao salvar serviço.');
-    }
+    push(servicosRef, servico)
+        .then(() => {
+            alert('Serviço cadastrado com sucesso!');
+            servicoForm.reset();
+            additionalFieldsContainer.innerHTML = '';
+        })
+        .catch(error => {
+            console.error("Erro ao cadastrar serviço:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
 }
 
-function resetServiceForm() {
-    serviceForm.reset();
-    additionalFieldsContainer.innerHTML = '';
-    currentEditingServiceKey = null;
-    addFieldButton.textContent = 'Adicionar Campo';
-}
-
-function loadServicesAdmin() {
+function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
-        servicosListAdmin.innerHTML = '';
+        servicosList.innerHTML = '';
         if (snapshot.exists()) {
             const servicos = snapshot.val();
             for (const key in servicos) {
-                const service = servicos[key];
-                const li = document.createElement('li');
-                li.className = 'list-group-item';
-                li.innerHTML = `
-                    <span>
-                        <strong>${service.nome}</strong> (R$ ${service.precoBase.toFixed(2)})
-                    </span>
-                    <div>
-                        <button class="btn btn-secondary btn-sm edit-service" data-key="${key}">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="btn btn-danger btn-sm delete-service" data-key="${key}">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>
-                    </div>
-                `;
-                li.querySelector('.edit-service').addEventListener('click', () => editService(key, service));
-                li.querySelector('.delete-service').addEventListener('click', () => deleteService(key));
-                servicosListAdmin.appendChild(li);
+                const servico = servicos[key];
+                createServicoCard(servico, key);
             }
         } else {
-            servicosListAdmin.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
+            servicosList.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
         }
     });
 }
 
-function editService(key, service) {
-    currentEditingServiceKey = key;
-    serviceNameInput.value = service.nome;
-    serviceDescriptionInput.value = service.descricao;
-    servicePriceInput.value = service.precoBase;
-
-    additionalFieldsContainer.innerHTML = '';
-    if (service.camposAdicionais) {
-        service.camposAdicionais.forEach(field => {
-            addAdditionalField(field.nome, field.tipo, field.opcoes || []);
-        });
-    }
-    addFieldButton.textContent = 'Adicionar mais';
+function createServicoCard(servico, key) {
+    const card = document.createElement('div');
+    card.className = 'card mb-3';
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">${servico.nome}</h5>
+            <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
+            <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
+            <h6>Campos Adicionais:</h6>
+            <ul>
+                ${servico.camposAdicionais ? servico.camposAdicionais.map(campo => `
+                    <li><strong>${campo.nome}</strong>:
+                        <ul>
+                            ${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}
+                        </ul>
+                    </li>
+                `).join('') : '<p>Nenhum campo adicional.</p>'}
+            </ul>
+            <button class="btn btn-danger btn-sm float-right delete-service-btn" data-key="${key}">Excluir</button>
+        </div>
+    `;
+    servicosList.appendChild(card);
+    card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
 }
 
-async function deleteService(key) {
-    if (confirm("Tem certeza que deseja excluir este serviço?")) {
-        try {
-            const serviceRef = ref(database, `servicos/${key}`);
-            await remove(serviceRef);
-            alert("Serviço excluído com sucesso!");
-        } catch (error) {
-            console.error("Erro ao excluir serviço:", error);
-            alert("Erro ao excluir serviço.");
-        }
+function deleteService(e) {
+    const key = e.target.dataset.key;
+    if (confirm('Tem certeza que deseja excluir este serviço?')) {
+        const servicoRef = ref(database, `servicos/${key}`);
+        remove(servicoRef)
+            .then(() => alert('Serviço excluído com sucesso!'))
+            .catch(error => {
+                console.error("Erro ao excluir serviço:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
     }
 }
 
 // ==========================================================================
-// 5. GESTÃO DE AGENDAMENTOS
+// 4. GERENCIAMENTO DE AGENDAMENTOS
 // ==========================================================================
 
-function loadAppointments() {
+function loadBookings() {
     const agendamentosRef = ref(database, 'agendamentos');
     onValue(agendamentosRef, (snapshot) => {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
-            let pendingCount = 0;
-            const table = document.createElement('table');
-            table.className = 'agendamentos-table';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Serviços</th>
-                        <th>Data/Hora</th>
-                        <th>Endereço</th>
-                        <th>Valor Total</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `;
-            const tbody = table.querySelector('tbody');
-            
-            const sortedAppointments = Object.entries(agendamentos).sort((a, b) => {
-                const [keyA, apptA] = a;
-                const [keyB, apptB] = b;
-                const dateA = new Date(`${apptA.data.split('/').reverse().join('-')}T${apptA.hora}:00`);
-                const dateB = new Date(`${apptB.data.split('/').reverse().join('-')}T${apptB.hora}:00`);
-                return dateB - dateA;
-            });
-
-            sortedAppointments.forEach(([key, agendamento]) => {
-                if (agendamento.status === 'Pendente') {
-                    pendingCount++;
-                }
-
-                const tr = document.createElement('tr');
-                
-                let servicosHtml = '<ul>';
-                agendamento.servicos.forEach(servico => {
-                    let totalServico = parseFloat(servico.precoCalculado);
-                    servicosHtml += `<li>- ${servico.nome} (R$ ${totalServico.toFixed(2)})</li>`;
-                    if (servico.camposAdicionaisSelecionados) {
-                         for (const campo in servico.camposAdicionaisSelecionados) {
-                            const valorCampo = servico.camposAdicionaisSelecionados[campo];
-                            const valorDisplay = typeof valorCampo === 'number' ? `R$ ${valorCampo.toFixed(2)}` : valorCampo;
-                            servicosHtml += `<li>&nbsp;&nbsp;&nbsp;&nbsp; - ${campo}: ${valorDisplay}</li>`;
-                        }
-                    }
-                });
-                servicosHtml += '</ul>';
-
-                const statusOptions = ['Pendente', 'Confirmado', 'Finalizado', 'Cancelado'];
-                const statusSelect = document.createElement('select');
-                statusSelect.className = 'status-select';
-                statusOptions.forEach(status => {
-                    const option = document.createElement('option');
-                    option.value = status;
-                    option.textContent = status;
-                    if (status === agendamento.status) {
-                        option.selected = true;
-                    }
-                    statusSelect.appendChild(option);
-                });
-
-                statusSelect.addEventListener('change', (e) => updateAppointmentStatus(key, e.target.value));
-                
-                tr.innerHTML = `
-                    <td data-label="Cliente">${agendamento.cliente.nome}</td>
-                    <td data-label="Serviços">${servicosHtml}</td>
-                    <td data-label="Data/Hora">${agendamento.data} às ${agendamento.hora}</td>
-                    <td data-label="Endereço">${agendamento.cliente.endereco}</td>
-                    <td data-label="Valor Total">R$ ${agendamento.orcamentoTotal.toFixed(2)}</td>
-                    <td data-label="Status"></td>
-                    <td data-label="Ações">
-                        <button class="btn btn-danger btn-sm delete-appointment" data-key="${key}"><i class="fas fa-trash"></i> Excluir</button>
-                    </td>
-                `;
-                
-                tr.querySelector('td:nth-child(6)').appendChild(statusSelect);
-                tr.querySelector('.delete-appointment').addEventListener('click', () => deleteAppointment(key));
-                tbody.appendChild(tr);
-            });
-
-            agendamentosList.appendChild(table);
-
-            if (pendingCount > 0) {
-                pendingAppointmentsNotification.classList.remove('hidden');
-                pendingAppointmentsNotification.querySelector('p').textContent = `Você tem ${pendingCount} agendamento(s) pendente(s)!`;
-            } else {
-                pendingAppointmentsNotification.classList.add('hidden');
+            for (const key in agendamentos) {
+                const agendamento = agendamentos[key];
+                createAgendamentoCard(agendamento, key);
             }
-
         } else {
-            agendamentosList.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
-            pendingAppointmentsNotification.classList.add('hidden');
+            agendamentosList.innerHTML = '<p>Nenhum agendamento pendente.</p>';
         }
     });
 }
 
-async function updateAppointmentStatus(key, newStatus) {
-    try {
-        const appointmentRef = ref(database, `agendamentos/${key}`);
-        await update(appointmentRef, { status: newStatus });
-    } catch (error) {
-        console.error("Erro ao atualizar status:", error);
-    }
+function createAgendamentoCard(agendamento, key) {
+    const card = document.createElement('div');
+    card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
+    
+    let servicosHtml = '<ul>';
+    agendamento.servicos.forEach(servico => {
+        servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
+            <ul>
+                ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
+                    <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
+                `).join('') : ''}
+            </ul>
+        </li>`;
+    });
+    servicosHtml += '</ul>';
+
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">Agendamento de ${agendamento.cliente.nome}</h5>
+            <p><strong>Data:</strong> ${agendamento.data} às ${agendamento.hora}</p>
+            <p><strong>Status:</strong> <span class="badge badge-${agendamento.status.toLowerCase()}">${agendamento.status}</span></p>
+            <hr>
+            <h6>Detalhes do Cliente:</h6>
+            <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
+            <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
+            <hr>
+            <h6>Serviços:</h6>
+            ${servicosHtml}
+            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
+            ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
+            <div class="mt-3">
+                <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
+                <button class="btn btn-danger btn-sm cancel-booking" data-key="${key}" ${agendamento.status === 'Cancelado' ? 'disabled' : ''}>Cancelar</button>
+            </div>
+        </div>
+    `;
+    agendamentosList.appendChild(card);
+    card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
+    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
 }
 
-async function deleteAppointment(key) {
-    if (confirm("Tem certeza que deseja excluir este agendamento?")) {
-        try {
-            const appointmentRef = ref(database, `agendamentos/${key}`);
-            await remove(appointmentRef);
-            alert("Agendamento excluído com sucesso!");
-        } catch (error) {
-            console.error("Erro ao excluir agendamento:", error);
-            alert("Erro ao excluir agendamento.");
-        }
-    }
+function updateBookingStatus(key, newStatus) {
+    const agendamentoRef = ref(database, `agendamentos/${key}`);
+    set(agendamentoRef, { ...agendamento, status: newStatus })
+        .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
+        .catch(error => {
+            console.error("Erro ao atualizar status:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
 }
 
 // ==========================================================================
-// 6. GESTÃO DE CONFIGURAÇÕES AVANÇADA
+// 5. GERENCIAMENTO DE CONFIGURAÇÕES
 // ==========================================================================
 
-async function loadConfigAdmin() {
-    const configRef = ref(database, 'configuracoes');
-    const snapshot = await get(configRef);
-    if (snapshot.exists()) {
-        const config = snapshot.val();
-        whatsappNumberInput.value = config.whatsappNumber || '';
-        duracaoServicoInput.value = config.duracaoServico || 60;
-        
-        if (config.horariosPorDia) {
-            for (const dia in config.horariosPorDia) {
-                const configDia = config.horariosPorDia[dia];
-                const checkbox = document.getElementById(`${dia}Checkbox`);
-                const timeInputs = document.getElementById(`${dia}TimeInputs`);
-                
-                if (checkbox) {
-                    checkbox.checked = configDia.ativo;
-                    if (configDia.ativo) {
-                        timeInputs.classList.remove('hidden');
-                        document.getElementById(`${dia}Inicio`).value = configDia.horarioInicio;
-                        document.getElementById(`${dia}Fim`).value = configDia.horarioFim;
-                    } else {
-                        timeInputs.classList.add('hidden');
-                    }
-                }
-            }
-        }
-    }
-}
-
-async function handleConfigFormSubmit(e) {
+function handleConfigFormSubmit(e) {
     e.preventDefault();
-    
+    const whatsappNumber = whatsappNumberInput.value;
     const horariosPorDia = {};
-    dayCheckboxes.forEach(checkbox => {
-        const dia = checkbox.dataset.day;
-        const timeInputs = document.getElementById(`${dia}TimeInputs`);
-        horariosPorDia[dia] = {
-            ativo: checkbox.checked,
-            horarioInicio: timeInputs.querySelector('.time-input:first-child').value,
-            horarioFim: timeInputs.querySelector('.time-input:last-child').value,
-            duracaoServico: parseInt(duracaoServicoInput.value)
-        };
+
+    diasDaSemana.forEach(dia => {
+        const ativo = document.getElementById(`${dia}Ativo`).checked;
+        const horarioInicio = document.getElementById(`${dia}Inicio`).value;
+        const horarioFim = document.getElementById(`${dia}Fim`).value;
+        const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
+
+        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
     });
 
-    const configData = {
-        whatsappNumber: whatsappNumberInput.value,
-        duracaoServico: parseInt(duracaoServicoInput.value),
-        horariosPorDia: horariosPorDia
-    };
-    
-    try {
-        const configRef = ref(database, 'configuracoes');
-        await set(configRef, configData);
-        alert('Configurações salvas com sucesso!');
-    } catch (error) {
-        console.error("Erro ao salvar configurações:", error);
-        alert('Erro ao salvar configurações.');
-    }
+    const configRef = ref(database, 'configuracoes');
+    set(configRef, { whatsappNumber, horariosPorDia })
+        .then(() => alert('Configurações salvas com sucesso!'))
+        .catch(error => {
+            console.error("Erro ao salvar configurações:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function loadConfig() {
+    const configRef = ref(database, 'configuracoes');
+    onValue(configRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const config = snapshot.val();
+            whatsappNumberInput.value = config.whatsappNumber;
+            diasDaSemana.forEach(dia => {
+                const diaConfig = config.horariosPorDia[dia];
+                if (diaConfig) {
+                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
+                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
+                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
+                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
+                }
+            });
+        }
+    });
 }
 
 // ==========================================================================
-// 7. FUNÇÕES AUXILIARES
+// 6. FUNÇÕES AUXILIARES
 // ==========================================================================
 
 function capitalize(s) {
