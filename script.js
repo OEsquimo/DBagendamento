@@ -150,9 +150,9 @@ function renderServiceForms() {
         const formGroup = document.createElement('div');
         formGroup.className = 'service-form-group';
         
-        let optionsHtml = '';
+        let fieldsHtml = '';
         if (service.camposAdicionais) {
-            optionsHtml = service.camposAdicionais.map(field => {
+            fieldsHtml = service.camposAdicionais.map(field => {
                 if (field.tipo === 'select' && field.opcoes) {
                     return `
                         <label>${field.nome}</label>
@@ -161,20 +161,31 @@ function renderServiceForms() {
                             ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
                         </select>
                     `;
+                } else if (field.tipo === 'text') {
+                    return `
+                        <label>${field.nome}</label>
+                        <input type="text" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}">
+                    `;
+                } else if (field.tipo === 'number') {
+                    return `
+                        <label>${field.nome}</label>
+                        <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01">
+                    `;
                 }
             }).join('');
         }
         
         formGroup.innerHTML = `
             <h3>${service.nome}</h3>
-            ${optionsHtml}
+            ${fieldsHtml}
             <div class="service-price">Valor: R$ 0.00</div>
         `;
         servicosFormContainer.appendChild(formGroup);
     });
 
-    document.querySelectorAll('.additional-field-select').forEach(select => {
-        select.addEventListener('change', updatePrice);
+    document.querySelectorAll('.additional-field-select, .additional-field-input').forEach(field => {
+        field.addEventListener('change', updatePrice);
+        field.addEventListener('input', updatePrice);
     });
 
     updateOrcamentoTotal();
@@ -193,9 +204,11 @@ function updatePrice(e) {
 }
 
 function calculatePrice(serviceData, container) {
-    let preco = 0; // O valor inicial agora é 0,00
+    let preco = serviceData.precoBase || 0;
     const selectElements = container.querySelectorAll('.additional-field-select');
+    const inputElements = container.querySelectorAll('.additional-field-input');
     
+    // Calcula o preço a partir de selects
     selectElements.forEach(select => {
         const selectedValue = select.value;
         if (selectedValue) {
@@ -205,6 +218,17 @@ function calculatePrice(serviceData, container) {
             }
         }
     });
+
+    // Adiciona o valor de campos de número
+    inputElements.forEach(input => {
+        if (input.type === 'number') {
+            const inputValue = parseFloat(input.value);
+            if (!isNaN(inputValue)) {
+                preco += inputValue;
+            }
+        }
+    });
+
     return preco;
 }
 
@@ -213,8 +237,8 @@ document.getElementById('nextStep2').addEventListener('click', () => {
     servicosSelecionados.forEach(service => {
         const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
         if (formGroup) {
-            formGroup.querySelectorAll('.additional-field-select').forEach(select => {
-                if (select.value === "") {
+            formGroup.querySelectorAll('.additional-field-select, .additional-field-input').forEach(field => {
+                if (field.value === "") {
                     allFieldsFilled = false;
                 }
             });
@@ -243,6 +267,8 @@ document.getElementById('nextStep2').addEventListener('click', () => {
 function getSelectedOptions(container, serviceData) {
     const selectedOptions = {};
     const selectElements = container.querySelectorAll('.additional-field-select');
+    const inputElements = container.querySelectorAll('.additional-field-input');
+    
     selectElements.forEach(select => {
         const selectedValue = select.value;
         const fieldName = select.dataset.fieldName;
@@ -255,6 +281,15 @@ function getSelectedOptions(container, serviceData) {
             }
         }
     });
+
+    inputElements.forEach(input => {
+        const inputValue = input.value;
+        const fieldName = input.dataset.fieldName;
+        if (inputValue) {
+            selectedOptions[fieldName] = input.type === 'number' ? parseFloat(inputValue) : inputValue;
+        }
+    });
+    
     return selectedOptions;
 }
 
