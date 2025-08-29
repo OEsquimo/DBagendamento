@@ -2,7 +2,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface de agendamento do cliente.
- * Versão: 3.0 (Com gestão de agendamento por dia da semana)
+ * Versão: 3.3 (Fluxo de agendamento com orçamento na segunda etapa)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -14,14 +14,14 @@ import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/fireba
 
 // Configuração do Firebase - Substitua pelos seus dados
 const firebaseConfig = {
-  apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
-  authDomain: "agendamento-esquimo.firebaseapp.com",
-  databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
-  projectId: "agendamento-esquimo",
-  storageBucket: "agendamento-esquimo.firebasestorage.app",
-  messagingSenderId: "348946727206",
-  appId: "1:348946727206:web:f5989788f13c259be0c1e7",
-  measurementId: "G-Z0EMQ3XQ1D"
+    apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
+    authDomain: "agendamento-esquimo.firebaseapp.com",
+    databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
+    projectId: "agendamento-esquimo",
+    storageBucket: "agendamento-esquimo.firebasestorage.app",
+    messagingSenderId: "348946727206",
+    appId: "1:348946727206:web:f5989788f13c259be0c1e7",
+    measurementId: "G-Z0EMQ3XQ1D"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,18 +30,32 @@ const database = getDatabase(app);
 // Variáveis de estado
 let servicosDisponiveis = {};
 let servicosSelecionados = [];
-let horariosDisponiveis = [];
 let configuracoes = {};
 
-// Elementos HTML
+// Elementos HTML das seções
+const servicosSection = document.getElementById('servicosSection');
+const camposAdicionaisSection = document.getElementById('camposAdicionaisSection');
+const dadosAgendamentoSection = document.getElementById('dadosAgendamentoSection');
+
+// Elementos HTML dos formulários e botões
 const formServicos = document.getElementById('formServicos');
 const servicosList = document.getElementById('servicosList');
-const formAgendamento = document.getElementById('formAgendamento');
-const dataInput = document.getElementById('data');
-const horaSelect = document.getElementById('hora');
+const btnContinuar = document.getElementById('btnContinuar');
+
+const formCamposAdicionais = document.getElementById('formCamposAdicionais');
+const camposAdicionaisList = document.getElementById('camposAdicionaisList');
 const summaryServicosList = document.getElementById('summaryServicosList');
 const totalPriceElement = document.getElementById('totalPrice');
-const formContato = document.getElementById('contactForm');
+const btnVoltarCampos = document.getElementById('btnVoltarCampos');
+const btnProximoCampos = document.querySelector('#formCamposAdicionais .btn-primary');
+
+const formDadosAgendamento = document.getElementById('formDadosAgendamento');
+const dataInput = document.getElementById('data');
+const horaSelect = document.getElementById('hora');
+const btnVoltarDados = document.getElementById('btnVoltarDados');
+const btnFinalizar = document.getElementById('btnFinalizar');
+const orcamentoTotalInput = document.getElementById('orcamentoTotal');
+
 const loadingMessage = document.getElementById('loadingMessage');
 const successMessage = document.getElementById('successMessage');
 const errorMessage = document.getElementById('errorMessage');
@@ -61,25 +75,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-/**
- * Carrega as configurações do Firebase.
- */
 async function loadConfig() {
     const configRef = ref(database, 'configuracoes');
     const snapshot = await get(configRef);
     if (snapshot.exists()) {
         configuracoes = snapshot.val();
-        if (configuracoes.horariosPorDia) {
-             console.log("Configurações de horários carregadas:", configuracoes.horariosPorDia);
-        }
     } else {
         throw new Error("Configurações não encontradas.");
     }
 }
 
-/**
- * Carrega os serviços disponíveis do Firebase.
- */
 async function loadServicos() {
     const servicosRef = ref(database, 'servicos');
     const snapshot = await get(servicosRef);
@@ -91,23 +96,39 @@ async function loadServicos() {
     }
 }
 
-/**
- * Configura os ouvintes de evento para os formulários.
- */
 function setupEventListeners() {
-    formServicos.addEventListener('submit', handleServicosSubmit);
-    formAgendamento.addEventListener('change', updateHorarios);
-    formContato.addEventListener('submit', handleFormSubmit);
+    btnContinuar.addEventListener('click', () => {
+        servicosSection.classList.add('hidden');
+        renderCamposAdicionaisForm();
+        camposAdicionaisSection.classList.remove('hidden');
+    });
+
+    btnVoltarCampos.addEventListener('click', () => {
+        camposAdicionaisSection.classList.add('hidden');
+        servicosSection.classList.remove('hidden');
+    });
+
+    formCamposAdicionais.addEventListener('submit', (e) => {
+        e.preventDefault();
+        camposAdicionaisSection.classList.add('hidden');
+        dadosAgendamentoSection.classList.remove('hidden');
+    });
+
+    btnVoltarDados.addEventListener('click', () => {
+        dadosAgendamentoSection.classList.add('hidden');
+        camposAdicionaisSection.classList.remove('hidden');
+    });
+
+    formDadosAgendamento.addEventListener('submit', handleFormSubmit);
+    dataInput.addEventListener('change', updateHorarios);
     dataInput.min = new Date().toISOString().split('T')[0];
+    horaSelect.addEventListener('change', () => btnFinalizar.disabled = !horaSelect.value);
 }
 
 // ==========================================================================
 // 3. RENDERIZAÇÃO E ATUALIZAÇÃO DA UI
 // ==========================================================================
 
-/**
- * Renderiza a lista de serviços na interface.
- */
 function renderServicos() {
     servicosList.innerHTML = '';
     for (const key in servicosDisponiveis) {
@@ -119,17 +140,46 @@ function renderServicos() {
                 <h4>${servico.nome}</h4>
                 <p>${servico.descricao}</p>
                 <p><strong>Preço Base:</strong> R$ ${servico.precoBase.toFixed(2)}</p>
-                <div class="additional-fields">
-                    </div>
             </div>
             <button type="button" class="btn btn-primary btn-select-service" data-key="${key}">
                 Selecionar
             </button>
         `;
+        li.querySelector('.btn-select-service').addEventListener('click', (e) => {
+            handleServiceSelection(e.target.dataset.key);
+        });
+        servicosList.appendChild(li);
+    }
+}
 
-        // Adiciona campos adicionais, se existirem
-        const additionalFieldsDiv = li.querySelector('.additional-fields');
+function handleServiceSelection(key) {
+    if (!servicosSelecionados.find(s => s.id === key)) {
+        const servico = { ...servicosDisponiveis[key], id: key };
+        servicosSelecionados.push(servico);
+        document.querySelector(`li[data-key="${key}"] .btn-select-service`).disabled = true;
+        document.querySelector(`li[data-key="${key}"] .btn-select-service`).textContent = 'Adicionado';
+    }
+    btnContinuar.disabled = servicosSelecionados.length === 0;
+}
+
+window.removeService = function(key) {
+    servicosSelecionados = servicosSelecionados.filter(s => s.id !== key);
+    const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Selecionar';
+    }
+    btnContinuar.disabled = servicosSelecionados.length === 0;
+}
+
+function renderCamposAdicionaisForm() {
+    camposAdicionaisList.innerHTML = '';
+    servicosSelecionados.forEach(servico => {
         if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
+            const serviceDiv = document.createElement('div');
+            serviceDiv.className = 'additional-service-form';
+            serviceDiv.innerHTML = `<h3>${servico.nome}</h3>`;
+            
             servico.camposAdicionais.forEach(campo => {
                 const formGroup = document.createElement('div');
                 formGroup.className = 'form-group';
@@ -140,10 +190,11 @@ function renderServicos() {
                 if (campo.tipo === 'select') {
                     const select = document.createElement('select');
                     select.className = 'form-control additional-field-select';
+                    select.dataset.serviceId = servico.id;
                     select.dataset.fieldName = campo.nome;
                     campo.opcoes.forEach(opcao => {
-                        const option = document.createElement('option');
                         const [nomeOpcao, preco] = opcao.split(', R$');
+                        const option = document.createElement('option');
                         option.value = preco ? parseFloat(preco.trim()) : 0;
                         option.textContent = nomeOpcao.trim();
                         select.appendChild(option);
@@ -154,70 +205,55 @@ function renderServicos() {
                     const input = document.createElement('input');
                     input.type = 'number';
                     input.className = 'form-control additional-field-input';
+                    input.dataset.serviceId = servico.id;
                     input.dataset.fieldName = campo.nome;
                     input.placeholder = 'Valor (R$)';
                     input.addEventListener('input', updateSummary);
                     formGroup.appendChild(input);
                 }
-                additionalFieldsDiv.appendChild(formGroup);
+                serviceDiv.appendChild(formGroup);
             });
-        } else {
-            additionalFieldsDiv.remove();
+            camposAdicionaisList.appendChild(serviceDiv);
         }
-
-        li.querySelector('.btn-select-service').addEventListener('click', (e) => {
-            handleServiceSelection(e.target.dataset.key);
-        });
-
-        servicosList.appendChild(li);
-    }
+    });
+    updateSummary(); // Inicializa o orçamento
 }
 
-/**
- * Atualiza o resumo do orçamento e a lista de serviços selecionados.
- */
 function updateSummary() {
     summaryServicosList.innerHTML = '';
     let total = 0;
 
     servicosSelecionados.forEach(servico => {
-        const li = document.createElement('li');
-        li.className = 'summary-item';
-
         let precoServico = parseFloat(servico.precoBase);
         const camposAdicionaisSelecionados = {};
 
-        const serviceElement = document.querySelector(`li[data-key="${servico.id}"]`);
-        if (serviceElement) {
-            // Coleta dados dos selects
-            serviceElement.querySelectorAll('.additional-field-select').forEach(select => {
-                const fieldName = select.dataset.fieldName;
-                const value = parseFloat(select.value);
-                if (!isNaN(value)) {
-                    precoServico += value;
-                    camposAdicionaisSelecionados[fieldName] = value;
-                }
-            });
-            // Coleta dados dos inputs de texto (número)
-            serviceElement.querySelectorAll('.additional-field-input').forEach(input => {
-                const fieldName = input.dataset.fieldName;
-                const value = parseFloat(input.value);
-                if (!isNaN(value)) {
-                    precoServico += value;
-                    camposAdicionaisSelecionados[fieldName] = value;
-                }
-            });
-        }
-        
+        document.querySelectorAll(`.additional-field-select[data-service-id="${servico.id}"]`).forEach(select => {
+            const fieldName = select.dataset.fieldName;
+            const value = parseFloat(select.value);
+            if (!isNaN(value)) {
+                precoServico += value;
+                camposAdicionaisSelecionados[fieldName] = value;
+            }
+        });
+        document.querySelectorAll(`.additional-field-input[data-service-id="${servico.id}"]`).forEach(input => {
+            const fieldName = input.dataset.fieldName;
+            const value = parseFloat(input.value);
+            if (!isNaN(value)) {
+                precoServico += value;
+                camposAdicionaisSelecionados[fieldName] = value;
+            }
+        });
+
         servico.precoCalculado = precoServico;
         servico.camposAdicionaisSelecionados = camposAdicionaisSelecionados;
         total += precoServico;
 
+        const li = document.createElement('li');
         let additionalHtml = '';
         for (const campo in camposAdicionaisSelecionados) {
-            additionalHtml += `<small> - ${campo}: R$ ${camposAdicionaisSelecionados[campo].toFixed(2)}</small><br>`;
+            additionalHtml += `<br><small> - ${campo}: R$ ${camposAdicionaisSelecionados[campo].toFixed(2)}</small>`;
         }
-
+        
         li.innerHTML = `
             <span><strong>${servico.nome}</strong></span>
             <span>R$ ${precoServico.toFixed(2)}</span>
@@ -228,44 +264,15 @@ function updateSummary() {
     });
 
     totalPriceElement.textContent = `Total: R$ ${total.toFixed(2)}`;
-    document.getElementById('orcamentoTotal').value = total.toFixed(2);
-    checkFormState();
+    orcamentoTotalInput.value = total.toFixed(2);
 }
+
 
 // ==========================================================================
-// 4. LÓGICA DE AGENDAMENTO
+// 4. LÓGICA DE FLUXO E AGENDAMENTO
 // ==========================================================================
 
-/**
- * Lida com a seleção de um serviço.
- */
-function handleServiceSelection(key) {
-    if (!servicosSelecionados.find(s => s.id === key)) {
-        const servico = { ...servicosDisponiveis[key], id: key };
-        servicosSelecionados.push(servico);
-        document.querySelector(`li[data-key="${key}"] .btn-select-service`).disabled = true;
-        document.querySelector(`li[data-key="${key}"] .btn-select-service`).textContent = 'Adicionado';
-        updateSummary();
-    }
-}
-
-/**
- * Remove um serviço da lista de selecionados.
- */
-window.removeService = function(key) {
-    servicosSelecionados = servicosSelecionados.filter(s => s.id !== key);
-    const btn = document.querySelector(`li[data-key="${key}"] .btn-select-service`);
-    if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Selecionar';
-    }
-    updateSummary();
-}
-
-/**
- * Atualiza os horários disponíveis com base na data selecionada.
- */
-function updateHorarios() {
+async function updateHorarios() {
     const dataSelecionada = dataInput.value;
     const diaDaSemana = new Date(dataSelecionada + 'T00:00:00').getDay();
     const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
@@ -273,18 +280,16 @@ function updateHorarios() {
     
     horaSelect.innerHTML = '<option value="">-- Selecione uma hora --</option>';
     horaSelect.disabled = true;
+    btnFinalizar.disabled = true;
 
     if (dataSelecionada && configuracoes.horariosPorDia) {
         const configDia = configuracoes.horariosPorDia[diaCorrente];
         if (configDia && configDia.ativo) {
-            gerarHorarios(dataSelecionada, configDia.horarioInicio, configDia.horarioFim, configuracoes.duracaoServico);
+            await gerarHorarios(dataSelecionada, configDia.horarioInicio, configDia.horarioFim, configuracoes.duracaoServico);
         }
     }
 }
 
-/**
- * Gera os horários disponíveis com base no horário de funcionamento e agendamentos existentes.
- */
 async function gerarHorarios(data, inicio, fim, duracaoServico) {
     const agendamentosRef = ref(database, 'agendamentos');
     const snapshot = await get(agendamentosRef);
@@ -294,7 +299,7 @@ async function gerarHorarios(data, inicio, fim, duracaoServico) {
         .filter(agendamento => agendamento.data === formatarDataParaExibicao(new Date(data + 'T00:00:00')))
         .map(agendamento => agendamento.hora);
     
-    horariosDisponiveis = [];
+    const horariosDisponiveis = [];
     const [startHour, startMinute] = inicio.split(':').map(Number);
     const [endHour, endMinute] = fim.split(':').map(Number);
     
@@ -303,10 +308,10 @@ async function gerarHorarios(data, inicio, fim, duracaoServico) {
 
     const endTime = new Date();
     endTime.setHours(endHour, endMinute, 0, 0);
+    endTime.setMinutes(endTime.getMinutes() - duracaoServico);
 
     while (currentTime <= endTime) {
         const horaFormatada = formatarHora(currentTime);
-        // Garante que não sugere horários passados no dia atual
         if (data === new Date().toISOString().split('T')[0] && currentTime <= new Date()) {
             currentTime.setMinutes(currentTime.getMinutes() + duracaoServico);
             continue;
@@ -322,6 +327,8 @@ async function gerarHorarios(data, inicio, fim, duracaoServico) {
         currentTime.setMinutes(currentTime.getMinutes() + duracaoServico);
     }
     horaSelect.disabled = false;
+    btnFinalizar.disabled = horariosDisponiveis.length === 0;
+
     if (horariosDisponiveis.length === 0) {
         const option = document.createElement('option');
         option.value = "";
@@ -331,18 +338,12 @@ async function gerarHorarios(data, inicio, fim, duracaoServico) {
     }
 }
 
-/**
- * Formata um objeto Date para o formato "HH:mm".
- */
 function formatarHora(date) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
 }
 
-/**
- * Formata um objeto Date para o formato "DD/MM/AAAA".
- */
 function formatarDataParaExibicao(date) {
     const dia = String(date.getDate()).padStart(2, '0');
     const mes = String(date.getMonth() + 1).padStart(2, '0');
@@ -350,25 +351,6 @@ function formatarDataParaExibicao(date) {
     return `${dia}/${mes}/${ano}`;
 }
 
-/**
- * Checa o estado dos formulários para habilitar/desabilitar o botão de submissão.
- */
-function checkFormState() {
-    const btnContinuar = document.getElementById('btnContinuar');
-    if (servicosSelecionados.length > 0) {
-        btnContinuar.disabled = false;
-    } else {
-        btnContinuar.disabled = true;
-    }
-}
-
-// ==========================================================================
-// 5. ENVIO E FINALIZAÇÃO DO AGENDAMENTO
-// ==========================================================================
-
-/**
- * Lida com a submissão final do formulário de agendamento.
- */
 async function handleFormSubmit(e) {
     e.preventDefault();
     showLoading();
@@ -378,7 +360,7 @@ async function handleFormSubmit(e) {
     const endereco = document.getElementById('endereco').value;
     const data = formatarDataParaExibicao(new Date(dataInput.value + 'T00:00:00'));
     const hora = horaSelect.value;
-    const orcamentoTotal = parseFloat(document.getElementById('orcamentoTotal').value);
+    const orcamentoTotal = parseFloat(orcamentoTotalInput.value);
 
     const novoAgendamento = {
         cliente: { nome, telefone, endereco },
@@ -411,9 +393,6 @@ async function handleFormSubmit(e) {
     }
 }
 
-/**
- * Envia uma mensagem de confirmação via WhatsApp.
- */
 function sendWhatsAppMessage(agendamento) {
     const whatsappNumber = configuracoes.whatsappNumber;
     if (!whatsappNumber) {
@@ -442,25 +421,21 @@ function sendWhatsAppMessage(agendamento) {
     window.open(whatsappUrl, '_blank');
 }
 
-// ==========================================================================
-// 6. FUNÇÕES AUXILIARES DE UI
-// ==========================================================================
-
 function showLoading() {
-    loadingMessage.style.display = 'block';
-    successMessage.style.display = 'none';
-    errorMessage.style.display = 'none';
+    loadingMessage.classList.remove('hidden');
+    successMessage.classList.add('hidden');
+    errorMessage.classList.add('hidden');
 }
 
 function hideLoading() {
-    loadingMessage.style.display = 'none';
+    loadingMessage.classList.add('hidden');
 }
 
 function showSuccess() {
-    successMessage.style.display = 'block';
+    successMessage.classList.remove('hidden');
 }
 
 function showError(message) {
     errorMessage.textContent = message;
-    errorMessage.style.display = 'block';
+    errorMessage.classList.remove('hidden');
 }
