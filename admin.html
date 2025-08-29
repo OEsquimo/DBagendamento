@@ -3,68 +3,179 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Painel Admin - O Esquimó</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <title>O Esquimó - Painel Administrativo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module" src="assets/admin.js"></script>
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-cogs"></i> Painel Administrativo</h1>
-            <p>Gerencie serviços, agendamentos e configurações</p>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1><i class="fas fa-tools"></i> Painel Administrativo</h1>
+            <button id="logoutButton" class="btn btn-logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </header>
+
+        <div id="pendingAppointmentsNotification" class="alert-banner hidden">
+            <p><i class="fas fa-exclamation-triangle"></i> Você tem agendamentos pendentes! Clique aqui para ver a lista completa.</p>
         </div>
 
-        <!-- Seção de Login -->
-        <div class="form-step active" id="loginSection">
-            <h2><i class="fas fa-lock"></i> Acesso Administrativo</h2>
-            
-            <div class="form-group">
-                <label for="adminEmail">E-mail</label>
-                <input type="email" id="adminEmail" class="form-control" placeholder="seu@email.com"/>
-            </div>
-            
-            <div class="form-group">
-                <label for="adminPassword">Senha</label>
-                <input type="password" id="adminPassword" class="form-control" placeholder="Sua senha"/>
-            </div>
-            
-            <button id="btnLogin" class="btn btn-primary" style="width: 100%">
-                <i class="fas fa-sign-in-alt"></i> Entrar
-            </button>
-            
-            <p id="loginMsg" class="form-message"></p>
-        </div>
+        <div class="tabs-container">
+            <ul class="tabs-nav">
+                <li class="tab-item active" data-tab="servicos"><i class="fas fa-concierge-bell"></i> Serviços</li>
+                <li class="tab-item" data-tab="agendamentos"><i class="fas fa-calendar-alt"></i> Agendamentos</li>
+                <li class="tab-item" data-tab="configuracoes"><i class="fas fa-cogs"></i> Configurações</li>
+            </ul>
 
-        <!-- Conteúdo do Admin (inicialmente oculto) -->
-        <div class="form-step" id="adminContent" style="display: none;">
-            <h2>Painel de Controle</h2>
-            <p>Bem-vindo ao painel administrativo</p>
-            
-            <div class="service-section">
-                <h3><i class="fas fa-concierge-bell"></i> Serviços Cadastrados</h3>
-                <div id="servicosList" class="services-grid">
-                    <!-- Serviços serão carregados aqui -->
+            <div class="tab-content active" id="tabServicos">
+                <h2>Gerenciar Serviços e Campos</h2>
+                <form id="addServiceForm" class="add-form">
+                    <div class="form-group">
+                        <label for="serviceName">Nome do Serviço</label>
+                        <input type="text" id="serviceName" class="form-control" placeholder="Instalação de Ar Condicionado" required/>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceDescription">Descrição</label>
+                        <textarea id="serviceDescription" class="form-control" placeholder="Instalação completa de aparelhos de climatização" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicePrice">Preço Base (R$)</label>
+                        <input type="number" id="servicePrice" class="form-control" placeholder="250.00" step="0.01" required/>
+                    </div>
+                    <div id="additionalFieldsContainer">
+                        <h4>Adicionar Campos Adicionais</h4>
+                        <div class="field-entry">
+                            <div class="form-group">
+                                <label for="fieldName">Nome do Campo</label>
+                                <input type="text" class="form-control field-name" placeholder="BTUs"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="fieldType">Tipo</label>
+                                <select class="form-control field-type">
+                                    <option value="text">Texto</option>
+                                    <option value="select">Lista de Opções</option>
+                                </select>
+                            </div>
+                            <div class="form-group field-options-group hidden">
+                                <label for="fieldOptions">Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
+                                <textarea class="form-control field-options" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-add-field"><i class="fas fa-plus"></i> Adicionar Outro Campo</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Salvar Serviço</button>
+                </form>
+                
+                <div class="service-list mt-5">
+                    <h3>Serviços Ativos</h3>
+                    <ul id="servicosListAdmin" class="list-group">
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Carregando serviços...</p>
+                        </div>
+                    </ul>
                 </div>
             </div>
-            
-            <div class="service-section">
-                <h3><i class="fas fa-cog"></i> Configurações</h3>
-                <div class="form-group">
-                    <label for="cfgCompanyName">Nome da Empresa</label>
-                    <input type="text" id="cfgCompanyName" class="form-control" placeholder="Nome da empresa"/>
+
+            <div class="tab-content" id="tabAgendamentos">
+                <h2>Agendamentos Recebidos</h2>
+                <div id="agendamentosList">
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Carregando agendamentos...</p>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="cfgWhats">WhatsApp para Contato</label>
-                    <input type="text" id="cfgWhats" class="form-control" placeholder="(81) 99999-9999"/>
-                </div>
-                
-                <button class="btn btn-success">
-                    <i class="fas fa-save"></i> Salvar Configurações
-                </button>
+            </div>
+
+            <div class="tab-content" id="tabConfiguracoes">
+                <h2>Configurações do Sistema</h2>
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="whatsappNumber">Número de WhatsApp</label>
+                        <input type="tel" id="whatsappNumber" class="form-control" placeholder="(DDD) 99999-9999" required/>
+                    </div>
+                    <div class="form-group">
+                        <label for="duracaoServico">Duração Padrão do Serviço (em minutos)</label>
+                        <input type="number" id="duracaoServico" class="form-control" required/>
+                    </div>
+                    
+                    <h3>Horário de Funcionamento</h3>
+                    <div id="horariosPorDia" class="mt-3">
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="segundaCheckbox" data-day="segunda" class="day-checkbox"> Segunda-feira</label>
+                            </div>
+                            <div class="time-inputs hidden" id="segundaTimeInputs">
+                                <input type="time" id="segundaInicio" class="form-control time-input" value="08:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="segundaFim" class="form-control time-input" value="18:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="tercaCheckbox" data-day="terca" class="day-checkbox"> Terça-feira</label>
+                            </div>
+                            <div class="time-inputs hidden" id="tercaTimeInputs">
+                                <input type="time" id="tercaInicio" class="form-control time-input" value="08:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="tercaFim" class="form-control time-input" value="18:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="quartaCheckbox" data-day="quarta" class="day-checkbox"> Quarta-feira</label>
+                            </div>
+                            <div class="time-inputs hidden" id="quartaTimeInputs">
+                                <input type="time" id="quartaInicio" class="form-control time-input" value="08:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="quartaFim" class="form-control time-input" value="18:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="quintaCheckbox" data-day="quinta" class="day-checkbox"> Quinta-feira</label>
+                            </div>
+                            <div class="time-inputs hidden" id="quintaTimeInputs">
+                                <input type="time" id="quintaInicio" class="form-control time-input" value="08:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="quintaFim" class="form-control time-input" value="18:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="sextaCheckbox" data-day="sexta" class="day-checkbox"> Sexta-feira</label>
+                            </div>
+                            <div class="time-inputs hidden" id="sextaTimeInputs">
+                                <input type="time" id="sextaInicio" class="form-control time-input" value="08:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="sextaFim" class="form-control time-input" value="18:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="sabadoCheckbox" data-day="sabado" class="day-checkbox"> Sábado</label>
+                            </div>
+                            <div class="time-inputs hidden" id="sabadoTimeInputs">
+                                <input type="time" id="sabadoInicio" class="form-control time-input" value="09:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="sabadoFim" class="form-control time-input" value="13:00">
+                            </div>
+                        </div>
+                        <div class="day-config">
+                            <div class="form-group">
+                                <label><input type="checkbox" id="domingoCheckbox" data-day="domingo" class="day-checkbox"> Domingo</label>
+                            </div>
+                            <div class="time-inputs hidden" id="domingoTimeInputs">
+                                <input type="time" id="domingoInicio" class="form-control time-input" value="09:00">
+                                <span class="time-separator">às</span>
+                                <input type="time" id="domingoFim" class="form-control time-input" value="13:00">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Salvar Configurações</button>
+                </form>
             </div>
         </div>
     </div>
+    
+    <script type="module" src="assets/admin.js"></script>
 </body>
 </html>
