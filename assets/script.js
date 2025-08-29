@@ -4,17 +4,14 @@
  * Versão: 3.0 (Com funcionalidade de agendamento por dia da semana)
  */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// ==========================================================================
-// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
-// ==========================================================================
-
-// Configuração do Firebase
-// ATENÇÃO: Substitua os dados abaixo pelos dados do seu projeto no Firebase Console
-
-
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
   authDomain: "agendamento-esquimo.firebaseapp.com",
