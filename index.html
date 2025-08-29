@@ -1,95 +1,102 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agendamento - O Esquimó</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-</head>
 <body>
 
-    <header class="header">
-        <div class="header-content">
-            <img src="logo.png" alt="O Esquimó Logo" class="logo">
-            <div class="contact-info">
+    <header>
+        <img src="https://o-esquimo.github.io/DEFESA-TCC/logo_o_esquimo.png" alt="O Esquimó Logo" class="logo">
+        <div class="whatsapp-contact">
+            <a id="whatsappLinkTop" href="#" target="_blank">
                 <i class="fab fa-whatsapp"></i>
                 <span id="whatsappNumberDisplay"></span>
-            </div>
+            </a>
         </div>
     </header>
 
-    <main class="main-content">
-        <section id="servicos" class="section">
-            <h2>Nossos Serviços</h2>
-            <div id="servicosContainer" class="servicos-grid">
-                </div>
-        </section>
+    <div class="container">
 
-        <section id="agendamento" class="section hidden">
-            <div class="card">
-                <div class="card-header">
-                    <button id="backButton" class="btn btn-secondary back-btn"><i class="fas fa-arrow-left"></i> Voltar</button>
-                    <h2>Seu Agendamento</h2>
-                </div>
-                <div id="selectedServicesList" class="selected-services-list">
-                    </div>
-
-                <div class="form-section">
-                    <h3>Escolha a Data e Horário</h3>
-                    <div class="date-selection">
-                        <label for="datePicker">Selecione a Data:</label>
-                        <input type="date" id="datePicker" class="form-control">
-                    </div>
-                    <div class="time-selection" id="timeSlotsContainer">
-                        </div>
-                </div>
-                
-                <div class="form-section">
-                    <h3>Seus Dados</h3>
-                    <form id="agendamentoForm">
-                        <div class="form-group">
-                            <label for="nome">Nome Completo</label>
-                            <input type="text" id="nome" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="telefone">Telefone</label>
-                            <input type="tel" id="telefone" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="endereco">Endereço Completo</label>
-                            <input type="text" id="endereco" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="observacoes">Observações (Opcional)</label>
-                            <textarea id="observacoes" class="form-control" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-calendar-alt"></i> Agendar Agora
-                        </button>
-                    </form>
-                </div>
-                
-                <div class="orcamento-summary">
-                    <h4>Orçamento Total: <span id="orcamentoTotal">R$ 0,00</span></h4>
-                </div>
+        <div class="progress-bar-container">
+            <div class="progress-step active">
+                <i class="fas fa-hand-pointer"></i>
+                <span>Serviços</span>
             </div>
-        </section>
-
-        <div id="confirmation" class="confirmation-popup hidden">
-            <div class="popup-content">
-                <i class="fas fa-check-circle success-icon"></i>
-                <h3>Agendamento Concluído!</h3>
-                <p>Seu agendamento foi enviado. Em breve, entraremos em contato para confirmar os detalhes.</p>
-                <p>Se preferir, clique abaixo para falar conosco no WhatsApp:</p>
-                <a id="whatsappLink" href="#" class="btn btn-success" target="_blank">
-                    <i class="fab fa-whatsapp"></i> Falar com a gente
-                </a>
+            <div class="progress-step">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Detalhes</span>
+            </div>
+            <div class="progress-step">
+                <i class="fas fa-user-circle"></i>
+                <span>Cliente</span>
+            </div>
+            <div class="progress-step">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Agendar</span>
             </div>
         </div>
 
-    </main>
+        <section id="servicos">
+            <h2>Nossos Serviços</h2>
+            <div id="servicosContainer" class="service-list">
+                </div>
+            <button id="nextStep1" class="btn btn-primary next-button" style="display: none;">Próximo</button>
+        </section>
 
-    <script src="script.js" type="module"></script>
+        <section id="servicosForm" class="hidden">
+            <h2>Detalhes do Serviço</h2>
+            <div id="servicosFormContainer">
+                </div>
+            <div class="orcamento-summary">
+                <strong>Orçamento Total:</strong> <span id="orcamentoTotal">R$ 0.00</span>
+            </div>
+            <button id="nextStep2" class="btn btn-primary next-button">Próximo</button>
+            <button id="backButton1" class="btn btn-secondary back-button">Voltar</button>
+        </section>
+
+        <section id="clienteForm" class="hidden">
+            <h2>Suas Informações</h2>
+            <form id="agendamentoForm">
+                <div class="form-group">
+                    <label for="nome">Nome Completo</label>
+                    <input type="text" id="nome" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="telefone">Telefone</label>
+                    <input type="tel" id="telefone" class="form-control" placeholder="(DD) 9XXXX-XXXX" required>
+                </div>
+                <div class="form-group">
+                    <label for="endereco">Endereço</label>
+                    <input type="text" id="endereco" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="observacoes">Observações (opcional)</label>
+                    <textarea id="observacoes" class="form-control" rows="3"></textarea>
+                </div>
+                <button id="nextStep3" class="btn btn-primary next-button">Próximo</button>
+                <button id="backButton2" class="btn btn-secondary back-button">Voltar</button>
+            </form>
+        </section>
+
+        <section id="agendamento" class="hidden">
+            <h2>Agendamento</h2>
+            <div class="form-group">
+                <label for="datePicker">Escolha uma data</label>
+                <input type="date" id="datePicker" class="form-control">
+            </div>
+            <div id="timeSlotsContainer" class="time-slots">
+                </div>
+            <button id="confirmBooking" class="btn btn-primary">Confirmar Agendamento</button>
+            <button id="backButton3" class="btn btn-secondary back-button">Voltar</button>
+        </section>
+
+        <section id="confirmation" class="hidden">
+            <h2>Agendamento Concluído!</h2>
+            <p>Seu agendamento foi enviado com sucesso. Por favor, clique no botão abaixo para nos enviar os detalhes via WhatsApp e confirmar seu horário.</p>
+            <a id="whatsappLink" class="btn btn-whatsapp" href="#" target="_blank">
+                <i class="fab fa-whatsapp"></i> Confirmar no WhatsApp
+            </a>
+            <p class="small-text">Sua confirmação é essencial para garantir o horário.</p>
+        </section>
+
+    </div>
+
+    <script type="module" src="script.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
 </body>
-</html>
