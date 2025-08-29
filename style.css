@@ -62,6 +62,15 @@ h2 {
     background-color: #218838;
 }
 
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
 .mt-3 {
     margin-top: 1rem;
 }
@@ -72,34 +81,12 @@ header {
     padding: 20px;
     background-color: #fff;
     border-bottom: 1px solid #ccc;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
-.header-logo img {
-    max-width: 150px;
-}
-
-.whatsapp-contact {
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    font-size: 18px;
+.header-text {
+    font-size: 1.5em;
     font-weight: bold;
-}
-
-.whatsapp-contact img {
-    width: 30px;
-    height: 30px;
-    margin-right: 8px;
-}
-
-.whatsapp-contact a {
-    color: #25d366;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
+    color: #333;
 }
 
 /* Barra de Progresso */
@@ -210,6 +197,14 @@ header {
     box-sizing: border-box;
 }
 
+.form-control:invalid:not(:placeholder-shown) {
+    border-color: #dc3545;
+}
+
+.form-control:valid:not(:placeholder-shown) {
+    border-color: #28a745;
+}
+
 .form-navigation {
     display: flex;
     justify-content: space-between;
@@ -292,6 +287,10 @@ header {
 
 #confirmation h2 {
     color: #28a745;
+}
+
+.new-booking-btn {
+    margin-top: 20px;
 }
 
 /* Estilos do Admin */
