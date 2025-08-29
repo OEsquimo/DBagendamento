@@ -4,7 +4,7 @@
  * Versão: 3.0 (Com funcionalidade de agendamento por dia da semana)
  */
 
-//import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
@@ -15,7 +15,7 @@ import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/fireba
 // ATENÇÃO: Substitua os dados abaixo pelos dados do seu projeto no Firebase Console
 
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+//import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
