@@ -23,7 +23,6 @@ const firebaseConfig = {
   measurementId: "G-Z0EMQ3XQ1D"
 };
 
-
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
@@ -84,24 +83,8 @@ function checkLogin() {
  * Mostra o formulário de login.
  */
 function showLoginForm() {
-    const loginHtml = `
-        <div class="login-container">
-            <h2>Login do Administrador</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="username">Usuário</label>
-                    <input type="text" id="username" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Senha</label>
-                    <input type="password" id="password" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Entrar</button>
-            </form>
-        </div>
-    `;
-    document.body.innerHTML = loginHtml;
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    loginForm.classList.remove('hidden');
+    adminPanel.classList.add('hidden');
 }
 
 /**
@@ -114,7 +97,7 @@ function handleLogin(e) {
 
     if (username === ADMIN_USER && password === ADMIN_PASS) {
         sessionStorage.setItem('adminLoggedIn', 'true');
-        location.reload(); // Recarrega a página para mostrar o painel
+        showAdminPanel();
     } else {
         alert('Usuário ou senha incorretos.');
     }
@@ -124,8 +107,8 @@ function handleLogin(e) {
  * Mostra o painel de administração e carrega todos os dados.
  */
 function showAdminPanel() {
-    document.body.innerHTML = document.querySelector('.admin-container').outerHTML;
-    setupEventListeners();
+    loginForm.classList.add('hidden');
+    adminPanel.classList.remove('hidden');
     loadAllData();
 }
 
@@ -134,7 +117,7 @@ function showAdminPanel() {
  */
 function handleLogout() {
     sessionStorage.removeItem('adminLoggedIn');
-    location.reload();
+    showLoginForm();
 }
 
 // ==========================================================================
@@ -145,9 +128,13 @@ function handleLogout() {
  * Configura todos os ouvintes de evento para o painel de admin.
  */
 function setupEventListeners() {
-    if (!document.getElementById('logoutButton')) return;
+    if (!loginForm || !adminPanel) {
+        console.error("Elementos principais do painel de admin não encontrados.");
+        return;
+    }
     
-    document.getElementById('logoutButton').addEventListener('click', handleLogout);
+    loginForm.addEventListener('submit', handleLogin);
+    logoutButton.addEventListener('click', handleLogout);
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -205,24 +192,24 @@ function loadAllData() {
 /**
  * Adiciona um novo campo adicional ao formulário de serviço.
  */
-function addAdditionalField() {
+function addAdditionalField(fieldName = '', fieldType = 'text', fieldOptions = []) {
     const fieldEntry = document.createElement('div');
     fieldEntry.className = 'field-entry';
     fieldEntry.innerHTML = `
         <div class="form-group">
             <label for="fieldName">Nome do Campo</label>
-            <input type="text" class="form-control field-name" placeholder="BTUs"/>
+            <input type="text" class="form-control field-name" placeholder="BTUs" value="${fieldName}"/>
         </div>
         <div class="form-group">
             <label for="fieldType">Tipo</label>
             <select class="form-control field-type">
-                <option value="text">Texto</option>
-                <option value="select">Lista de Opções</option>
+                <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Texto</option>
+                <option value="select" ${fieldType === 'select' ? 'selected' : ''}>Lista de Opções</option>
             </select>
         </div>
-        <div class="form-group field-options-group hidden">
+        <div class="form-group field-options-group ${fieldType === 'text' ? 'hidden' : ''}">
             <label for="fieldOptions">Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
-            <textarea class="form-control field-options" rows="2"></textarea>
+            <textarea class="form-control field-options" rows="2">${fieldOptions.join('; ')}</textarea>
         </div>
         <button type="button" class="btn btn-danger btn-remove-field"><i class="fas fa-trash"></i> Remover</button>
     `;
@@ -265,12 +252,17 @@ async function handleServiceFormSubmit(e) {
         const fieldType = entry.querySelector('.field-type').value;
         const fieldOptions = entry.querySelector('.field-options').value;
         
-        const field = {
-            nome: fieldName,
-            tipo: fieldType,
-            opcoes: fieldOptions.split(';').map(o => o.trim())
-        };
-        serviceData.camposAdicionais.push(field);
+        // Verifica se o nome do campo não está vazio
+        if(fieldName.trim() !== '') {
+            const field = {
+                nome: fieldName,
+                tipo: fieldType
+            };
+            if (fieldType === 'select') {
+                field.opcoes = fieldOptions.split(';').map(o => o.trim());
+            }
+            serviceData.camposAdicionais.push(field);
+        }
     });
     
     const servicosRef = ref(database, 'servicos');
@@ -281,21 +273,28 @@ async function handleServiceFormSubmit(e) {
             const serviceRef = ref(database, `servicos/${currentEditingServiceKey}`);
             await set(serviceRef, serviceData);
             alert('Serviço atualizado com sucesso!');
-            currentEditingServiceKey = null; // Reseta a chave de edição
         } else {
             // Se for um novo serviço, adiciona ao Firebase
             await push(servicosRef, serviceData);
             alert('Serviço adicionado com sucesso!');
         }
         
-        serviceForm.reset();
-        additionalFieldsContainer.innerHTML = '';
-        addAdditionalField(); // Adiciona um campo vazio para o próximo
+        resetServiceForm(); // Reseta o formulário
         loadServicesAdmin();
     } catch (error) {
         console.error("Erro ao salvar serviço:", error);
         alert('Erro ao salvar serviço.');
     }
+}
+
+/**
+ * Reseta o formulário de serviço.
+ */
+function resetServiceForm() {
+    serviceForm.reset();
+    additionalFieldsContainer.innerHTML = '';
+    currentEditingServiceKey = null;
+    addAdditionalField(); // Adiciona um campo vazio para o próximo
 }
 
 /**
@@ -346,36 +345,7 @@ function editService(key, service) {
     additionalFieldsContainer.innerHTML = '';
     if (service.camposAdicionais) {
         service.camposAdicionais.forEach(field => {
-            const fieldEntry = document.createElement('div');
-            fieldEntry.className = 'field-entry';
-            fieldEntry.innerHTML = `
-                <div class="form-group">
-                    <label for="fieldName">Nome do Campo</label>
-                    <input type="text" class="form-control field-name" value="${field.nome}"/>
-                </div>
-                <div class="form-group">
-                    <label for="fieldType">Tipo</label>
-                    <select class="form-control field-type">
-                        <option value="text" ${field.tipo === 'text' ? 'selected' : ''}>Texto</option>
-                        <option value="select" ${field.tipo === 'select' ? 'selected' : ''}>Lista de Opções</option>
-                    </select>
-                </div>
-                <div class="form-group field-options-group ${field.tipo === 'text' ? 'hidden' : ''}">
-                    <label for="fieldOptions">Opções (ex: 9000 BTUs, R$ 50; 12000 BTUs, R$ 75)</label>
-                    <textarea class="form-control field-options" rows="2">${field.opcoes.join('; ')}</textarea>
-                </div>
-                <button type="button" class="btn btn-danger btn-remove-field"><i class="fas fa-trash"></i> Remover</button>
-            `;
-            fieldEntry.querySelector('.btn-remove-field').addEventListener('click', () => fieldEntry.remove());
-            fieldEntry.querySelector('.field-type').addEventListener('change', (e) => {
-                const optionsGroup = e.target.closest('.field-entry').querySelector('.field-options-group');
-                if (e.target.value === 'select') {
-                    optionsGroup.classList.remove('hidden');
-                } else {
-                    optionsGroup.classList.add('hidden');
-                }
-            });
-            additionalFieldsContainer.appendChild(fieldEntry);
+            addAdditionalField(field.nome, field.tipo, field.opcoes || []);
         });
     }
     // Adiciona um campo vazio para permitir a adição de mais
@@ -430,8 +400,16 @@ function loadAppointments() {
             `;
             const tbody = table.querySelector('tbody');
             
-            for (const key in agendamentos) {
-                const agendamento = agendamentos[key];
+            // Ordena os agendamentos por data e hora, do mais recente para o mais antigo
+            const sortedAppointments = Object.entries(agendamentos).sort((a, b) => {
+                const [keyA, apptA] = a;
+                const [keyB, apptB] = b;
+                const dateA = new Date(`${apptA.data.split('/').reverse().join('-')}T${apptA.hora}:00`);
+                const dateB = new Date(`${apptB.data.split('/').reverse().join('-')}T${apptB.hora}:00`);
+                return dateB - dateA; // Ordena de forma decrescente (mais recente primeiro)
+            });
+
+            sortedAppointments.forEach(([key, agendamento]) => {
                 if (agendamento.status === 'Pendente') {
                     pendingCount++;
                 }
@@ -446,7 +424,8 @@ function loadAppointments() {
                     if (servico.camposAdicionaisSelecionados) {
                          for (const campo in servico.camposAdicionaisSelecionados) {
                             const valorCampo = parseFloat(servico.camposAdicionaisSelecionados[campo]);
-                            servicosHtml += `<li>&nbsp;&nbsp;&nbsp;&nbsp; - ${campo}: R$ ${valorCampo.toFixed(2)}</li>`;
+                            // Evita exibir R$ NaN caso o valor não seja numérico
+                            servicosHtml += `<li>&nbsp;&nbsp;&nbsp;&nbsp; - ${campo}: R$ ${isNaN(valorCampo) ? '0.00' : valorCampo.toFixed(2)}</li>`;
                         }
                     }
                 });
@@ -484,7 +463,8 @@ function loadAppointments() {
                 tr.querySelector('td:nth-child(6)').appendChild(statusSelect);
                 tr.querySelector('.delete-appointment').addEventListener('click', () => deleteAppointment(key));
                 tbody.appendChild(tr);
-            }
+            });
+
             agendamentosList.appendChild(table);
 
             // Exibe ou oculta a notificação de agendamentos pendentes
