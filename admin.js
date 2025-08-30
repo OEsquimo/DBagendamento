@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 6.0 (Com navegação por abas)
+ * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -121,8 +121,9 @@ function addAdditionalFieldForm(fieldData = {}) {
                 <label>Tipo do Campo</label>
                 <select class="form-control field-type">
                     <option value="select" ${fieldData.tipo === 'select' ? 'selected' : ''}>Lista de Opções (select)</option>
-                    <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto (input)</option>
-                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico (input)</option>
+                    <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
+                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
+                    <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
                 </select>
             </div>
             <div class="options-container">
