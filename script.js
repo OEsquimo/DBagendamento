@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 9.0 (Regras de agendamento atualizadas e suporte a textarea)
+ * Versão: 9.1 (Mensagem do WhatsApp melhorada)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -285,12 +285,8 @@ function getSelectedOptions(container, serviceData) {
         const selectedValue = select.value;
         const fieldName = select.dataset.fieldName;
         if (selectedValue) {
-            const parts = selectedValue.split(', R$ ');
-            if (parts.length === 2) {
-                selectedOptions[fieldName] = parseFloat(parts[1]);
-            } else {
-                selectedOptions[fieldName] = selectedValue;
-            }
+            // AQUI: Armazena o valor completo (ex: "9000 BTUs, R$ 180.00")
+            selectedOptions[fieldName] = selectedValue;
         }
     });
 
@@ -524,32 +520,32 @@ function createWhatsAppMessage() {
     const observacoes = document.getElementById('observacoes').value;
     const total = orcamentoTotalDisplay.textContent;
 
-    let servicosTexto = 'Serviços:\n';
+    let servicosTexto = '🛠️ Serviços:\n';
     servicosSelecionados.forEach(servico => {
         servicosTexto += `  - ${servico.nome} (R$ ${servico.precoCalculado.toFixed(2)})\n`;
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
                 const valor = servico.camposAdicionaisSelecionados[campo];
-                servicosTexto += `    * ${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}\n`;
+                servicosTexto += `    * ${campo}: ${valor}\n`;
             }
         }
     });
 
     return `Olá, gostaria de confirmar um agendamento.
     
-    *Dados do Cliente:*
+    *👤 Dados do Cliente:*
     Nome: ${nome}
     Telefone: ${telefone}
     Endereço: ${endereco}
     
-    *Detalhes do Agendamento:*
+    *📅 Detalhes do Agendamento:*
     Data: ${data}
     Hora: ${hora}
     ${servicosTexto}
     
-    Orçamento Total: ${total}
+    *💰 Orçamento Total: ${total}*
     
-    ${observacoes ? `Observações: ${observacoes}` : ''}
+    ${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
     
     Obrigado!`;
 }
