@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 8.0 (Atualizações de UI, validação, WhatsApp e contagem)
+ * Versão: 9.0 (Regras de agendamento atualizadas e suporte a textarea)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -177,6 +177,11 @@ function renderServiceForms() {
                         <label>${field.nome}</label>
                         <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01" required>
                     `;
+                } else if (field.tipo === 'textarea') {
+                     return `
+                        <label>${field.nome}</label>
+                        <textarea class="form-control additional-field-textarea" data-field-name="${field.nome}" data-key="${service.key}" placeholder="Digite aqui..."></textarea>
+                    `;
                 }
             }).join('');
         }
@@ -189,7 +194,7 @@ function renderServiceForms() {
         servicosFormContainer.appendChild(formGroup);
     });
 
-    document.querySelectorAll('.additional-field-select, .additional-field-input').forEach(field => {
+    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea').forEach(field => {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
@@ -252,7 +257,7 @@ document.getElementById('nextStep2').addEventListener('click', () => {
     });
 
     if (!allFieldsFilled) {
-        alert("Por favor, preencha todos os campos para continuar.");
+        alert("Por favor, preencha todos os campos obrigatórios para continuar.");
         return;
     }
 
@@ -274,6 +279,7 @@ function getSelectedOptions(container, serviceData) {
     const selectedOptions = {};
     const selectElements = container.querySelectorAll('.additional-field-select');
     const inputElements = container.querySelectorAll('.additional-field-input');
+    const textareaElements = container.querySelectorAll('.additional-field-textarea');
     
     selectElements.forEach(select => {
         const selectedValue = select.value;
@@ -296,6 +302,14 @@ function getSelectedOptions(container, serviceData) {
         }
     });
     
+    textareaElements.forEach(textarea => {
+        const textareaValue = textarea.value;
+        const fieldName = textarea.dataset.fieldName;
+        if (textareaValue) {
+            selectedOptions[fieldName] = textareaValue;
+        }
+    });
+
     return selectedOptions;
 }
 
@@ -348,9 +362,31 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 
 async function handleDateSelection() {
     const selectedDate = datePicker.value;
-    if (!selectedDate) return;
+    if (!selectedDate) {
+        timeSlotsContainer.innerHTML = '<p>Selecione uma data para ver os horários.</p>';
+        return;
+    }
 
     timeSlotsContainer.innerHTML = '<p>Carregando horários...</p>';
+    
+    // Obter a data atual sem a hora para comparação
+    const hoje = new Date();
+    const dataAtual = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const dataAgendamento = new Date(selectedDate + 'T00:00:00');
+
+    // Validação 1: Não permitir agendamento para dias passados
+    if (dataAgendamento < dataAtual) {
+        timeSlotsContainer.innerHTML = '<p>Não é possível agendar para uma data que já passou.</p>';
+        return;
+    }
+
+    // Validação 2: Não permitir agendamento para o dia atual após 14:00
+    if (dataAgendamento.getTime() === dataAtual.getTime()) {
+        if (hoje.getHours() >= 14) {
+            timeSlotsContainer.innerHTML = '<p>Agendamentos para o dia de hoje só são permitidos até as 14:00. Por favor, selecione uma data futura.</p>';
+            return;
+        }
+    }
     
     const [year, month, day] = selectedDate.split('-');
     const dayOfWeek = getDayOfWeek(selectedDate);
@@ -369,29 +405,41 @@ async function handleDateSelection() {
     if (snapshot.exists()) {
         snapshot.forEach(childSnapshot => {
             const agendamento = childSnapshot.val();
-            if (agendamento.data === `${day}/${month}/${year}` && agendamento.status !== 'Cancelado') {
+            // A data no Firebase está no formato DD/MM/YYYY, precisamos converter
+            const firebaseDate = `${day}/${month}/${year}`;
+            if (agendamento.data === firebaseDate && agendamento.status !== 'Cancelado') {
                 agendamentosDoDia.push(agendamento.hora);
             }
         });
     }
 
-    const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia);
+    const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
     displayTimeSlots(horariosDisponiveis);
 }
 
-function generateTimeSlots(startTime, endTime, interval, existingAppointments) {
+function generateTimeSlots(startTime, endTime, interval, existingAppointments, referenceTime) {
     const slots = [];
     let currentTime = new Date(`2000-01-01T${startTime}:00`);
     const end = new Date(`2000-01-01T${endTime}:00`);
-
+    
     while (currentTime < end) {
         const timeString = currentTime.toTimeString().slice(0, 5);
+        
+        // Verifica se o slot já passou, somente se for o dia de hoje
+        if (referenceTime) {
+             const [slotHour, slotMinute] = timeString.split(':').map(Number);
+             if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
+                currentTime.setMinutes(currentTime.getMinutes() + interval);
+                continue;
+            }
+        }
+
         if (!existingAppointments.includes(timeString)) {
             slots.push(timeString);
         }
+        
         currentTime.setMinutes(currentTime.getMinutes() + interval);
     }
-
     return slots;
 }
 
