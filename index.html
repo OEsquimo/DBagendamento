@@ -8,8 +8,7 @@
 </head>
 <body>
 
-    <div class="container">
-        
+    <div class="header-container">
         <div class="progress-bar">
             <div class="progress-step active" data-step="1">
                 <span class="step-number">1</span>
@@ -28,13 +27,18 @@
                 <span class="step-text">Agendar</span>
             </div>
         </div>
+    </div>
 
+    <div class="container">
+        
         <section id="servicos" class="active-section">
             <h2>Escolha um ou mais serviços</h2>
             <div id="servicosContainer">
-                </div>
+            </div>
             <div class="total-summary-container">
                 <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
+            </div>
+            <div class="form-navigation-bottom">
                 <button class="btn btn-primary" id="nextStep1" style="display:none;">Próximo</button>
             </div>
         </section>
@@ -42,12 +46,12 @@
         <section id="servicosForm" class="hidden">
             <h2>Detalhes do Serviço</h2>
             <div id="servicosFormContainer">
-                </div>
+            </div>
             <div class="total-summary-container">
                 <span class="total-label">Orçamento Total:</span>
                 <span id="orcamentoTotal">R$ 0,00</span>
             </div>
-            <div class="form-navigation">
+            <div class="form-navigation-bottom">
                 <button class="btn btn-secondary" id="backButton1">Voltar</button>
                 <button class="btn btn-primary" id="nextStep2">Próximo</button>
             </div>
@@ -72,11 +76,11 @@
                     <label for="observacoes">Observações (opcional)</label>
                     <textarea id="observacoes" class="form-control" placeholder="Ex: Preferência de horário, detalhes do local."></textarea>
                 </div>
-                <div class="form-navigation">
-                    <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
-                    <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
-                </div>
             </form>
+            <div class="form-navigation-bottom">
+                <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
+                <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
+            </div>
         </section>
 
         <section id="agendamento" class="hidden">
@@ -92,11 +96,11 @@
                         <p>Selecione uma data para ver os horários.</p>
                     </div>
                 </div>
-                <div class="form-navigation">
-                    <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
-                    <button type="submit" class="btn btn-primary">Confirmar Agendamento</button>
-                </div>
             </form>
+            <div class="form-navigation-bottom">
+                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                <button type="submit" class="btn btn-primary" form="agendamentoForm">Confirmar Agendamento</button>
+            </div>
         </section>
 
         <section id="confirmation" class="hidden">
@@ -106,7 +110,7 @@
             <p>Enviar confirmação do agendamento para o whatsapp:</p>
             <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Enviar mensagem</a>
         </section>
-        
+
     </div>
 
     <script type="module" src="script.js"></script>
