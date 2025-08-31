@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 9.1 (Mensagem do WhatsApp melhorada)
+ * Versão: 10.0 (Recursos fixos, mensagem melhorada, e verificação de conexão)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -67,10 +67,16 @@ async function loadAllData() {
 }
 
 async function loadConfig() {
-    const configRef = ref(database, 'configuracoes');
-    const snapshot = await get(configRef);
-    if (snapshot.exists()) {
-        configGlobais = snapshot.val();
+    try {
+        const configRef = ref(database, 'configuracoes');
+        const snapshot = await get(configRef);
+        if (snapshot.exists()) {
+            configGlobais = snapshot.val();
+        } else {
+            console.error("Configurações não encontradas no banco de dados.");
+        }
+    } catch (error) {
+        console.error("Erro ao carregar configurações:", error);
     }
 }
 
@@ -465,6 +471,11 @@ function selectTimeSlot(selectedSlot) {
 async function handleFormSubmit(e) {
     e.preventDefault();
 
+    if (!navigator.onLine) {
+        alert("Parece que você está sem conexão com a internet. Verifique sua conexão e tente novamente.");
+        return;
+    }
+
     const selectedTimeSlot = document.querySelector('.time-slot.selected');
     if (!selectedTimeSlot) {
         alert("Por favor, selecione um horário para o agendamento.");
@@ -522,11 +533,16 @@ function createWhatsAppMessage() {
 
     let servicosTexto = '🛠️ Serviços:\n';
     servicosSelecionados.forEach(servico => {
-        servicosTexto += `  - ${servico.nome} (R$ ${servico.precoCalculado.toFixed(2)})\n`;
+        servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
-                const valor = servico.camposAdicionaisSelecionados[campo];
-                servicosTexto += `    * ${campo}: ${valor}\n`;
+                // Remove o valor da mensagem para Capacidade de BTUs
+                if (campo === 'Capacidade de BTUs') {
+                     servicosTexto += `    * ${campo}: ${servico.camposAdicionaisSelecionados[campo].split(', R$ ')[0]}\n`;
+                } else {
+                    const valor = servico.camposAdicionaisSelecionados[campo];
+                    servicosTexto += `    * ${campo}: ${valor}\n`;
+                }
             }
         }
     });
