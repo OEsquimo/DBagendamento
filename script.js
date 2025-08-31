@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.0 (Recursos fixos, mensagem melhorada, e verificação de conexão)
+ * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -291,7 +291,6 @@ function getSelectedOptions(container, serviceData) {
         const selectedValue = select.value;
         const fieldName = select.dataset.fieldName;
         if (selectedValue) {
-            // AQUI: Armazena o valor completo (ex: "9000 BTUs, R$ 180.00")
             selectedOptions[fieldName] = selectedValue;
         }
     });
@@ -520,6 +519,13 @@ function showConfirmation() {
     
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
+    
+    // Redireciona para a página inicial após o clique no link do WhatsApp
+    whatsappLink.addEventListener('click', () => {
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 500); // Pequeno atraso para dar tempo do WhatsApp abrir
+    });
 }
 
 function createWhatsAppMessage() {
@@ -533,17 +539,35 @@ function createWhatsAppMessage() {
 
     let servicosTexto = '🛠️ Serviços:\n';
     servicosSelecionados.forEach(servico => {
-        servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
+        let precoTotalServico = servico.precoBase || 0;
+        let subServicosDetalhes = [];
+        
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
-                // Remove o valor da mensagem para Capacidade de BTUs
-                if (campo === 'Capacidade de BTUs') {
-                     servicosTexto += `    * ${campo}: ${servico.camposAdicionaisSelecionados[campo].split(', R$ ')[0]}\n`;
+                const valor = servico.camposAdicionaisSelecionados[campo];
+                let subServicoTexto = `  - ${campo}: ${valor}`;
+
+                // Verifica se a opção tem valor para incluir
+                if (typeof valor === 'string' && valor.includes(', R$ ')) {
+                    const [descricao, preco] = valor.split(', R$ ');
+                    precoTotalServico += parseFloat(preco);
+                    // Remove o valor da mensagem para Capacidade de BTUs
+                    if (campo === 'Capacidade de BTUs') {
+                        subServicoTexto = `  - ${servico.nome} (${descricao}): R$ ${precoTotalServico.toFixed(2)}`;
+                    } else {
+                        subServicoTexto = `  - ${campo}: R$ ${preco}`;
+                    }
                 } else {
-                    const valor = servico.camposAdicionaisSelecionados[campo];
-                    servicosTexto += `    * ${campo}: ${valor}\n`;
+                     subServicoTexto = `  - ${campo}: ${valor}`;
                 }
+                subServicosDetalhes.push(subServicoTexto);
             }
+        } else {
+             servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
+        }
+        
+        if (subServicosDetalhes.length > 0) {
+            servicosTexto += subServicosDetalhes.join('\n') + '\n';
         }
     });
 
