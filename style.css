@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
- * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 9.1 (Barra de progresso e botões fixos)
+ * Descrição: Estilos para o Painel Administrativo do sistema.
+ * Versão: 1.0 (Somente estilos para o admin)
  */
 
 body {
@@ -9,7 +9,11 @@ body {
     background-color: #f4f4f9;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent; /* Remove o fundo azul no clique */
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Alinha o conteúdo ao topo */
+    min-height: 100vh;
 }
 
 .hidden {
@@ -18,165 +22,83 @@ body {
 
 .container {
     padding: 20px;
-    max-width: 600px;
-    margin: 0 auto;
+    max-width: 600px; /* Ajuste para corresponder à imagem */
+    width: 100%;
+    margin: 40px auto; /* Adicionado margem superior para espaçamento */
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    min-height: calc(100vh - 120px); /* Ajusta para os cabeçalhos e rodapés fixos */
-}
-
-/* ========================================================================== */
-/* 1. LAYOUT FIXO */
-/* ========================================================================== */
-
-.header-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    padding: 10px 0;
-}
-
-.progress-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-.form-navigation-bottom {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-@media (max-width: 600px) {
-    .form-navigation-bottom {
-        padding: 10px;
-    }
-}
-
-/* ========================================================================== */
-/* 2. BARRA DE PROGRESSO */
-/* ========================================================================== */
-
-.progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    flex: 1;
-    text-align: center;
-    color: #bbb;
-    font-size: 12px;
-}
-
-.progress-step.active .step-number {
-    background-color: #007bff;
-    color: #fff;
-}
-
-.progress-step.active .step-text {
-    color: #007bff;
-}
-
-.step-number {
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    color: #495057;
-    font-weight: bold;
-}
-
-.step-text {
-    margin-top: 5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
-
-.progress-step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background: #e9ecef;
-    top: 15px;
-    left: 50%;
-    z-index: -1;
-}
-
-.progress-step.active:not(:last-child)::after {
-    background: #007bff;
-}
-
-/* ========================================================================== */
-/* 3. SEÇÕES E CARDS */
-/* ========================================================================== */
-
-section {
-    padding-top: 80px; /* Para não ficar atrás do header fixo */
-    padding-bottom: 70px; /* Para não ficar atrás do footer fixo */
+    border-radius: 8px;
 }
 
 h2 {
     color: #333;
     text-align: center;
     margin-bottom: 20px;
+    text-transform: uppercase; /* Para combinar com a imagem */
+    font-size: 1.5em;
 }
 
-.service-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    background-color: #f9f9f9;
-    transition: box-shadow 0.3s;
-    text-align: center;
-}
-
-.service-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.service-card.selected {
-    border-color: #28a745;
-    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
-}
-
-.total-summary-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-top: 1px solid #eee;
-    margin-top: 20px;
-}
-
-.total-label {
-    font-weight: bold;
+h3 {
     color: #333;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+h4 {
+    color: #333;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.1em;
 }
 
 /* ========================================================================== */
-/* 4. FORMULÁRIOS E BOTÕES */
+/* 1. NAVEGAÇÃO POR ABAS */
+/* ========================================================================== */
+
+.tab-navigation {
+    display: flex;
+    justify-content: space-between; /* Espaço entre os botões */
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee; /* Linha mais sutil */
+    padding-bottom: 5px;
+    gap: 5px; /* Espaçamento entre os botões */
+}
+
+.tab-btn {
+    flex: 1; /* Distribui o espaço igualmente */
+    padding: 10px 5px; /* Padding ajustado */
+    border: 1px solid #ccc; /* Borda leve para cada botão */
+    border-bottom: none; /* Remove a borda inferior para não colidir com a linha */
+    background-color: #f0f0f0; /* Fundo padrão */
+    cursor: pointer;
+    font-size: 14px; /* Fonte um pouco menor */
+    font-weight: bold;
+    color: #555;
+    transition: all 0.2s ease;
+    border-radius: 5px 5px 0 0; /* Bordas arredondadas no topo */
+    text-transform: capitalize; /* Capitaliza a primeira letra */
+}
+
+.tab-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.tab-btn.active {
+    background-color: #007bff; /* Fundo azul para ativo */
+    color: #fff; /* Texto branco para ativo */
+    border-color: #007bff; /* Borda azul para ativo */
+    position: relative;
+    z-index: 1; /* Garante que a borda do botão ativo sobreponha a linha */
+}
+
+.tab-content {
+    padding-top: 20px;
+    border-top: 1px solid #eee; /* Linha sutil para separar conteúdo da navegação */
+    margin-top: -1px; /* Ajusta para se alinhar perfeitamente com a borda inferior dos botões */
+}
+
+/* ========================================================================== */
+/* 2. FORMULÁRIOS E BOTÕES */
 /* ========================================================================== */
 
 .form-group {
@@ -187,6 +109,7 @@ h2 {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: #333;
 }
 
 .form-control {
@@ -205,12 +128,14 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
-    width: 48%; /* Para alinhar os botões lado a lado */
+    text-transform: capitalize;
 }
 
 .btn-primary {
     background-color: #007bff;
     color: #fff;
+    width: 100%; /* Botão "Salvar Serviço" mais largo */
+    margin-top: 20px;
 }
 
 .btn-primary:hover {
@@ -220,72 +145,111 @@ h2 {
 .btn-secondary {
     background-color: #6c757d;
     color: #fff;
+    width: auto; /* Deixa o "Adicionar Campo" menor */
+    margin-top: 10px;
 }
 
 .btn-secondary:hover {
     background-color: #5a6268;
 }
 
-.btn-select-service {
-    width: 100%;
-}
-
-.btn-success {
-    background-color: #28a745;
+.btn-danger {
+    background-color: #dc3545;
     color: #fff;
-    text-decoration: none;
-    display: inline-block;
-    width: 100%;
-    text-align: center;
 }
 
-.btn-success:hover {
-    background-color: #218838;
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.8em;
 }
 
 /* ========================================================================== */
-/* 5. SELEÇÃO DE HORÁRIOS */
+/* 3. LISTAS E CARDS */
 /* ========================================================================== */
 
-.time-slots-container {
+.card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.card-title {
+    margin-top: 0;
+    font-size: 1.2em;
+    color: #007bff;
+}
+
+.card-text {
+    margin-bottom: 5px;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.badge-pendente { background-color: #ffc107; }
+.badge-concluido { background-color: #28a745; }
+.badge-cancelado { background-color: #dc3545; }
+
+/* ========================================================================== */
+/* 4. CAMPOS ADICIONAIS */
+/* ========================================================================== */
+
+.additional-field {
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background-color: #fcfcfc;
+}
+
+.additional-field .btn-danger {
+    margin-top: 10px;
+    width: auto;
+}
+
+.option-item {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
-}
-
-.time-slot {
-    padding: 10px 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-    background-color: #e9ecef;
-}
-
-.time-slot:hover {
-    background-color: #dee2e6;
-}
-
-.time-slot.selected {
-    background-color: #007bff;
-    color: #fff;
-    border-color: #007bff;
-}
-
-/* ========================================================================== */
-/* 6. MENSAGEM DE CONFIRMAÇÃO */
-/* ========================================================================== */
-
-#confirmation {
-    text-align: center;
-}
-
-#confirmation p {
     margin-bottom: 10px;
-    font-size: 1.1em;
 }
 
-#whatsappLink {
-    margin-top: 20px;
+.option-item .form-control {
+    flex: 1;
 }
 
+.option-list {
+    margin-bottom: 10px;
+}
+
+/* ========================================================================== */
+/* 5. CONFIGURAÇÕES */
+/* ========================================================================== */
+
+.horario-dia {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
