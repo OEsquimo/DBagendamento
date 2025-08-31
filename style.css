@@ -1,38 +1,211 @@
-/* Estilos Gerais */
+/*
+ * Arquivo: style.css
+ * Descrição: Estilos para o sistema de agendamento do cliente.
+ * Versão: 9.1 (Barra de progresso e botões fixos)
+ */
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    background-color: #f4f4f9;
     margin: 0;
     padding: 0;
-    color: #333;
+    -webkit-tap-highlight-color: transparent; /* Remove o fundo azul no clique */
+}
+
+.hidden {
+    display: none;
 }
 
 .container {
-    max-width: 800px;
-    margin: 20px auto;
     padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
     background-color: #fff;
-    border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    min-height: calc(100vh - 120px); /* Ajusta para os cabeçalhos e rodapés fixos */
+}
+
+/* ========================================================================== */
+/* 1. LAYOUT FIXO */
+/* ========================================================================== */
+
+.header-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 10px 0;
+}
+
+.progress-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.form-navigation-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .form-navigation-bottom {
+        padding: 10px;
+    }
+}
+
+/* ========================================================================== */
+/* 2. BARRA DE PROGRESSO */
+/* ========================================================================== */
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    text-align: center;
+    color: #bbb;
+    font-size: 12px;
+}
+
+.progress-step.active .step-number {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.progress-step.active .step-text {
+    color: #007bff;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: bold;
+}
+
+.step-text {
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.progress-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: #e9ecef;
+    top: 15px;
+    left: 50%;
+    z-index: -1;
+}
+
+.progress-step.active:not(:last-child)::after {
+    background: #007bff;
+}
+
+/* ========================================================================== */
+/* 3. SEÇÕES E CARDS */
+/* ========================================================================== */
+
+section {
+    padding-top: 80px; /* Para não ficar atrás do header fixo */
+    padding-bottom: 70px; /* Para não ficar atrás do footer fixo */
 }
 
 h2 {
-    color: #0056b3;
+    color: #333;
     text-align: center;
     margin-bottom: 20px;
 }
 
-.hidden {
-    display: none !important;
+.service-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+    transition: box-shadow 0.3s;
+    text-align: center;
+}
+
+.service-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.service-card.selected {
+    border-color: #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.total-summary-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-top: 1px solid #eee;
+    margin-top: 20px;
+}
+
+.total-label {
+    font-weight: bold;
+    color: #333;
+}
+
+/* ========================================================================== */
+/* 4. FORMULÁRIOS E BOTÕES */
+/* ========================================================================== */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
 }
 
 .btn {
     padding: 10px 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s;
+    width: 48%; /* Para alinhar os botões lado a lado */
 }
 
 .btn-primary {
@@ -53,215 +226,44 @@ h2 {
     background-color: #5a6268;
 }
 
+.btn-select-service {
+    width: 100%;
+}
+
 .btn-success {
     background-color: #28a745;
     color: #fff;
+    text-decoration: none;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
 }
 
 .btn-success:hover {
     background-color: #218838;
 }
 
-.btn-danger {
-    background-color: #dc3545;
-    color: #fff;
-}
+/* ========================================================================== */
+/* 5. SELEÇÃO DE HORÁRIOS */
+/* ========================================================================== */
 
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-.mt-3 {
-    margin-top: 1rem;
-}
-
-/* Header */
-header {
-    text-align: center;
-    padding: 20px;
-    background-color: #fff;
-    border-bottom: 1px solid #ccc;
-}
-
-.header-text {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #333;
-}
-
-/* Barra de Progresso */
-.progress-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    position: relative;
-}
-
-.progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background-color: #e0e0e0;
-    z-index: 0;
-}
-
-.progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-    color: #888;
-    transition: color 0.3s ease;
-}
-
-.progress-step.active {
-    color: #007bff;
-}
-
-.progress-step .step-number {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: #e0e0e0;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    margin-bottom: 5px;
-    transition: background-color 0.3s ease;
-}
-
-.progress-step.active .step-number {
-    background-color: #007bff;
-}
-
-.progress-step .step-text {
-    font-size: 12px;
-    text-align: center;
-}
-
-/* Estilos de Cartões de Serviço */
-.service-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.service-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.service-card.selected {
-    border-color: #007bff;
-    background-color: #e7f0ff;
-}
-
-/* Estilos de Formulário */
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
-}
-
-.form-control:invalid:not(:placeholder-shown) {
-    border-color: #dc3545;
-}
-
-.form-control:valid:not(:placeholder-shown) {
-    border-color: #28a745;
-}
-
-.form-navigation {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-/* Detalhes do Serviço */
-.service-form-group {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.service-form-group h3 {
-    margin-top: 0;
-    color: #333;
-}
-
-.service-price {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #007bff;
-    text-align: right;
-    margin-top: 10px;
-}
-
-.total-summary-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.5em;
-    font-weight: bold;
-    padding: 15px;
-    border-top: 2px solid #ccc;
-    margin-top: 20px;
-}
-
-.total-summary-container .total-label {
-    color: #333;
-}
-
-#orcamentoTotal {
-    color: #007bff;
-}
-
-/* Agendamento */
 .time-slots-container {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
 }
 
 .time-slot {
     padding: 10px 15px;
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
+    background-color: #e9ecef;
 }
 
 .time-slot:hover {
-    background-color: #e0e0e0;
+    background-color: #dee2e6;
 }
 
 .time-slot.selected {
@@ -270,120 +272,20 @@ header {
     border-color: #007bff;
 }
 
-/* Confirmação */
+/* ========================================================================== */
+/* 6. MENSAGEM DE CONFIRMAÇÃO */
+/* ========================================================================== */
+
 #confirmation {
     text-align: center;
 }
 
-#confirmation h2 {
-    color: #28a745;
+#confirmation p {
+    margin-bottom: 10px;
+    font-size: 1.1em;
 }
 
-.new-booking-btn {
+#whatsappLink {
     margin-top: 20px;
 }
 
-/* Estilos do Admin */
-.admin-login {
-    text-align: center;
-}
-.admin-login .form-group {
-    max-width: 400px;
-    margin: 0 auto 15px auto;
-}
-.card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-.card-body {
-    padding: 20px;
-}
-.booking-card.booking-concluido {
-    border-left: 5px solid #28a745;
-}
-.booking-card.booking-cancelado {
-    border-left: 5px solid #dc3545;
-}
-.badge-concluido {
-    background-color: #28a745;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-}
-.badge-cancelado {
-    background-color: #dc3545;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-}
-.badge-pendente {
-    background-color: #ffc107;
-    color: #333;
-    padding: 5px 10px;
-    border-radius: 4px;
-}
-
-.additional-field {
-    border: 1px dashed #ccc;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-}
-.additional-field .form-group {
-    margin-bottom: 10px;
-}
-.option-list {
-    margin-left: 10px;
-    border-left: 2px solid #eee;
-    padding-left: 10px;
-}
-.option-item {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 5px;
-}
-.option-item input {
-    flex-grow: 1;
-}
-.remove-option-btn {
-    flex-shrink: 0;
-}
-
-/* Novos estilos para abas */
-.tab-navigation {
-    display: flex;
-    overflow-x: auto; /* Habilita a rolagem horizontal */
-    white-space: nowrap; /* Impede que os botões quebrem a linha */
-    -webkit-overflow-scrolling: touch; /* Melhora a rolagem em dispositivos iOS */
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-.tab-btn {
-    flex-shrink: 0; /* Impede que os botões encolham */
-    padding: 15px 10px;
-    border: none;
-    background-color: #f8f9fa;
-    color: #6c757d;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    transition: background-color 0.3s, color 0.3s;
-    border-bottom: 2px solid transparent;
-}
-
-.tab-btn.active {
-    background-color: #fff;
-    color: #007bff;
-    border-bottom: 2px solid #007bff;
-}
-
-.tab-btn:hover {
-    background-color: #e9ecef;
-}
-
-.tab-pane {
-    padding-top: 20px;
-}
