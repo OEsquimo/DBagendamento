@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 8.0 (Com navegação por abas e novo tipo de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -28,44 +28,52 @@ const database = getDatabase(app);
 // Elementos do DOM
 const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
-const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
+const dynamicContentContainer = document.getElementById('dynamicContentContainer');
+const addBlockSelect = document.getElementById('addBlockSelect');
+const addBlockBtn = document.getElementById('addBlockBtn');
 const servicosList = document.getElementById('servicosList');
 const agendamentosList = document.getElementById('agendamentosList');
+const promocaoForm = document.getElementById('promocaoForm');
+const promocoesList = document.getElementById('promocoesList');
+const promocaoServicoSelect = document.getElementById('promocaoServico');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
+const whatsappTemplateInput = document.getElementById('whatsappTemplate');
 const horariosContainer = document.getElementById('horariosContainer');
-const addFieldBtn = document.getElementById('addFieldBtn');
-const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
+const formasPagamentoContainer = document.getElementById('formasPagamentoContainer');
+const addPagamentoBtn = document.getElementById('addPagamentoBtn');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabPanes = document.querySelectorAll('.tab-pane');
 
 const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+let servicosGlobais = {};
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadServices();
+    loadAllData();
+    setupTabNavigation();
+    setupServicoForm();
+    setupConfigForm();
+    setupPromocaoForm();
+});
+
+async function loadAllData() {
+    await loadServices();
     loadBookings();
     loadConfig();
-    setupConfigForm();
-    setupServicoForm();
-    setupTabNavigation(); // Nova função para navegação por abas
-});
+    loadPromotions();
+}
 
 function setupTabNavigation() {
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove a classe 'active' de todos os botões e 'tab-pane'
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabPanes.forEach(pane => pane.classList.add('hidden'));
-
-            // Adiciona a classe 'active' ao botão clicado
             button.classList.add('active');
-
-            // Exibe o painel de conteúdo correspondente
             const targetId = button.dataset.tab;
             document.getElementById(targetId).classList.remove('hidden');
         });
@@ -74,7 +82,14 @@ function setupTabNavigation() {
 
 function setupServicoForm() {
     servicoForm.addEventListener('submit', handleServicoFormSubmit);
-    addFieldBtn.addEventListener('click', () => addAdditionalFieldForm());
+    addBlockBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const blockType = addBlockSelect.value;
+        if (blockType) {
+            addDynamicBlock(blockType);
+            addBlockSelect.value = '';
+        }
+    });
 }
 
 function setupConfigForm() {
@@ -103,88 +118,124 @@ function setupConfigForm() {
         horariosContainer.appendChild(div);
     });
 
+    addPagamentoBtn.addEventListener('click', addPagamentoField);
     configForm.addEventListener('submit', handleConfigFormSubmit);
+}
+
+function setupPromocaoForm() {
+    promocaoForm.addEventListener('submit', handlePromocaoFormSubmit);
 }
 
 // ==========================================================================
 // 3. GERENCIAMENTO DE SERVIÇOS (CRUD)
 // ==========================================================================
 
-function addAdditionalFieldForm(fieldData = {}) {
-    const fieldHtml = `
-        <div class="additional-field" data-type="${fieldData.tipo || 'select'}">
+function addDynamicBlock(blockType, blockData = {}) {
+    const blockElement = document.createElement('div');
+    blockElement.className = 'dynamic-content-block';
+    blockElement.dataset.type = blockType;
+
+    let html = '';
+    if (blockType === 'titulo') {
+        html = `
+            <input type="text" class="form-control block-input" placeholder="Título" value="${blockData.conteudo || ''}" required>
+        `;
+    } else if (blockType === 'paragrafo') {
+        html = `
+            <textarea class="form-control block-input" placeholder="Parágrafo">${blockData.conteudo || ''}</textarea>
+        `;
+    } else if (blockType === 'imagem') {
+        html = `
+            <input type="text" class="form-control block-input" placeholder="Nome da imagem (ex: imagem.jpg)" value="${blockData.conteudo || ''}" required>
+            <small class="form-text text-muted">A imagem deve estar na pasta "imagens/".</small>
+        `;
+    } else if (blockType === 'campo') {
+        const campo = blockData.conteudo || {};
+        html = `
             <div class="form-group">
                 <label>Nome do Campo</label>
-                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" value="${fieldData.nome || ''}" required>
+                <input type="text" class="form-control campo-nome" placeholder="Ex: Capacidade de BTUs" value="${campo.nome || ''}" required>
             </div>
             <div class="form-group">
                 <label>Tipo do Campo</label>
-                <select class="form-control field-type">
-                    <option value="select" ${fieldData.tipo === 'select' ? 'selected' : ''}>Lista de Opções (select)</option>
-                    <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
-                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
-                    <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
+                <select class="form-control campo-tipo">
+                    <option value="select" ${campo.tipo === 'select' ? 'selected' : ''}>Lista de Opções (select)</option>
+                    <option value="text" ${campo.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
+                    <option value="number" ${campo.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
+                    <option value="textarea" ${campo.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
                 </select>
             </div>
-            <div class="options-container">
-                ${fieldData.tipo === 'select' || !fieldData.tipo ? generateOptionsHTML(fieldData.opcoes) : ''}
+            <div class="campo-options-container">
+                ${campo.tipo === 'select' || !campo.tipo ? generateCampoOptionsHTML(campo.opcoes) : ''}
             </div>
-            <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
+        `;
+    }
+    
+    blockElement.innerHTML = `
+        <div class="block-actions">
+            <button type="button" class="btn btn-secondary btn-sm block-up-btn">▲</button>
+            <button type="button" class="btn btn-secondary btn-sm block-down-btn">▼</button>
+            <button type="button" class="btn btn-danger btn-sm block-remove-btn">x</button>
         </div>
+        ${html}
     `;
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = fieldHtml;
-    const fieldElement = tempDiv.firstElementChild;
-    additionalFieldsContainer.appendChild(fieldElement);
+    dynamicContentContainer.appendChild(blockElement);
 
-    const fieldTypeSelect = fieldElement.querySelector('.field-type');
-    const optionsContainer = fieldElement.querySelector('.options-container');
-
-    fieldTypeSelect.addEventListener('change', (e) => {
-        const selectedType = e.target.value;
-        fieldElement.dataset.type = selectedType;
-        if (selectedType === 'select') {
-            optionsContainer.innerHTML = generateOptionsHTML();
-            optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
-            optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
-        } else {
-            optionsContainer.innerHTML = '';
+    if (blockType === 'campo') {
+        const campoTipoSelect = blockElement.querySelector('.campo-tipo');
+        campoTipoSelect.addEventListener('change', (e) => {
+            const optionsContainer = blockElement.querySelector('.campo-options-container');
+            if (e.target.value === 'select') {
+                optionsContainer.innerHTML = generateCampoOptionsHTML();
+                optionsContainer.querySelector('.add-option-btn').addEventListener('click', addCampoOption);
+            } else {
+                optionsContainer.innerHTML = '';
+            }
+        });
+        const addOptionBtn = blockElement.querySelector('.add-option-btn');
+        if (addOptionBtn) {
+            addOptionBtn.addEventListener('click', addCampoOption);
         }
-    });
-
-    if (fieldElement.dataset.type === 'select') {
-        optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
-        optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
     }
-    fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
+    
+    blockElement.querySelector('.block-remove-btn').addEventListener('click', () => blockElement.remove());
+    blockElement.querySelector('.block-up-btn').addEventListener('click', () => moveBlock(blockElement, -1));
+    blockElement.querySelector('.block-down-btn').addEventListener('click', () => moveBlock(blockElement, 1));
 }
 
-function generateOptionsHTML(opcoes = ['']) {
+function generateCampoOptionsHTML(opcoes = []) {
+    let optionsHtml = opcoes.length > 0 ? opcoes.map(op => `
+        <div class="campo-option-item">
+            <input type="text" class="form-control option-value" placeholder="Nome da opção" value="${op.valor || ''}" required>
+            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${op.precoAdicional || 0}">
+            <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+        </div>
+    `).join('') : '';
+
+    if (opcoes.length === 0) {
+        optionsHtml = `
+            <div class="campo-option-item">
+                <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+                <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+                <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+            </div>
+        `;
+    }
+
     return `
         <p>Opções:</p>
         <div class="option-list">
-            ${opcoes.map(option => {
-                const parts = option.split(', R$ ');
-                const optionValue = parts[0] || '';
-                const optionPrice = parts[1] || '0.00';
-                return `
-                    <div class="option-item">
-                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
-                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
-                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-                    </div>
-                `;
-            }).join('')}
+            ${optionsHtml}
         </div>
         <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
     `;
 }
 
-function addOptionForm(e) {
-    const optionList = e.target.closest('.options-container').querySelector('.option-list');
+function addCampoOption(e) {
+    const optionList = e.target.closest('.campo-options-container').querySelector('.option-list');
     const optionHtml = `
-        <div class="option-item mt-2">
+        <div class="campo-option-item">
             <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
             <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
             <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
@@ -194,53 +245,53 @@ function addOptionForm(e) {
     tempDiv.innerHTML = optionHtml;
     const newOption = tempDiv.firstElementChild;
     optionList.appendChild(newOption);
-    newOption.querySelector('.remove-option-btn').addEventListener('click', removeOptionForm);
+    newOption.querySelector('.remove-option-btn').addEventListener('click', (e) => e.target.closest('.campo-option-item').remove());
 }
 
-function removeOptionForm(e) {
-    e.target.closest('.option-item').remove();
-}
-
-function removeAdditionalFieldForm(e) {
-    e.target.closest('.additional-field').remove();
+function moveBlock(block, direction) {
+    const parent = block.parentNode;
+    if (direction === -1 && block.previousElementSibling) {
+        parent.insertBefore(block, block.previousElementSibling);
+    } else if (direction === 1 && block.nextElementSibling) {
+        parent.insertBefore(block.nextElementSibling, block);
+    }
 }
 
 function handleServicoFormSubmit(e) {
     e.preventDefault();
 
     const nome = servicoNomeInput.value;
-    const descricao = servicoDescricaoInput.value;
     const precoBase = parseFloat(servicoPrecoInput.value) || 0;
     const servicoKey = servicoForm.dataset.key;
     
-    const camposAdicionais = [];
-    document.querySelectorAll('.additional-field').forEach(fieldElement => {
-        const fieldName = fieldElement.querySelector('.field-name').value;
-        const fieldType = fieldElement.querySelector('.field-type').value;
-        
-        const campoData = {
-            nome: fieldName,
-            tipo: fieldType
-        };
+    const conteudoDinamico = [];
+    document.querySelectorAll('#dynamicContentContainer .dynamic-content-block').forEach(blockElement => {
+        const blockType = blockElement.dataset.type;
+        const blockData = { tipo: blockType };
 
-        if (fieldType === 'select') {
-            const opcoes = [];
-            fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
-                const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
-            });
-            campoData.opcoes = opcoes;
+        if (blockType === 'titulo' || blockType === 'paragrafo' || blockType === 'imagem') {
+            blockData.conteudo = blockElement.querySelector('.block-input').value;
+        } else if (blockType === 'campo') {
+            const campo = {};
+            campo.nome = blockElement.querySelector('.campo-nome').value;
+            campo.tipo = blockElement.querySelector('.campo-tipo').value;
+            if (campo.tipo === 'select') {
+                campo.opcoes = [];
+                blockElement.querySelectorAll('.campo-option-item').forEach(optionItem => {
+                    const valor = optionItem.querySelector('.option-value').value;
+                    const precoAdicional = parseFloat(optionItem.querySelector('.option-price').value) || 0;
+                    campo.opcoes.push({ valor, precoAdicional });
+                });
+            }
+            blockData.conteudo = campo;
         }
-
-        camposAdicionais.push(campoData);
+        conteudoDinamico.push(blockData);
     });
 
     const servico = {
         nome,
-        descricao,
         precoBase,
-        camposAdicionais
+        conteudoDinamico
     };
 
     const servicosRef = ref(database, `servicos/${servicoKey || ''}`);
@@ -271,19 +322,24 @@ function handleServicoFormSubmit(e) {
 function resetServicoForm() {
     servicoForm.reset();
     servicoForm.removeAttribute('data-key');
-    additionalFieldsContainer.innerHTML = '';
+    dynamicContentContainer.innerHTML = '';
     servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
 }
 
-function loadServices() {
+async function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
         servicosList.innerHTML = '';
+        promocaoServicoSelect.innerHTML = '<option value="">Selecione um serviço</option>';
         if (snapshot.exists()) {
-            const servicos = snapshot.val();
-            for (const key in servicos) {
-                const servico = servicos[key];
+            servicosGlobais = snapshot.val();
+            for (const key in servicosGlobais) {
+                const servico = servicosGlobais[key];
                 createServicoCard(servico, key);
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = servico.nome;
+                promocaoServicoSelect.appendChild(option);
             }
         } else {
             servicosList.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
@@ -295,26 +351,29 @@ function createServicoCard(servico, key) {
     const card = document.createElement('div');
     card.className = 'card mb-3';
     
-    let camposAdicionaisHtml = '';
-    if (servico.camposAdicionais) {
-        camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
-            let opcoesHtml = '';
-            if (campo.tipo === 'select' && campo.opcoes) {
-                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
-            } else {
-                opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
+    let conteudoHtml = '';
+    if (servico.conteudoDinamico) {
+        conteudoHtml = servico.conteudoDinamico.map(block => {
+            if (block.tipo === 'titulo') return `<h4>${block.conteudo}</h4>`;
+            if (block.tipo === 'paragrafo') return `<p>${block.conteudo}</p>`;
+            if (block.tipo === 'imagem') return `<p>Imagem: ${block.conteudo}</p>`;
+            if (block.tipo === 'campo') {
+                let optionsHtml = '';
+                if (block.conteudo.opcoes) {
+                    optionsHtml = block.conteudo.opcoes.map(op => `<li>${op.valor} (R$ ${op.precoAdicional.toFixed(2)})</li>`).join('');
+                }
+                return `<p><strong>Campo ${block.conteudo.nome}</strong> (${block.conteudo.tipo})</p><ul>${optionsHtml}</ul>`;
             }
-            return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
+            return '';
         }).join('');
     }
 
     card.innerHTML = `
         <div class="card-body">
             <h5 class="card-title">${servico.nome}</h5>
-            <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
             <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
-            <h6>Campos Adicionais:</h6>
-            <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
+            <h6>Conteúdo da Página:</h6>
+            ${conteudoHtml || '<p>Nenhum conteúdo.</p>'}
             <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
@@ -330,16 +389,16 @@ function editService(e) {
     get(servicoRef).then(snapshot => {
         const servicoData = snapshot.val();
         servicoNomeInput.value = servicoData.nome;
-        servicoDescricaoInput.value = servicoData.descricao;
         servicoPrecoInput.value = servicoData.precoBase || 0;
         servicoForm.dataset.key = key;
         
-        additionalFieldsContainer.innerHTML = '';
-        if (servicoData.camposAdicionais) {
-            servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
+        dynamicContentContainer.innerHTML = '';
+        if (servicoData.conteudoDinamico) {
+            servicoData.conteudoDinamico.forEach(block => {
+                addDynamicBlock(block.tipo, block);
+            });
         }
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
-        // Alternar para a aba correta
         document.querySelector('[data-tab="addServicoTab"]').click();
     });
 }
@@ -367,7 +426,6 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
-            // Inverter a ordem para mostrar os mais recentes primeiro
             const agendamentosArray = Object.entries(agendamentos).reverse();
             agendamentosArray.forEach(([key, agendamento]) => {
                 createAgendamentoCard(agendamento, key);
@@ -405,6 +463,7 @@ function createAgendamentoCard(agendamento, key) {
             <h6>Detalhes do Cliente:</h6>
             <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
             <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
+            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
@@ -449,25 +508,133 @@ function deleteBooking(key) {
 }
 
 // ==========================================================================
-// 5. GERENCIAMENTO DE CONFIGURAÇÕES
+// 5. GERENCIAMENTO DE PROMOÇÕES
 // ==========================================================================
+
+function loadPromotions() {
+    const promocoesRef = ref(database, 'promocoes');
+    onValue(promocoesRef, (snapshot) => {
+        promocoesList.innerHTML = '';
+        if (snapshot.exists()) {
+            const promocoes = snapshot.val();
+            for (const key in promocoes) {
+                const promocao = promocoes[key];
+                createPromocaoCard(promocao, key);
+            }
+        } else {
+            promocoesList.innerHTML = '<p>Nenhuma promoção cadastrada.</p>';
+        }
+    });
+}
+
+function createPromocaoCard(promocao, key) {
+    const card = document.createElement('div');
+    card.className = 'card mb-3';
+    
+    const servicoNome = servicosGlobais[promocao.servicoId] ? servicosGlobais[promocao.servicoId].nome : 'Serviço excluído';
+
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">${promocao.nome}</h5>
+            <p class="card-text"><strong>Serviço:</strong> ${servicoNome}</p>
+            <p class="card-text"><strong>Desconto:</strong> ${promocao.tipoDesconto === 'percentual' ? `${promocao.valorDesconto}%` : `R$ ${promocao.valorDesconto.toFixed(2)}`}</p>
+            <p class="card-text"><strong>Válido de:</strong> ${promocao.dataInicio} até ${promocao.dataFim}</p>
+            <button class="btn btn-warning btn-sm edit-promocao-btn" data-key="${key}">Editar</button>
+            <button class="btn btn-danger btn-sm delete-promocao-btn" data-key="${key}">Excluir</button>
+        </div>
+    `;
+    promocoesList.appendChild(card);
+    card.querySelector('.edit-promocao-btn').addEventListener('click', editPromocao);
+    card.querySelector('.delete-promocao-btn').addEventListener('click', deletePromocao);
+}
+
+function handlePromocaoFormSubmit(e) {
+    e.preventDefault();
+    const promocaoKey = promocaoForm.dataset.key;
+    const promocaoData = {
+        nome: document.getElementById('promocaoNome').value,
+        servicoId: document.getElementById('promocaoServico').value,
+        dataInicio: document.getElementById('dataInicio').value,
+        dataFim: document.getElementById('dataFim').value,
+        tipoDesconto: document.getElementById('tipoDesconto').value,
+        valorDesconto: parseFloat(document.getElementById('valorDesconto').value)
+    };
+
+    const promocoesRef = ref(database, `promocoes/${promocaoKey || ''}`);
+    if (promocaoKey) {
+        set(promocoesRef, promocaoData).then(() => {
+            alert('Promoção atualizada com sucesso!');
+            promocaoForm.reset();
+            promocaoForm.removeAttribute('data-key');
+        });
+    } else {
+        push(promocoesRef, promocaoData).then(() => {
+            alert('Promoção criada com sucesso!');
+            promocaoForm.reset();
+        });
+    }
+}
+
+function editPromocao(e) {
+    const key = e.target.dataset.key;
+    const promocaoRef = ref(database, `promocoes/${key}`);
+    get(promocaoRef).then(snapshot => {
+        const promocaoData = snapshot.val();
+        document.getElementById('promocaoNome').value = promocaoData.nome;
+        document.getElementById('promocaoServico').value = promocaoData.servicoId;
+        document.getElementById('dataInicio').value = promocaoData.dataInicio;
+        document.getElementById('dataFim').value = promocaoData.dataFim;
+        document.getElementById('tipoDesconto').value = promocaoData.tipoDesconto;
+        document.getElementById('valorDesconto').value = promocaoData.valorDesconto;
+        promocaoForm.dataset.key = key;
+        document.querySelector('[data-tab="promocoesTab"]').click();
+    });
+}
+
+function deletePromocao(e) {
+    const key = e.target.dataset.key;
+    if (confirm('Tem certeza que deseja excluir esta promoção?')) {
+        const promocaoRef = ref(database, `promocoes/${key}`);
+        remove(promocaoRef).then(() => alert('Promoção excluída!'));
+    }
+}
+
+// ==========================================================================
+// 6. GERENCIAMENTO DE CONFIGURAÇÕES
+// ==========================================================================
+
+function addPagamentoField(forma = '') {
+    const item = document.createElement('div');
+    item.className = 'pagamento-item';
+    item.innerHTML = `
+        <input type="text" class="form-control pagamento-input" value="${forma}" required placeholder="Ex: Pix, Cartão de Crédito">
+        <button type="button" class="btn btn-danger btn-sm remove-pagamento-btn">Remover</button>
+    `;
+    formasPagamentoContainer.appendChild(item);
+    item.querySelector('.remove-pagamento-btn').addEventListener('click', () => item.remove());
+}
 
 function handleConfigFormSubmit(e) {
     e.preventDefault();
-    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Limpa o número
+    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, '');
+    const whatsappTemplate = whatsappTemplateInput.value;
     const horariosPorDia = {};
+    const formasPagamento = [];
+
+    document.querySelectorAll('.pagamento-input').forEach(input => {
+        if (input.value) formasPagamento.push(input.value);
+    });
 
     diasDaSemana.forEach(dia => {
         const ativo = document.getElementById(`${dia}Ativo`).checked;
         const horarioInicio = document.getElementById(`${dia}Inicio`).value;
         const horarioFim = document.getElementById(`${dia}Fim`).value;
         const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
-
         horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
     });
 
     const configRef = ref(database, 'configuracoes');
-    set(configRef, { whatsappNumber, horariosPorDia })
+    set(configRef, { whatsappNumber, whatsappTemplate, horariosPorDia, formasPagamento })
         .then(() => alert('Configurações salvas com sucesso!'))
         .catch(error => {
             console.error("Erro ao salvar configurações:", error);
@@ -481,6 +648,11 @@ function loadConfig() {
         if (snapshot.exists()) {
             const config = snapshot.val();
             whatsappNumberInput.value = config.whatsappNumber;
+            whatsappTemplateInput.value = config.whatsappTemplate || '';
+            
+            formasPagamentoContainer.innerHTML = '';
+            (config.formasPagamento || []).forEach(forma => addPagamentoField(forma));
+
             diasDaSemana.forEach(dia => {
                 const diaConfig = config.horariosPorDia[dia];
                 if (diaConfig) {
@@ -495,7 +667,7 @@ function loadConfig() {
 }
 
 // ==========================================================================
-// 6. FUNÇÕES AUXILIARES
+// 7. FUNÇÕES AUXILIARES
 // ==========================================================================
 
 function capitalize(s) {
