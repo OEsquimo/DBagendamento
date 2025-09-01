@@ -3,130 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - O Esquimó</title>
+    <title>Painel Administrativo - O Esquimó</title>
     <link rel="stylesheet" href="admin-style.css">
 </head>
 <body>
 
-    <div class="container">
+    <div id="login-container">
         <h2>Painel Administrativo</h2>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Usuário</label>
+                <input type="text" id="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+        </form>
+    </div>
+
+    <div id="admin-panel" class="hidden">
+        <div class="header">
+            <h1>Painel Administrativo</h1>
+            <button id="logout-btn" class="btn btn-secondary">Sair</button>
+        </div>
 
         <div class="tab-navigation">
-            <button class="tab-btn active" data-tab="addServicoTab">Cadastrar Serviço</button>
-            <button class="tab-btn" data-tab="listaServicosTab">Serviços Cadastrados</button>
-            <button class="tab-btn" data-tab="agendamentosTab">Agendamentos</button>
-            <button class="tab-btn" data-tab="promocoesTab">Promoções</button>
-            <button class="tab-btn" data-tab="configuracoesTab">Configurações</button>
+            <button class="tab-button active" data-tab="agendamentos">Agendamentos</button>
+            <button class="tab-button" data-tab="servicos">Serviços</button>
+            <button class="tab-button" data-tab="promocoes">Promoções</button>
+            <button class="tab-button" data-tab="configuracoes">Configurações</button>
         </div>
-        
-        <div class="tab-content">
-            <section id="addServicoTab" class="tab-pane active">
-                <h3>Cadastrar Novo Serviço</h3>
-                <form id="servicoForm">
-                    <div class="form-group">
-                        <label for="servicoNome">Nome do Serviço</label>
-                        <input type="text" id="servicoNome" class="form-control" required placeholder="Instalação de ar condicionado">
-                    </div>
-                    <div class="form-group">
-                        <label for="servicoPreco">Preço Base (se houver)</label>
-                        <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00" placeholder="0.00">
-                    </div>
-                    
-                    <h4>Conteúdo da Página do Serviço</h4>
-                    <div id="dynamicContentContainer">
-                        </div>
-                    
-                    <div class="block-controls">
-                        <label>Adicionar Novo Bloco:</label>
-                        <select id="addBlockSelect" class="form-control">
-                            <option value="">Selecione o tipo de bloco</option>
-                            <option value="titulo">Título</option>
-                            <option value="paragrafo">Parágrafo</option>
-                            <option value="imagem">Imagem</option>
-                            <option value="campo">Campo de Formulário</option>
-                        </select>
-                        <button type="button" id="addBlockBtn" class="btn btn-secondary">Adicionar Bloco</button>
-                    </div>
 
-                    <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
-                </form>
-            </section>
-            
-            <section id="listaServicosTab" class="tab-pane hidden">
-                <h3>Serviços Cadastrados</h3>
-                <div id="servicosList">
+        <div id="agendamentos" class="tab-content active">
+            <h2>Agendamentos</h2>
+            <div class="filter-controls">
+                <label for="status-filter">Filtrar por Status:</label>
+                <select id="status-filter">
+                    <option value="Todos">Todos</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Confirmado">Confirmado</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>
+                <input type="date" id="date-filter">
+            </div>
+            <div id="agendamentos-list">
+                <p>Carregando agendamentos...</p>
+            </div>
+        </div>
+
+        <div id="servicos" class="tab-content hidden">
+            <h2>Serviços</h2>
+            <button id="add-service-btn" class="btn btn-primary">Adicionar Novo Serviço</button>
+            <div id="servicos-list">
+                <p>Carregando serviços...</p>
+            </div>
+        </div>
+
+        <div id="promocoes" class="tab-content hidden">
+            <h2>Gerenciar Promoções</h2>
+            <button id="add-promocao-btn" class="btn btn-primary">Adicionar Nova Promoção</button>
+            <div id="promocoes-list">
+                <p>Carregando promoções...</p>
+            </div>
+        </div>
+
+        <div id="configuracoes" class="tab-content hidden">
+            <h2>Configurações do Sistema</h2>
+            <div class="config-section">
+                <h3>Dados de Contato e Mensagem</h3>
+                <div class="form-group">
+                    <label for="whatsappNumber">Número de WhatsApp (ex: 5511999998888)</label>
+                    <input type="text" id="whatsappNumber" class="form-control">
                 </div>
-            </section>
-            
-            <section id="agendamentosTab" class="tab-pane hidden">
-                <h3>Agendamentos</h3>
-                <div id="agendamentosList">
+                <div class="form-group">
+                    <label for="whatsappTemplate">Modelo da Mensagem do WhatsApp</label>
+                    <textarea id="whatsappTemplate" class="form-control" rows="10"></textarea>
+                    <small>Use {{nome_cliente}}, {{telefone_cliente}}, {{endereco_cliente}}, {{data_agendamento}}, {{hora_agendamento}}, {{servicos_selecionados}}, {{orcamento_total}}, {{forma_pagamento}}, {{observacoes_cliente}}.</small>
                 </div>
-            </section>
-            
-            <section id="promocoesTab" class="tab-pane hidden">
-                <h3>Gerenciar Promoções</h3>
-                <form id="promocaoForm">
-                    <div class="form-group">
-                        <label for="promocaoNome">Nome da Promoção</label>
-                        <input type="text" id="promocaoNome" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="promocaoServico">Serviço Vinculado</label>
-                        <select id="promocaoServico" class="form-control" required>
-                            <option value="">Selecione um serviço</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="dataInicio">Data de Início</label>
-                        <input type="date" id="dataInicio" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="dataFim">Data de Término</label>
-                        <input type="date" id="dataFim" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="tipoDesconto">Tipo de Desconto</label>
-                        <select id="tipoDesconto" class="form-control" required>
-                            <option value="percentual">Percentual (%)</option>
-                            <option value="fixo">Fixo (R$)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="valorDesconto">Valor do Desconto</label>
-                        <input type="number" id="valorDesconto" class="form-control" step="0.01" required>
-                    </div>
+                <button id="save-config-btn" class="btn btn-primary">Salvar Configurações</button>
+            </div>
+
+            <div class="config-section">
+                <h3>Formas de Pagamento</h3>
+                <div id="payment-options-container" class="options-container"></div>
+                <div class="form-group">
+                    <input type="text" id="new-payment-option" class="form-control" placeholder="Nova opção de pagamento">
+                    <button id="add-payment-btn" class="btn btn-secondary">Adicionar</button>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3>Horários de Atendimento</h3>
+                <div id="horarios-container"></div>
+                <div class="form-group">
+                    <button id="save-horarios-btn" class="btn btn-primary">Salvar Horários</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="service-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="modal-title">Adicionar Serviço</h2>
+            <form id="service-form">
+                <input type="hidden" id="service-key">
+                <div class="form-group">
+                    <label for="service-name">Nome do Serviço</label>
+                    <input type="text" id="service-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="service-description">Descrição</label>
+                    <textarea id="service-description" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="service-base-price">Preço Base (R$)</label>
+                    <input type="number" id="service-base-price" class="form-control" step="0.01" required>
+                </div>
+                
+                <h3>Conteúdo da Página do Serviço (Editor de Blocos)</h3>
+                <div id="block-editor-container"></div>
+                <div class="form-group">
+                    <select id="block-type-select" class="form-control">
+                        <option value="titulo">Título</option>
+                        <option value="paragrafo">Parágrafo</option>
+                        <option value="imagem">Imagem</option>
+                        <option value="campo">Campo de Formulário</option>
+                    </select>
+                    <button type="button" id="add-block-btn" class="btn btn-secondary">Adicionar Bloco</button>
+                </div>
+
+                <div class="form-navigation-bottom">
+                    <button type="submit" class="btn btn-primary">Salvar Serviço</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="promocao-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="promocao-modal-title">Adicionar Promoção</h2>
+            <form id="promocao-form">
+                <input type="hidden" id="promocao-key">
+                <div class="form-group">
+                    <label for="promocao-nome">Nome da Promoção</label>
+                    <input type="text" id="promocao-nome" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="promocao-servico">Serviço</label>
+                    <select id="promocao-servico" class="form-control" required>
+                        <option value="">Selecione um serviço...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="promocao-tipo">Tipo de Desconto</label>
+                    <select id="promocao-tipo" class="form-control" required>
+                        <option value="fixo">Valor Fixo (R$)</option>
+                        <option value="percentual">Percentual (%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="promocao-valor">Valor do Desconto</label>
+                    <input type="number" id="promocao-valor" class="form-control" required min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="promocao-data-inicio">Data de Início</label>
+                    <input type="date" id="promocao-data-inicio" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="promocao-data-fim">Data de Fim</label>
+                    <input type="date" id="promocao-data-fim" class="form-control" required>
+                </div>
+                <div class="form-navigation-bottom">
                     <button type="submit" class="btn btn-primary">Salvar Promoção</button>
-                </form>
-                <hr>
-                <div id="promocoesList"></div>
-            </section>
-
-            <section id="configuracoesTab" class="tab-pane hidden">
-                <h3>Configurações Gerais</h3>
-                <form id="configForm">
-                    <div class="form-group">
-                        <label for="whatsappNumber">Número do WhatsApp do Administrador</label>
-                        <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
-                    </div>
-                    
-                    <h4>Formas de Pagamento</h4>
-                    <div id="formasPagamentoContainer">
-                        </div>
-                    <button type="button" class="btn btn-sm btn-light mt-2" id="addPagamentoBtn">Adicionar Forma de Pagamento</button>
-
-                    <h4>Modelo de Mensagem do WhatsApp</h4>
-                    <div class="form-group">
-                        <textarea id="whatsappTemplate" class="form-control" rows="10" placeholder="Olá, {{nome_cliente}}! Seu agendamento foi confirmado..."></textarea>
-                        <small class="form-text text-muted">Use variáveis como: {{nome_cliente}}, {{telefone_cliente}}, {{data_agendamento}}, {{hora_agendamento}}, {{servicos_selecionados}}, {{orcamento_total}}, {{forma_pagamento}}, {{observacoes_cliente}}.</small>
-                    </div>
-                    
-                    <h4>Horários de Atendimento por Dia</h4>
-                    <div id="horariosContainer">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Salvar Configurações</button>
-                </form>
-            </section>
+                </div>
+            </form>
         </div>
     </div>
 
