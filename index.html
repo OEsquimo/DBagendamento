@@ -24,6 +24,10 @@
             </div>
             <div class="progress-step" data-step="4">
                 <span class="step-number">4</span>
+                <span class="step-text">Pagamento</span>
+            </div>
+            <div class="progress-step" data-step="5">
+                <span class="step-number">5</span>
                 <span class="step-text">Agendar</span>
             </div>
         </div>
@@ -32,6 +36,7 @@
     <div class="container">
         
         <section id="servicos" class="active-section">
+            <div id="promocoesContainer"></div>
             <h2>Escolha um ou mais serviços</h2>
             <div id="servicosContainer">
             </div>
@@ -83,6 +88,17 @@
             </div>
         </section>
 
+        <section id="pagamentoForm" class="hidden">
+            <h2>Forma de Pagamento</h2>
+            <div id="pagamentoContainer" class="pagamento-container">
+                <p>Carregando opções...</p>
+            </div>
+            <div class="form-navigation-bottom">
+                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                <button type="button" class="btn btn-primary" id="nextStep4">Próximo</button>
+            </div>
+        </section>
+
         <section id="agendamento" class="hidden">
             <h2>Agendar</h2>
             <form id="agendamentoForm">
@@ -98,7 +114,7 @@
                 </div>
             </form>
             <div class="form-navigation-bottom">
-                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                <button type="button" class="btn btn-secondary" id="backButton4">Voltar</button>
                 <button type="submit" class="btn btn-primary" form="agendamentoForm">Confirmar Agendamento</button>
             </div>
         </section>
