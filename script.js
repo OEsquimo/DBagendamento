@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 12.0 (Banner de promoção clicável)
+ * Versão: 13.0 (Correção do objeto Object em campos dinâmicos)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -112,21 +112,18 @@ function renderPromotions() {
         const dataFim = new Date(promo.dataFim + 'T23:59:59');
 
         if (hoje >= dataInicio && hoje <= dataFim) {
-            // NOVO: Adiciona um wrapper para o banner de promoção
             const promoWrapper = document.createElement('div');
             promoWrapper.className = 'promotions-banner';
-            // NOVO: Adiciona o ID do serviço para identificar o link
             promoWrapper.dataset.servicoId = promo.servicoId;
             promoWrapper.innerHTML = `🔥 **PROMOÇÃO!** ${promo.nome} - Válido até ${formatDate(promo.dataFim)} 🔥`;
             
-            // NOVO: Adiciona o evento de clique ao banner de promoção
             promoWrapper.addEventListener('click', () => {
                 const serviceKey = promoWrapper.dataset.servicoId;
                 if (servicosGlobais[serviceKey]) {
                     const selectedService = { ...servicosGlobais[serviceKey], key: serviceKey };
-                    servicosSelecionados = [selectedService]; // Seleciona apenas o serviço da promoção
+                    servicosSelecionados = [selectedService];
                     updateSelectedServicesCount();
-                    nextStep1Btn.click(); // Simula o clique no botão "Próximo"
+                    nextStep1Btn.click();
                 } else {
                     alert('O serviço desta promoção não está mais disponível.');
                 }
@@ -225,7 +222,6 @@ function renderServiceBlocks() {
         const serviceBlockContainer = document.createElement('div');
         serviceBlockContainer.className = 'service-block-container';
         
-        // CORREÇÃO ANTERIOR: Adiciona o nome e o preço base do serviço imediatamente
         serviceBlockContainer.innerHTML = `
             <h3>${service.nome}</h3>
             <p>Valor Base: R$ ${service.precoBase.toFixed(2)}</p>
@@ -253,11 +249,12 @@ function renderServiceBlocks() {
                     const field = block.conteudo;
                     let inputHtml = '';
                     if (field.tipo === 'select' && field.opcoes) {
+                        // CORRIGIDO: Agora acessa corretamente o nome da opção
                         inputHtml = `
                             <label>${field.nome}</label>
                             <select class="form-control dynamic-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
                                 <option value="">Selecione...</option>
-                                ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                                ${field.opcoes.map(option => `<option value="${option.nome}">${option.nome} (R$ ${option.precoAdicional.toFixed(2)})</option>`).join('')}
                             </select>
                         `;
                     } else if (field.tipo === 'text') {
@@ -300,7 +297,6 @@ function updatePrice(e) {
     const serviceBlockContainer = e.target.closest('.service-block-container');
     const newPrice = calculatePrice(service, serviceBlockContainer);
     service.precoCalculado = newPrice;
-    serviceBlockContainer.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
     updateOrcamentoTotal();
 }
 
@@ -327,11 +323,13 @@ function calculatePrice(serviceData, container) {
     const selectElements = container.querySelectorAll('.dynamic-field-select');
     const inputElements = container.querySelectorAll('.dynamic-field-input');
     
-    // Calcula o preço a partir de selects
+    // CORRIGIDO: Agora calcula o preço a partir do nome da opção e não do objeto inteiro
     selectElements.forEach(select => {
         const selectedValue = select.value;
         const fieldData = serviceData.conteudoDinamico.find(b => b.tipo === 'campo' && b.conteudo.nome === select.dataset.fieldName);
-        const selectedOption = fieldData.conteudo.opcoes.find(o => o.valor === selectedValue);
+        
+        // Procura a opção pelo nome
+        const selectedOption = fieldData.conteudo.opcoes.find(o => o.nome === selectedValue);
         if (selectedOption) {
             preco += selectedOption.precoAdicional;
         }
