@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 13.0 (Correção do objeto Object em campos dinâmicos)
+ * Versão: 14.0 (Versão Final - Correções e Melhorias)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -114,16 +114,18 @@ function renderPromotions() {
         if (hoje >= dataInicio && hoje <= dataFim) {
             const promoWrapper = document.createElement('div');
             promoWrapper.className = 'promotions-banner';
+            // NOVO: Adiciona o ID do serviço para identificar o link
             promoWrapper.dataset.servicoId = promo.servicoId;
             promoWrapper.innerHTML = `🔥 **PROMOÇÃO!** ${promo.nome} - Válido até ${formatDate(promo.dataFim)} 🔥`;
             
+            // NOVO: Adiciona o evento de clique ao banner de promoção
             promoWrapper.addEventListener('click', () => {
                 const serviceKey = promoWrapper.dataset.servicoId;
                 if (servicosGlobais[serviceKey]) {
                     const selectedService = { ...servicosGlobais[serviceKey], key: serviceKey };
-                    servicosSelecionados = [selectedService];
+                    servicosSelecionados = [selectedService]; // Seleciona apenas o serviço da promoção
                     updateSelectedServicesCount();
-                    nextStep1Btn.click();
+                    nextStep1Btn.click(); // Simula o clique no botão "Próximo"
                 } else {
                     alert('O serviço desta promoção não está mais disponível.');
                 }
@@ -680,7 +682,8 @@ function createWhatsAppMessage(agendamento) {
 
     msg = msg.replace(/{{nome_cliente}}/g, agendamento.cliente.nome);
     msg = msg.replace(/{{telefone_cliente}}/g, agendamento.cliente.telefone);
-    msg = msg.replace(/{{endereco_cliente}}/g, agendamento.cliente.endereco);
+    // NOVO: Condição para não exibir o campo Endereço se estiver vazio
+    msg = msg.replace(/{{endereco_cliente}}/g, agendamento.cliente.endereco ? agendamento.cliente.endereco : 'Não informado');
     msg = msg.replace(/{{data_agendamento}}/g, agendamento.data);
     msg = msg.replace(/{{hora_agendamento}}/g, agendamento.hora);
     msg = msg.replace(/{{orcamento_total}}/g, `R$ ${agendamento.orcamentoTotal.toFixed(2)}`);
@@ -689,15 +692,19 @@ function createWhatsAppMessage(agendamento) {
     let servicosTexto = '';
     agendamento.servicos.forEach(servico => {
         servicosTexto += `- ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
+        // NOVO: Adiciona os campos adicionais apenas se existirem
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
                 const valor = servico.camposAdicionaisSelecionados[campo];
-                servicosTexto += `  - ${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}\n`;
+                if (valor) { // NÃO MOSTRA SE O VALOR FOR VAZIO
+                    servicosTexto += `  - ${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}\n`;
+                }
             }
         }
     });
     msg = msg.replace(/{{servicos_selecionados}}/g, servicosTexto);
 
+    // NOVO: Condição para não exibir o campo de Observações se estiver vazio
     const obsText = agendamento.observacoes ? `\n*📝 Observações:* ${agendamento.observacoes}` : '';
     msg = msg.replace(/{{observacoes_cliente}}/g, obsText);
 
