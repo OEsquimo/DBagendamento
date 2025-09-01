@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.0 (Com promoções, sistema de blocos, pagamento e template de WhatsApp)
+ * Versão: 12.0 (Banner de promoção clicável)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -48,6 +48,7 @@ const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
+const nextStep1Btn = document.getElementById('nextStep1');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
@@ -111,16 +112,35 @@ function renderPromotions() {
         const dataFim = new Date(promo.dataFim + 'T23:59:59');
 
         if (hoje >= dataInicio && hoje <= dataFim) {
-            const promoBanner = document.createElement('div');
-            promoBanner.className = 'promotions-banner';
-            promoBanner.innerHTML = `🔥 **PROMOÇÃO!** ${promo.nome} - Válido até ${formatDate(promo.dataFim)} 🔥`;
-            promocoesContainer.appendChild(promoBanner);
+            // NOVO: Adiciona um wrapper para o banner de promoção
+            const promoWrapper = document.createElement('div');
+            promoWrapper.className = 'promotions-banner';
+            // NOVO: Adiciona o ID do serviço para identificar o link
+            promoWrapper.dataset.servicoId = promo.servicoId;
+            promoWrapper.innerHTML = `🔥 **PROMOÇÃO!** ${promo.nome} - Válido até ${formatDate(promo.dataFim)} 🔥`;
+            
+            // NOVO: Adiciona o evento de clique ao banner de promoção
+            promoWrapper.addEventListener('click', () => {
+                const serviceKey = promoWrapper.dataset.servicoId;
+                if (servicosGlobais[serviceKey]) {
+                    const selectedService = { ...servicosGlobais[serviceKey], key: serviceKey };
+                    servicosSelecionados = [selectedService]; // Seleciona apenas o serviço da promoção
+                    updateSelectedServicesCount();
+                    nextStep1Btn.click(); // Simula o clique no botão "Próximo"
+                } else {
+                    alert('O serviço desta promoção não está mais disponível.');
+                }
+            });
+
+            promocoesContainer.appendChild(promoWrapper);
             promoFound = true;
         }
     }
 
     if (!promoFound) {
         promocoesContainer.style.display = 'none';
+    } else {
+         promocoesContainer.style.display = 'block';
     }
 }
 
@@ -170,11 +190,10 @@ function createServiceCard(service, key) {
         }
         
         updateSelectedServicesCount();
-        const nextButton = document.getElementById('nextStep1');
         if (servicosSelecionados.length > 0) {
-            nextButton.style.display = 'block';
+            nextStep1Btn.style.display = 'block';
         } else {
-            nextButton.style.display = 'none';
+            nextStep1Btn.style.display = 'none';
         }
     });
 
@@ -185,7 +204,7 @@ function updateSelectedServicesCount() {
     selectedServicesCount.textContent = servicosSelecionados.length;
 }
 
-document.getElementById('nextStep1').addEventListener('click', () => {
+nextStep1Btn.addEventListener('click', () => {
     if (servicosSelecionados.length > 0) {
         servicosSection.classList.add('hidden');
         servicosFormSection.classList.remove('hidden');
@@ -205,7 +224,12 @@ function renderServiceBlocks() {
     servicosSelecionados.forEach(service => {
         const serviceBlockContainer = document.createElement('div');
         serviceBlockContainer.className = 'service-block-container';
-        serviceBlockContainer.innerHTML = `<h3>${service.nome}</h3>`;
+        
+        // CORREÇÃO ANTERIOR: Adiciona o nome e o preço base do serviço imediatamente
+        serviceBlockContainer.innerHTML = `
+            <h3>${service.nome}</h3>
+            <p>Valor Base: R$ ${service.precoBase.toFixed(2)}</p>
+        `;
 
         if (service.conteudoDinamico && service.conteudoDinamico.length > 0) {
             service.conteudoDinamico.forEach(block => {
@@ -213,9 +237,9 @@ function renderServiceBlocks() {
                 blockElement.className = 'content-block';
                 
                 if (block.tipo === 'titulo') {
-                    const h3 = document.createElement('h3');
-                    h3.textContent = block.conteudo;
-                    blockElement.appendChild(h3);
+                    const h4 = document.createElement('h4');
+                    h4.textContent = block.conteudo;
+                    blockElement.appendChild(h4);
                 } else if (block.tipo === 'paragrafo') {
                     const p = document.createElement('p');
                     p.textContent = block.conteudo;
@@ -257,12 +281,6 @@ function renderServiceBlocks() {
                 serviceBlockContainer.appendChild(blockElement);
             });
         }
-
-        const priceDisplay = document.createElement('div');
-        priceDisplay.className = 'service-price';
-        priceDisplay.textContent = 'Valor: R$ 0.00';
-        serviceBlockContainer.appendChild(priceDisplay);
-
         servicosFormContainer.appendChild(serviceBlockContainer);
     });
 
