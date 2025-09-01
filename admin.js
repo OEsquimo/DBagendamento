@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 9.0 (Com desconto percentual na promoção)
+ * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -30,11 +30,10 @@ const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
 const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosList = document.getElementById('servicosList');
+const servicosList = document.getElementById('listaServicosTab');
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
-const whatsappMessageTemplate = document.getElementById('whatsappMessageTemplate');
 const horariosContainer = document.getElementById('horariosContainer');
 const addFieldBtn = document.getElementById('addFieldBtn');
 const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
@@ -53,17 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     setupConfigForm();
     setupServicoForm();
-    setupTabNavigation();
+    setupTabNavigation(); // Nova função para navegação por abas
 });
 
 function setupTabNavigation() {
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
+            // Remove a classe 'active' de todos os botões e 'tab-pane'
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabPanes.forEach(pane => pane.classList.add('hidden'));
 
+            // Adiciona a classe 'active' ao botão clicado
             button.classList.add('active');
 
+            // Exibe o painel de conteúdo correspondente
             const targetId = button.dataset.tab;
             document.getElementById(targetId).classList.remove('hidden');
         });
@@ -122,15 +124,10 @@ function addAdditionalFieldForm(fieldData = {}) {
                     <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
                     <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
                     <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
-                    <option value="date" ${fieldData.tipo === 'date' ? 'selected' : ''}>Calendário (Data)</option>
-                    <option value="image" ${fieldData.tipo === 'image' ? 'selected' : ''}>Imagens</option>
-                    <option value="title" ${fieldData.tipo === 'title' ? 'selected' : ''}>Título</option>
-                    <option value="description" ${fieldData.tipo === 'description' ? 'selected' : ''}>Descrição</option>
                 </select>
             </div>
             <div class="options-container">
                 ${fieldData.tipo === 'select' || !fieldData.tipo ? generateOptionsHTML(fieldData.opcoes) : ''}
-                ${fieldData.tipo === 'image' ? generateImageUploadHTML(fieldData.caminho) : ''}
             </div>
             <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
         </div>
@@ -147,63 +144,40 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldTypeSelect.addEventListener('change', (e) => {
         const selectedType = e.target.value;
         fieldElement.dataset.type = selectedType;
-        switch (selectedType) {
-            case 'select':
-                optionsContainer.innerHTML = generateOptionsHTML();
-                break;
-            case 'image':
-                optionsContainer.innerHTML = generateImageUploadHTML();
-                break;
-            default:
-                optionsContainer.innerHTML = '';
+        if (selectedType === 'select') {
+            optionsContainer.innerHTML = generateOptionsHTML();
+            optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+            optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
+        } else {
+            optionsContainer.innerHTML = '';
         }
-        setupOptionListeners(fieldElement);
     });
 
-    setupOptionListeners(fieldElement);
-}
-
-function setupOptionListeners(fieldElement) {
-    const addOptionBtn = fieldElement.querySelector('.add-option-btn');
-    if (addOptionBtn) {
-        addOptionBtn.addEventListener('click', addOptionForm);
+    if (fieldElement.dataset.type === 'select') {
+        optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+        optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
     }
-    fieldElement.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
-function generateOptionsHTML(opcoes = []) {
-    let optionsHtml = opcoes.length > 0 ? opcoes.map(option => {
-        const parts = option.split(', R$ ');
-        const optionValue = parts[0] || '';
-        const optionPrice = parts[1] || '0.00';
-        return `
-            <div class="option-item">
-                <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
-                <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
-                <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-            </div>
-        `;
-    }).join('') : `
-        <div class="option-item">
-            <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
-            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
-            <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-        </div>
-    `;
+function generateOptionsHTML(opcoes = ['']) {
     return `
         <p>Opções:</p>
-        <div class="option-list">${optionsHtml}</div>
-        <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
-    `;
-}
-
-function generateImageUploadHTML(caminho = '') {
-    return `
-        <div class="form-group">
-            <label>Caminho da Imagem (Ex: imagem/img/foto.jpg)</label>
-            <input type="text" class="form-control field-image-path" placeholder="Caminho relativo à pasta raiz" value="${caminho}">
+        <div class="option-list">
+            ${opcoes.map(option => {
+                const parts = option.split(', R$ ');
+                const optionValue = parts[0] || '';
+                const optionPrice = parts[1] || '0.00';
+                return `
+                    <div class="option-item">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
+                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                    </div>
+                `;
+            }).join('')}
         </div>
+        <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
     `;
 }
 
@@ -257,8 +231,6 @@ function handleServicoFormSubmit(e) {
                 opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
             });
             campoData.opcoes = opcoes;
-        } else if (fieldType === 'image') {
-            campoData.caminho = fieldElement.querySelector('.field-image-path').value;
         }
 
         camposAdicionais.push(campoData);
@@ -326,39 +298,29 @@ function createServicoCard(servico, key) {
     let camposAdicionaisHtml = '';
     if (servico.camposAdicionais) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
-            switch (campo.tipo) {
-                case 'select':
-                    const opcoesHtml = campo.opcoes ? `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>` : '';
-                    return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
-                case 'image':
-                    return `<li><strong>${campo.nome}</strong>: <img src="${campo.caminho}" alt="Miniatura" class="image-thumbnail"></li>`;
-                default:
-                    return `<li><strong>${campo.nome}</strong>: Tipo: ${campo.tipo}</li>`;
+            let opcoesHtml = '';
+            if (campo.tipo === 'select' && campo.opcoes) {
+                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
+            } else {
+                opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
+            return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
         }).join('');
-    }
-
-    let promocaoInfo = '';
-    if (servico.promocao && servico.promocao.ativa) {
-        promocaoInfo = `<div class="promocao-form">Em Promoção até ${servico.promocao.dataFim}. **Desconto de ${servico.promocao.descontoPorcentagem}%**</div>`;
     }
 
     card.innerHTML = `
         <div class="card-body">
             <h5 class="card-title">${servico.nome}</h5>
-            ${promocaoInfo}
             <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
             <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
             <h6>Campos Adicionais:</h6>
             <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
             <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
-            <button class="btn btn-success btn-sm promote-service-btn" data-key="${key}">Promover</button>
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
     servicosList.appendChild(card);
     card.querySelector('.edit-service-btn').addEventListener('click', editService);
-    card.querySelector('.promote-service-btn').addEventListener('click', promoteService);
     card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
 }
 
@@ -377,36 +339,8 @@ function editService(e) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
+        // Alternar para a aba correta
         document.querySelector('[data-tab="addServicoTab"]').click();
-    });
-}
-
-function promoteService(e) {
-    const key = e.target.dataset.key;
-    const descontoPorcentagem = prompt('Digite o percentual de desconto (somente o número, Ex: 15 para 15%):');
-    if (descontoPorcentagem === null || isNaN(parseFloat(descontoPorcentagem))) {
-        alert('Valor de desconto inválido.');
-        return;
-    }
-    const dataFim = prompt('Digite a data de término da promoção (YYYY-MM-DD):');
-    if (!dataFim || !/^\d{4}-\d{2}-\d{2}$/.test(dataFim)) {
-        alert('Data de término inválida.');
-        return;
-    }
-
-    const servicoRef = ref(database, `servicos/${key}`);
-    const promocaoData = {
-        ativa: true,
-        descontoPorcentagem: parseFloat(descontoPorcentagem),
-        dataInicio: new Date().toISOString().slice(0, 10),
-        dataFim: dataFim
-    };
-
-    get(servicoRef).then(snapshot => {
-        const servicoData = snapshot.val();
-        set(servicoRef, { ...servicoData, promocao: promocaoData })
-            .then(() => alert('Serviço promovido com sucesso!'))
-            .catch(error => console.error("Erro ao promover serviço:", error));
     });
 }
 
@@ -433,6 +367,7 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
+            // Inverter a ordem para mostrar os mais recentes primeiro
             const agendamentosArray = Object.entries(agendamentos).reverse();
             agendamentosArray.forEach(([key, agendamento]) => {
                 createAgendamentoCard(agendamento, key);
@@ -473,7 +408,6 @@ function createAgendamentoCard(agendamento, key) {
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
-            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
             ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
             <div class="mt-3">
@@ -520,8 +454,7 @@ function deleteBooking(key) {
 
 function handleConfigFormSubmit(e) {
     e.preventDefault();
-    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, '');
-    const whatsappTemplate = whatsappMessageTemplate.value;
+    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Limpa o número
     const horariosPorDia = {};
 
     diasDaSemana.forEach(dia => {
@@ -534,7 +467,7 @@ function handleConfigFormSubmit(e) {
     });
 
     const configRef = ref(database, 'configuracoes');
-    set(configRef, { whatsappNumber, whatsappTemplate, horariosPorDia })
+    set(configRef, { whatsappNumber, horariosPorDia })
         .then(() => alert('Configurações salvas com sucesso!'))
         .catch(error => {
             console.error("Erro ao salvar configurações:", error);
@@ -548,7 +481,6 @@ function loadConfig() {
         if (snapshot.exists()) {
             const config = snapshot.val();
             whatsappNumberInput.value = config.whatsappNumber;
-            whatsappMessageTemplate.value = config.whatsappTemplate || "";
             diasDaSemana.forEach(dia => {
                 const diaConfig = config.horariosPorDia[dia];
                 if (diaConfig) {
