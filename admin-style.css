@@ -1,6 +1,7 @@
 /*
  * Arquivo: admin-style.css
  * Descrição: Estilos para o Painel Administrativo do sistema.
+ * Versão: 8.0 (Com navegação por abas e novo tipo de campo)
  */
 
 body {
@@ -22,12 +23,12 @@ body {
 .container {
     padding: 20px;
     max-width: 600px;
-    width: 100%; /* Garante que o container ocupe a largura máxima permitida */
+    width: 100%;
     margin: 40px auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
+    box-sizing: border-box;
 }
 
 h2 {
@@ -62,13 +63,13 @@ h4 {
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
     gap: 5px;
-    flex-wrap: wrap; /* Permite que os botões quebrem a linha se a tela for muito pequena */
+    flex-wrap: wrap;
 }
 
 .tab-btn {
-    flex: 1 1 auto; /* Permite que os botões cresçam e encolham, mas mantêm um tamanho mínimo */
-    min-width: fit-content; /* Garante que o texto não quebre demais */
-    padding: 10px 10px; /* Aumenta um pouco o padding horizontal */
+    flex: 1 1 auto;
+    min-width: fit-content;
+    padding: 10px 10px;
     border: 1px solid #ccc;
     border-bottom: none;
     background-color: #f0f0f0;
@@ -79,8 +80,8 @@ h4 {
     transition: all 0.2s ease;
     border-radius: 5px 5px 0 0;
     text-transform: capitalize;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
-    text-align: center; /* Centraliza o texto nos botões */
+    box-sizing: border-box;
+    text-align: center;
 }
 
 .tab-btn:hover {
@@ -121,7 +122,7 @@ h4 {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box; /* MUITO IMPORTANTE: Garante que padding e border sejam incluídos na largura total */
+    box-sizing: border-box;
     font-size: 16px;
 }
 
@@ -175,6 +176,15 @@ h4 {
     background-color: #e0a800;
 }
 
+.btn-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
 .btn-sm {
     padding: 5px 10px;
     font-size: 0.8em;
@@ -214,36 +224,67 @@ h4 {
 .badge-pendente { background-color: #ffc107; }
 .badge-concluido { background-color: #28a745; }
 .badge-cancelado { background-color: #dc3545; }
+.badge-promocao { background-color: #17a2b8; }
 
 /* ========================================================================== */
-/* 4. CAMPOS ADICIONAIS */
+/* 4. BLOCOS DE CONTEÚDO */
 /* ========================================================================== */
 
-.additional-field {
-    border: 1px solid #eee;
-    padding: 15px;
+.dynamic-content-block {
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
+    padding: 15px;
     margin-bottom: 15px;
-    background-color: #fcfcfc;
+    background-color: #fefefe;
+    position: relative;
 }
 
-.additional-field .btn-danger {
+.block-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.block-controls .form-control, .block-controls .btn {
+    flex: 1;
+}
+
+.block-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: flex;
+    gap: 5px;
+}
+
+.block-actions .btn-sm {
+    padding: 3px 8px;
+}
+
+.campo-options-container {
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
     margin-top: 10px;
-    width: auto;
 }
 
-.option-item {
+.campo-option-item {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
 }
 
-.option-item .form-control {
+.campo-option-item input {
     flex: 1;
 }
 
-.option-list {
+.pagamento-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 10px;
 }
 
