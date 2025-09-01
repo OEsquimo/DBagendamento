@@ -1,369 +1,121 @@
-/*
- * Arquivo: admin-style.css
- * Descrição: Estilos para o painel administrativo, incluindo abas, formulários e modais.
- * Versão: 1.0
- */
-
-:root {
-    --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --background-color: #f8f9fa;
-    --text-color: #343a40;
-    --card-bg: #ffffff;
-    --border-color: #dee2e6;
-    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    line-height: 1.6;
-    margin: 0;
-    padding: 20px;
+    background-color: #f0f2f5;
+    font-family: Arial, sans-serif;
 }
 
-h1, h2 {
-    color: var(--primary-color);
+.container {
+    max-width: 1200px;
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--border-color);
+.logo {
+    max-width: 100px;
 }
 
-#login-container {
-    max-width: 400px;
-    margin: 50px auto;
-    padding: 20px;
-    background-color: var(--card-bg);
+.tab-btn {
+    cursor: pointer;
+}
+
+.tab-pane {
+    background-color: #fff;
+    padding: 30px;
     border-radius: 8px;
-    box-shadow: var(--box-shadow);
-    text-align: center;
-}
-
-#login-container h2 {
-    margin-bottom: 20px;
-}
-
-#admin-panel {
-    max-width: 1000px;
-    margin: 0 auto;
-    background-color: var(--card-bg);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: var(--box-shadow);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hidden {
     display: none;
 }
 
-.form-group {
-    margin-bottom: 15px;
+/* Serviços */
+.service-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
 }
 
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 1em;
-}
-
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.2s;
-    width: 100%;
+.image-thumbnail {
+    max-width: 100px;
+    height: auto;
+    border-radius: 5px;
     margin-top: 5px;
 }
 
-.btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #545b62;
-}
-
-.btn-danger {
-    background-color: var(--danger-color);
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-.tab-navigation {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.tab-button {
-    background-color: transparent;
-    border: none;
-    padding: 15px 25px;
-    cursor: pointer;
-    font-size: 1.1em;
-    font-weight: bold;
-    color: var(--secondary-color);
-    transition: all 0.3s;
-}
-
-.tab-button.active {
-    color: var(--primary-color);
-    border-bottom: 3px solid var(--primary-color);
-}
-
-.tab-content {
-    padding: 20px 0;
-}
-
-/* ==========================================================================
-   Listas de Serviços e Agendamentos
-   ========================================================================== */
-
-.list-item, .agendamento-card {
-    background-color: #f1f1f1;
-    border: 1px solid #ccc;
+.additional-field {
+    border: 1px dashed #ccc;
     padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.list-item.promocao-item {
-    background-color: #fff3cd;
-    border-color: #ffeeba;
-}
-
-.item-details h4 {
-    margin: 0;
-    font-size: 1.2em;
-}
-
-.item-actions .btn {
-    width: auto;
-    margin-left: 10px;
-}
-
-.agendamento-card h4 {
-    margin: 0 0 5px 0;
-}
-
-.agendamento-details {
-    flex-grow: 1;
-}
-
-.agendamento-details p {
-    margin: 5px 0;
-}
-
-.agendamento-status {
-    font-weight: bold;
-}
-
-.status-Pendente {
-    color: #ffc107;
-}
-
-.status-Confirmado {
-    color: var(--primary-color);
-}
-
-.status-Concluído {
-    color: var(--success-color);
-}
-
-.status-Cancelado {
-    color: var(--danger-color);
-}
-
-.agendamento-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-left: 20px;
-}
-
-.agendamento-actions .btn {
-    width: auto;
-}
-
-/* ==========================================================================
-   Modals
-   ========================================================================== */
-
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-    padding-top: 60px;
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 90%;
-    max-width: 600px;
-    border-radius: 8px;
-    position: relative;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.close-btn {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close-btn:hover, .close-btn:focus {
-    color: #000;
-    text-decoration: none;
-}
-
-.form-navigation-bottom {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-.form-navigation-bottom .btn {
-    width: 48%;
-}
-
-/* ==========================================================================
-   Editor de Blocos
-   ========================================================================== */
-
-.block-editor {
-    border: 2px dashed var(--border-color);
-    padding: 20px;
-    border-radius: 8px;
-    min-height: 100px;
+    border-radius: 5px;
     margin-bottom: 15px;
 }
 
-.block-item {
-    background-color: #e9e9e9;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.block-content {
-    flex-grow: 1;
-}
-
-.block-controls {
-    display: flex;
-    gap: 5px;
-}
-
-.block-controls .btn {
-    width: auto;
-    padding: 5px 10px;
-    font-size: 0.8em;
-}
-
-.block-input-group {
+.additional-field .remove-field-btn {
     margin-top: 10px;
 }
 
-.block-input-group .form-control {
-    margin-top: 5px;
+.promocao-form {
+    background-color: #fff3cd;
+    border-left: 5px solid #ffc107;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
 }
 
-.block-input-group .btn {
-    margin-top: 5px;
+.promocao-form strong {
+    color: #856404;
 }
 
-.config-section {
-    border: 1px solid var(--border-color);
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.config-section h3 {
-    margin-top: 0;
-}
-
-.options-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.option-tag {
-    background-color: #f1f1f1;
-    border: 1px solid #ccc;
-    padding: 8px 12px;
-    border-radius: 20px;
+.option-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    margin-bottom: 5px;
 }
 
-.remove-option-btn {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    font-weight: bold;
-    cursor: pointer;
+.option-item .form-control {
+    flex: 1;
+}
+
+/* Agendamentos */
+.booking-card {
+    border-left: 5px solid;
+}
+
+.booking-pendente {
+    border-color: #ffc107;
+}
+
+.booking-concluido {
+    border-color: #28a745;
+}
+
+.booking-cancelado {
+    border-color: #dc3545;
+}
+
+.badge-pendente {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.badge-concluido {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.badge-cancelado {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* Configurações */
+.horarios-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
 .horario-dia {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-}
-
-.horario-dia input[type="time"] {
-    flex: 1;
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
 }
