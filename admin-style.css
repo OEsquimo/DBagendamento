@@ -185,11 +185,14 @@ h4 {
     background-color: #28a745;
     color: #fff;
     width: auto;
-    margin-left: 10px;
     font-size: 1em;
 }
 .btn-promo:hover {
     background-color: #218838;
+}
+
+.mt-2 {
+    margin-top: 10px;
 }
 
 /* ========================================================================== */
