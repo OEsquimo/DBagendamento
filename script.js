@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada)
+ * Versão: 11.0 (Com promoção e pagamento)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,11 +44,16 @@ const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
+const promocaoBanner = document.getElementById('promocaoBanner');
+const promocaoBtn = document.getElementById('promocaoBtn');
+const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
 let servicosGlobais = {};
 let configGlobais = {};
+let promocaoAtiva = null;
+let mensagemWhatsappPadrao = '';
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
@@ -59,10 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateProgressBar(1);
     setupPhoneMask();
+    setupPaymentMethodSelection();
 });
 
 async function loadAllData() {
     await loadConfig();
+    await loadPromocao();
     loadServices();
 }
 
@@ -77,6 +84,46 @@ async function loadConfig() {
         }
     } catch (error) {
         console.error("Erro ao carregar configurações:", error);
+    }
+}
+
+async function loadPromocao() {
+    try {
+        const promocoesRef = ref(database, 'promocoes');
+        const snapshot = await get(promocoesRef);
+        if (snapshot.exists()) {
+            const promocoes = snapshot.val();
+            const hoje = new Date().toISOString().slice(0, 10);
+            
+            // Procura por uma promoção ativa e válida
+            for (const key in promocoes) {
+                const promo = promocoes[key];
+                if (promo.servicoId && promo.dataInicio <= hoje && promo.dataFim >= hoje) {
+                    promocaoAtiva = { ...promo, key };
+                    break;
+                }
+            }
+            
+            if (promocaoAtiva) {
+                promocaoBanner.classList.remove('hidden');
+                promocaoBtn.textContent = promocaoAtiva.descricao;
+                promocaoBtn.dataset.serviceId = promocaoAtiva.servicoId;
+                
+                promocaoBtn.addEventListener('click', () => {
+                    handlePromocaoClick(promocaoAtiva.servicoId);
+                });
+            }
+        }
+        
+        // Carregar a mensagem personalizada do WhatsApp
+        const mensagemRef = ref(database, 'mensagens/whatsapp');
+        const msgSnapshot = await get(mensagemRef);
+        if (msgSnapshot.exists()) {
+            mensagemWhatsappPadrao = msgSnapshot.val().texto;
+        }
+        
+    } catch (error) {
+        console.error("Erro ao carregar promoções ou mensagem:", error);
     }
 }
 
@@ -135,6 +182,26 @@ function createServiceCard(service, key) {
     });
 
     servicosContainer.appendChild(card);
+}
+
+function handlePromocaoClick(serviceId) {
+    // Limpar seleções anteriores
+    servicosSelecionados = [];
+    document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
+    
+    // Encontrar o serviço da promoção e adicioná-lo
+    const serviceKey = Object.keys(servicosGlobais).find(key => key === serviceId);
+    if (serviceKey) {
+        const selectedService = { ...servicosGlobais[serviceKey], key: serviceKey };
+        selectedService.promocao = promocaoAtiva; // Adicionar a info da promo
+        servicosSelecionados.push(selectedService);
+        
+        // Simular o clique no botão Próximo
+        servicosSection.classList.add('hidden');
+        servicosFormSection.classList.remove('hidden');
+        renderServiceForms();
+        updateProgressBar(2);
+    }
 }
 
 function updateSelectedServicesCount() {
@@ -204,19 +271,29 @@ function renderServiceForms() {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
-
+    
+    // Atualiza o preço inicial para o caso da promoção
+    updatePrice();
     updateOrcamentoTotal();
 }
 
 function updatePrice(e) {
-    const key = e.target.dataset.key;
+    const key = e ? e.target.dataset.key : servicosSelecionados[0].key;
     const service = servicosSelecionados.find(s => s.key === key);
     if (!service) return;
 
-    const formGroup = e.target.closest('.service-form-group');
+    const formGroup = e ? e.target.closest('.service-form-group') : document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
     const newPrice = calculatePrice(service, formGroup);
     service.precoCalculado = newPrice;
-    formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
+    
+    // Aplica o desconto se for uma promoção
+    if (service.promocao) {
+        const precoComDesconto = newPrice * (1 - service.promocao.desconto / 100);
+        service.precoCalculado = precoComDesconto;
+        formGroup.querySelector('.service-price').textContent = `Valor: R$ ${precoComDesconto.toFixed(2)} (Promoção: ${service.promocao.desconto}%)`;
+    } else {
+        formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
+    }
     updateOrcamentoTotal();
 }
 
@@ -272,7 +349,14 @@ document.getElementById('nextStep2').addEventListener('click', () => {
         if (formGroup) {
             const selectedOptions = getSelectedOptions(formGroup, service);
             service.camposAdicionaisSelecionados = selectedOptions;
-            service.precoCalculado = calculatePrice(service, formGroup);
+            
+            // Recalcular o preço final
+            const basePrice = calculatePrice(service, formGroup);
+            if (service.promocao) {
+                service.precoCalculado = basePrice * (1 - service.promocao.desconto / 100);
+            } else {
+                service.precoCalculado = basePrice;
+            }
         }
     });
     
@@ -360,6 +444,15 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 // ==========================================================================
 // 6. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
 // ==========================================================================
+
+function setupPaymentMethodSelection() {
+    document.querySelectorAll('.payment-method-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.payment-method-option').forEach(opt => opt.classList.remove('selected'));
+            option.classList.add('selected');
+        });
+    });
+}
 
 async function handleDateSelection() {
     const selectedDate = datePicker.value;
@@ -476,8 +569,15 @@ async function handleFormSubmit(e) {
     }
 
     const selectedTimeSlot = document.querySelector('.time-slot.selected');
+    const selectedPaymentMethod = document.querySelector('.payment-method-option.selected');
+    
     if (!selectedTimeSlot) {
         alert("Por favor, selecione um horário para o agendamento.");
+        return;
+    }
+    
+    if (!selectedPaymentMethod) {
+        alert("Por favor, selecione uma forma de pagamento.");
         return;
     }
 
@@ -499,25 +599,26 @@ async function handleFormSubmit(e) {
         hora: selectedTimeSlot.textContent,
         observacoes: document.getElementById('observacoes').value,
         orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
+        formaPagamento: selectedPaymentMethod.dataset.method,
         status: 'Pendente'
     };
 
     try {
         const agendamentosRef = ref(database, 'agendamentos');
         await push(agendamentosRef, agendamentoData);
-        showConfirmation();
+        showConfirmation(agendamentoData);
     } catch (error) {
         console.error("Erro ao salvar agendamento:", error);
         alert("Ocorreu um erro ao salvar o agendamento. Por favor, tente novamente.");
     }
 }
 
-function showConfirmation() {
+function showConfirmation(agendamentoData) {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
     updateProgressBar(5);
     
-    const whatsappMsg = createWhatsAppMessage();
+    const whatsappMsg = createWhatsAppMessage(agendamentoData);
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
     
     // Redireciona para a página inicial após o clique no link do WhatsApp
@@ -528,66 +629,46 @@ function showConfirmation() {
     });
 }
 
-function createWhatsAppMessage() {
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const endereco = document.getElementById('endereco').value;
-    const data = formatDate(datePicker.value);
-    const hora = document.querySelector('.time-slot.selected').textContent;
-    const observacoes = document.getElementById('observacoes').value;
-    const total = orcamentoTotalDisplay.textContent;
-
-    let servicosTexto = '🛠️ Serviços:\n';
-    servicosSelecionados.forEach(servico => {
-        let precoTotalServico = servico.precoBase || 0;
-        let subServicosDetalhes = [];
+function createWhatsAppMessage(agendamentoData) {
+    let messageTemplate = mensagemWhatsappPadrao;
+    if (!messageTemplate) {
+        messageTemplate = `Olá, {nomeCliente}!
+        Seu agendamento foi confirmado.
         
+        *Detalhes:*
+        Data: {dataAgendamento}
+        Hora: {horaAgendamento}
+        Serviços: {servicosSelecionados}
+        Valor Total: {orcamentoTotal}
+        Forma de Pagamento: {formaPagamento}
+        
+        Aguardamos você!`;
+    }
+    
+    const cliente = agendamentoData.cliente;
+    const servicosTexto = agendamentoData.servicos.map(servico => {
+        let texto = `- ${servico.nome}`;
         if (servico.camposAdicionaisSelecionados) {
-            for (const campo in servico.camposAdicionaisSelecionados) {
-                const valor = servico.camposAdicionaisSelecionados[campo];
-                let subServicoTexto = `  - ${campo}: ${valor}`;
-
-                // Verifica se a opção tem valor para incluir
-                if (typeof valor === 'string' && valor.includes(', R$ ')) {
-                    const [descricao, preco] = valor.split(', R$ ');
-                    precoTotalServico += parseFloat(preco);
-                    // Remove o valor da mensagem para Capacidade de BTUs
-                    if (campo === 'Capacidade de BTUs') {
-                        subServicoTexto = `  - ${servico.nome} (${descricao}): R$ ${precoTotalServico.toFixed(2)}`;
-                    } else {
-                        subServicoTexto = `  - ${campo}: R$ ${preco}`;
-                    }
-                } else {
-                     subServicoTexto = `  - ${campo}: ${valor}`;
-                }
-                subServicosDetalhes.push(subServicoTexto);
-            }
-        } else {
-             servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
+            const camposDetalhes = Object.entries(servico.camposAdicionaisSelecionados)
+                                       .map(([campo, valor]) => `${campo}: ${valor}`).join(', ');
+            texto += ` (${camposDetalhes})`;
         }
+        texto += `: R$ ${servico.precoCalculado.toFixed(2)}`;
+        return texto;
+    }).join('\n');
+    
+    const finalMessage = messageTemplate
+        .replace(/{nomeCliente}/g, cliente.nome)
+        .replace(/{telefoneCliente}/g, cliente.telefone)
+        .replace(/{enderecoCliente}/g, cliente.endereco)
+        .replace(/{dataAgendamento}/g, agendamentoData.data)
+        .replace(/{horaAgendamento}/g, agendamentoData.hora)
+        .replace(/{servicosSelecionados}/g, servicosTexto)
+        .replace(/{orcamentoTotal}/g, `R$ ${agendamentoData.orcamentoTotal.toFixed(2)}`)
+        .replace(/{formaPagamento}/g, agendamentoData.formaPagamento)
+        .replace(/{observacoesCliente}/g, agendamentoData.observacoes || 'N/A');
         
-        if (subServicosDetalhes.length > 0) {
-            servicosTexto += subServicosDetalhes.join('\n') + '\n';
-        }
-    });
-
-    return `Olá, gostaria de confirmar um agendamento.
-    
-    *👤 Dados do Cliente:*
-    Nome: ${nome}
-    Telefone: ${telefone}
-    Endereço: ${endereco}
-    
-    *📅 Detalhes do Agendamento:*
-    Data: ${data}
-    Hora: ${hora}
-    ${servicosTexto}
-    
-    *💰 Orçamento Total: ${total}*
-    
-    ${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
-    
-    Obrigado!`;
+    return finalMessage;
 }
 
 // ==========================================================================
