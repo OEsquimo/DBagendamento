@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.0 (Gerenciamento de promoções e mensagens do WhatsApp)
+ * Versão: 9.0 (Gerenciamento de promoções e mensagens do WhatsApp, com correção de bug)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -57,7 +57,6 @@ const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta'
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Adicione a chamada para carregar os serviços e agendamentos ao carregar a página
     loadServices();
     loadBookings();
     loadConfig();
@@ -386,7 +385,10 @@ function createServicoCard(servico, key) {
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
-    document.getElementById('servicosList').appendChild(card);
+    // AQUI ESTÁ A CORREÇÃO:
+    servicosList.appendChild(card);
+    // FIM DA CORREÇÃO
+    
     card.querySelector('.edit-service-btn').addEventListener('click', editService);
     card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
 }
@@ -406,15 +408,12 @@ function editService(e) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
         
-        // Exibe o botão de criar promoção
         createPromoBtn.classList.remove('hidden');
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
         
-        // Esconde os campos de promoção
         promoFields.classList.add('hidden');
         servicoForm.querySelector('button[type="submit"]').classList.remove('hidden');
 
-        // Preenche os campos de promoção se houver
         if (servicoData.promocao) {
             promoDiscountInput.value = servicoData.promocao.desconto;
             promoDescriptionTextarea.value = servicoData.promocao.descricao;
