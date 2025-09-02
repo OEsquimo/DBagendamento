@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada)
+ * Versão: 10.2 (Lógica de exibição de preço e nome na seleção de serviço, mensagem do WhatsApp ajustada)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -166,11 +166,26 @@ function renderServiceForms() {
         if (service.camposAdicionais) {
             fieldsHtml = service.camposAdicionais.map(field => {
                 if (field.tipo === 'select' && field.opcoes) {
+                    const selectOptionsHtml = field.opcoes.map(option => {
+                        let optionText = '';
+                        // Monta a string da opção de forma inteligente
+                        if (option.nome && option.preco !== null && option.preco !== undefined) {
+                            optionText = `${option.nome} - R$ ${option.preco.toFixed(2)}`;
+                        } else if (option.nome) {
+                            optionText = option.nome;
+                        } else if (option.preco !== null && option.preco !== undefined) {
+                            optionText = `R$ ${option.preco.toFixed(2)}`;
+                        }
+                        return optionText ? `<option value="${option.nome || ''}" data-preco="${option.preco !== null && option.preco !== undefined ? option.preco : ''}">${optionText}</option>` : '';
+                    }).join('');
+                    
+                    if (selectOptionsHtml === '') return '';
+
                     return `
                         <label>${field.nome}</label>
                         <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
                             <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                            ${selectOptionsHtml}
                         </select>
                     `;
                 } else if (field.tipo === 'text') {
@@ -227,12 +242,9 @@ function calculatePrice(serviceData, container) {
     
     // Calcula o preço a partir de selects
     selectElements.forEach(select => {
-        const selectedValue = select.value;
-        if (selectedValue) {
-            const parts = selectedValue.split(', R$ ');
-            if (parts.length === 2) {
-                preco += parseFloat(parts[1]);
-            }
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.dataset.preco) {
+            preco += parseFloat(selectedOption.dataset.preco);
         }
     });
 
@@ -430,9 +442,9 @@ function generateTimeSlots(startTime, endTime, interval, existingAppointments, r
         if (referenceTime) {
              const [slotHour, slotMinute] = timeString.split(':').map(Number);
              if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
-                currentTime.setMinutes(currentTime.getMinutes() + interval);
-                continue;
-            }
+                 currentTime.setMinutes(currentTime.getMinutes() + interval);
+                 continue;
+             }
         }
 
         if (!existingAppointments.includes(timeString)) {
@@ -539,55 +551,34 @@ function createWhatsAppMessage() {
 
     let servicosTexto = '🛠️ Serviços:\n';
     servicosSelecionados.forEach(servico => {
-        let precoTotalServico = servico.precoBase || 0;
-        let subServicosDetalhes = [];
+        servicosTexto += `  - ${servico.nome}\n`;
         
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
                 const valor = servico.camposAdicionaisSelecionados[campo];
-                let subServicoTexto = `  - ${campo}: ${valor}`;
-
-                // Verifica se a opção tem valor para incluir
-                if (typeof valor === 'string' && valor.includes(', R$ ')) {
-                    const [descricao, preco] = valor.split(', R$ ');
-                    precoTotalServico += parseFloat(preco);
-                    // Remove o valor da mensagem para Capacidade de BTUs
-                    if (campo === 'Capacidade de BTUs') {
-                        subServicoTexto = `  - ${servico.nome} (${descricao}): R$ ${precoTotalServico.toFixed(2)}`;
-                    } else {
-                        subServicoTexto = `  - ${campo}: R$ ${preco}`;
-                    }
-                } else {
-                     subServicoTexto = `  - ${campo}: ${valor}`;
-                }
-                subServicosDetalhes.push(subServicoTexto);
+                let subServicoTexto = `    - ${campo}: ${valor}`;
+                servicosTexto += subServicoTexto + '\n';
             }
-        } else {
-             servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
-        }
-        
-        if (subServicosDetalhes.length > 0) {
-            servicosTexto += subServicosDetalhes.join('\n') + '\n';
         }
     });
 
     return `Olá, gostaria de confirmar um agendamento.
     
-    *👤 Dados do Cliente:*
-    Nome: ${nome}
-    Telefone: ${telefone}
-    Endereço: ${endereco}
+*👤 Dados do Cliente:*
+Nome: ${nome}
+Telefone: ${telefone}
+Endereço: ${endereco}
     
-    *📅 Detalhes do Agendamento:*
-    Data: ${data}
-    Hora: ${hora}
-    ${servicosTexto}
+*📅 Detalhes do Agendamento:*
+Data: ${data}
+Hora: ${hora}
+${servicosTexto}
     
-    *💰 Orçamento Total: ${total}*
+*💰 Orçamento Total: ${total}*
     
-    ${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
+${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
     
-    Obrigado!`;
+Obrigado!`;
 }
 
 // ==========================================================================
