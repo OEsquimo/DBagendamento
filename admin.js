@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 8.0 (Com navegação por abas e novo tipo de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -30,7 +30,7 @@ const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
 const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosList = document.getElementById('listaServicosTab');
+const servicosList = document.getElementById('servicosList');
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
@@ -39,6 +39,11 @@ const addFieldBtn = document.getElementById('addFieldBtn');
 const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabPanes = document.querySelectorAll('.tab-pane');
+const whatsappMessageForm = document.getElementById('whatsappMessageForm');
+const whatsappMessageInput = document.getElementById('whatsappMessage');
+const promocaoModal = document.getElementById('promocaoModal');
+const promocaoForm = document.getElementById('promocaoForm');
+const closeBtn = document.querySelector('.close-btn');
 
 const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 
@@ -50,9 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadServices();
     loadBookings();
     loadConfig();
+    loadWhatsappMessage();
     setupConfigForm();
     setupServicoForm();
     setupTabNavigation(); // Nova função para navegação por abas
+    setupPromocaoModal();
+    setupWhatsappMessageForm();
 });
 
 function setupTabNavigation() {
@@ -104,6 +112,20 @@ function setupConfigForm() {
     });
 
     configForm.addEventListener('submit', handleConfigFormSubmit);
+}
+
+function setupPromocaoModal() {
+    promocaoForm.addEventListener('submit', handlePromocaoFormSubmit);
+    closeBtn.addEventListener('click', () => promocaoModal.classList.add('hidden'));
+    window.addEventListener('click', (e) => {
+        if (e.target === promocaoModal) {
+            promocaoModal.classList.add('hidden');
+        }
+    });
+}
+
+function setupWhatsappMessageForm() {
+    whatsappMessageForm.addEventListener('submit', handleWhatsappMessageFormSubmit);
 }
 
 // ==========================================================================
@@ -273,6 +295,10 @@ function resetServicoForm() {
     servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
     servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
+    const existingPromoBtn = servicoForm.querySelector('.btn-promo');
+    if (existingPromoBtn) {
+        existingPromoBtn.remove();
+    }
 }
 
 function loadServices() {
@@ -338,6 +364,20 @@ function editService(e) {
         if (servicoData.camposAdicionais) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
+        
+        // Adicionar o botão de promoção
+        const existingPromoBtn = servicoForm.querySelector('.btn-promo');
+        if (existingPromoBtn) {
+            existingPromoBtn.remove();
+        }
+        const promoBtn = document.createElement('button');
+        promoBtn.type = 'button';
+        promoBtn.className = 'btn btn-promo';
+        promoBtn.textContent = 'Criar Promoção';
+        promoBtn.dataset.serviceId = key;
+        promoBtn.addEventListener('click', openPromocaoModal);
+        servicoForm.appendChild(promoBtn);
+        
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
         // Alternar para a aba correta
         document.querySelector('[data-tab="addServicoTab"]').click();
@@ -346,10 +386,15 @@ function editService(e) {
 
 function deleteService(e) {
     const key = e.target.dataset.key;
-    if (confirm('Tem certeza que deseja excluir este serviço?')) {
+    if (confirm('Tem certeza que deseja excluir este serviço? Esta ação também removerá a promoção associada, se houver.')) {
         const servicoRef = ref(database, `servicos/${key}`);
         remove(servicoRef)
-            .then(() => alert('Serviço excluído com sucesso!'))
+            .then(() => {
+                // Remove a promoção associada também
+                const promocaoRef = ref(database, `promocoes/${key}`);
+                remove(promocaoRef);
+                alert('Serviço e promoção associada excluídos com sucesso!');
+            })
             .catch(error => {
                 console.error("Erro ao excluir serviço:", error);
                 alert("Ocorreu um erro. Verifique o console.");
@@ -405,6 +450,7 @@ function createAgendamentoCard(agendamento, key) {
             <h6>Detalhes do Cliente:</h6>
             <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
             <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
+            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
@@ -495,7 +541,104 @@ function loadConfig() {
 }
 
 // ==========================================================================
-// 6. FUNÇÕES AUXILIARES
+// 6. GERENCIAMENTO DE MENSAGENS PERSONALIZADAS
+// ==========================================================================
+
+function handleWhatsappMessageFormSubmit(e) {
+    e.preventDefault();
+    const texto = whatsappMessageInput.value;
+    const mensagemRef = ref(database, 'mensagens/whatsapp');
+    set(mensagemRef, { texto })
+        .then(() => alert('Mensagem salva com sucesso!'))
+        .catch(error => {
+            console.error("Erro ao salvar mensagem:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function loadWhatsappMessage() {
+    const mensagemRef = ref(database, 'mensagens/whatsapp');
+    onValue(mensagemRef, (snapshot) => {
+        if (snapshot.exists()) {
+            whatsappMessageInput.value = snapshot.val().texto;
+        } else {
+            // Mensagem padrão caso não exista
+            whatsappMessageInput.value = `Olá, {nomeCliente}!
+Seu agendamento foi confirmado.
+
+*Detalhes:*
+Data: {dataAgendamento}
+Hora: {horaAgendamento}
+Serviços: {servicosSelecionados}
+Valor Total: {orcamentoTotal}
+Forma de Pagamento: {formaPagamento}
+Observações: {observacoesCliente}
+
+Aguardamos você!`;
+        }
+    });
+}
+
+// ==========================================================================
+// 7. GERENCIAMENTO DE PROMOÇÕES
+// ==========================================================================
+
+function openPromocaoModal(e) {
+    promocaoModal.classList.remove('hidden');
+    promocaoForm.reset();
+    promocaoForm.dataset.serviceId = e.target.dataset.serviceId;
+    promocaoForm.dataset.promocaoKey = '';
+    
+    // Verifica se já existe uma promoção para esse serviço
+    const promocaoRef = ref(database, `promocoes/${e.target.dataset.serviceId}`);
+    get(promocaoRef).then(snapshot => {
+        if (snapshot.exists()) {
+            const promoData = snapshot.val();
+            document.getElementById('promoDescricao').value = promoData.descricao;
+            document.getElementById('promoDesconto').value = promoData.desconto;
+            document.getElementById('promoInicio').value = promoData.dataInicio;
+            document.getElementById('promoFim').value = promoData.dataFim;
+            promocaoForm.dataset.promocaoKey = e.target.dataset.serviceId; // A chave da promoção é o ID do serviço
+        }
+    });
+}
+
+function handlePromocaoFormSubmit(e) {
+    e.preventDefault();
+    
+    const serviceId = promocaoForm.dataset.serviceId;
+    const descricao = document.getElementById('promoDescricao').value;
+    const desconto = document.getElementById('promoDesconto').value;
+    const dataInicio = document.getElementById('promoInicio').value;
+    const dataFim = document.getElementById('promoFim').value;
+    
+    if (dataInicio > dataFim) {
+        alert('A data de início deve ser anterior ou igual à data de término.');
+        return;
+    }
+    
+    const promocaoData = {
+        descricao,
+        desconto: parseFloat(desconto),
+        dataInicio,
+        dataFim,
+        servicoId
+    };
+    
+    const promocaoRef = ref(database, `promocoes/${serviceId}`);
+    set(promocaoRef, promocaoData)
+        .then(() => {
+            alert('Promoção salva com sucesso!');
+            promocaoModal.classList.add('hidden');
+        })
+        .catch(error => {
+            console.error("Erro ao salvar promoção:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+// ==========================================================================
+// 8. FUNÇÕES AUXILIARES
 // ==========================================================================
 
 function capitalize(s) {
