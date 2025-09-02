@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin-style.css
  * Descrição: Estilos para o Painel Administrativo do sistema.
- * Versão: 8.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 9.0 (Com navegação por abas e novo tipo de campo)
  */
 
 body {
@@ -140,7 +140,6 @@ h4 {
     background-color: #007bff;
     color: #fff;
     width: 100%;
-    margin-top: 20px;
 }
 
 .btn-primary:hover {
@@ -184,15 +183,23 @@ h4 {
 .btn-promo {
     background-color: #28a745;
     color: #fff;
-    width: auto;
+    width: 100%;
     font-size: 1em;
 }
+
 .btn-promo:hover {
     background-color: #218838;
 }
 
 .mt-2 {
     margin-top: 10px;
+}
+
+.form-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 /* ========================================================================== */
