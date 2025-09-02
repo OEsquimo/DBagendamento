@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 9.0 (Com correção na navegação por abas)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadWhatsappMessage();
     setupConfigForm();
     setupServicoForm();
-    setupTabNavigation(); // Nova função para navegação por abas
+    setupTabNavigation();
     setupPromocaoModal();
     setupWhatsappMessageForm();
 });
@@ -66,8 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupTabNavigation() {
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove a classe 'active' de todos os botões e 'tab-pane'
+            // Remove a classe 'active' de todos os botões
             tabButtons.forEach(btn => btn.classList.remove('active'));
+            // Oculta todos os painéis de conteúdo
             tabPanes.forEach(pane => pane.classList.add('hidden'));
 
             // Adiciona a classe 'active' ao botão clicado
@@ -468,4 +469,188 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', ()anto de `index.html` e `admin.js`, respectivamente, para que as correções tenham efeito.
+    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
+}
+
+function updateBookingStatus(key, status) {
+    const bookingRef = ref(database, `agendamentos/${key}`);
+    set(bookingRef, { ...getBookingDataFromCard(key), status })
+        .then(() => {
+            alert(`Agendamento marcado como ${status}!`);
+        })
+        .catch(error => {
+            console.error("Erro ao atualizar status:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function deleteBooking(key) {
+    if (confirm('Tem certeza que deseja excluir este agendamento?')) {
+        const bookingRef = ref(database, `agendamentos/${key}`);
+        remove(bookingRef)
+            .then(() => {
+                alert('Agendamento excluído com sucesso!');
+            })
+            .catch(error => {
+                console.error("Erro ao excluir agendamento:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
+function getBookingDataFromCard(key) {
+    const card = document.querySelector(`.booking-card[data-key="${key}"]`);
+    // Este é um método simplificado. O ideal seria buscar os dados novamente do Firebase se necessário
+    return {
+        cliente: {
+            nome: card.querySelector('.card-title').textContent.replace('Agendamento de ', ''),
+            telefone: card.querySelector('p:nth-of-type(3)').textContent.replace('Telefone: ', ''),
+            endereco: card.querySelector('p:nth-of-type(4)').textContent.replace('Endereço: ', ''),
+        },
+        data: card.querySelector('p:nth-of-type(1)').textContent.split(' ')[2],
+        hora: card.querySelector('p:nth-of-type(1)').textContent.split(' ')[4],
+        formaPagamento: card.querySelector('p:nth-of-type(5)').textContent.replace('Forma de Pagamento: ', ''),
+        // ... outros dados
+    };
+}
+
+// ==========================================================================
+// 5. GERENCIAMENTO DE CONFIGURAÇÕES E MENSAGENS
+// ==========================================================================
+
+function handleConfigFormSubmit(e) {
+    e.preventDefault();
+
+    const configData = {
+        whatsappNumber: whatsappNumberInput.value,
+        horariosPorDia: {}
+    };
+
+    diasDaSemana.forEach(dia => {
+        configData.horariosPorDia[dia] = {
+            ativo: document.getElementById(`${dia}Ativo`).checked,
+            horarioInicio: document.getElementById(`${dia}Inicio`).value,
+            horarioFim: document.getElementById(`${dia}Fim`).value,
+            duracaoServico: parseInt(document.getElementById(`${dia}Duracao`).value, 10)
+        };
+    });
+
+    const configRef = ref(database, 'configuracoes');
+    set(configRef, configData)
+        .then(() => alert('Configurações salvas com sucesso!'))
+        .catch(error => {
+            console.error("Erro ao salvar configurações:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function loadConfig() {
+    const configRef = ref(database, 'configuracoes');
+    onValue(configRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const config = snapshot.val();
+            whatsappNumberInput.value = config.whatsappNumber || '';
+            diasDaSemana.forEach(dia => {
+                const diaConfig = config.horariosPorDia[dia];
+                if (diaConfig) {
+                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
+                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
+                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
+                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
+                }
+            });
+        }
+    });
+}
+
+function handleWhatsappMessageFormSubmit(e) {
+    e.preventDefault();
+
+    const mensagem = {
+        texto: whatsappMessageInput.value
+    };
+
+    const mensagemRef = ref(database, 'mensagens/whatsapp');
+    set(mensagemRef, mensagem)
+        .then(() => alert('Mensagem salva com sucesso!'))
+        .catch(error => {
+            console.error("Erro ao salvar mensagem:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function loadWhatsappMessage() {
+    const mensagemRef = ref(database, 'mensagens/whatsapp');
+    onValue(mensagemRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const mensagem = snapshot.val();
+            whatsappMessageInput.value = mensagem.texto || '';
+        }
+    });
+}
+
+// ==========================================================================
+// 6. GERENCIAMENTO DE PROMOÇÕES
+// ==========================================================================
+
+function openPromocaoModal() {
+    const serviceId = document.querySelector('#criarPromoBtn').dataset.serviceId;
+    promocaoModal.dataset.serviceId = serviceId;
+    promocaoModal.classList.remove('hidden');
+
+    // Preencher o formulário se já houver uma promoção para este serviço
+    const promocoesRef = ref(database, 'promocoes');
+    get(promocoesRef).then(snapshot => {
+        if (snapshot.exists()) {
+            const promocoes = snapshot.val();
+            const promocao = promocoes[serviceId];
+            if (promocao) {
+                document.getElementById('promoDescricao').value = promocao.descricao;
+                document.getElementById('promoDesconto').value = promocao.desconto;
+                document.getElementById('promoInicio').value = promocao.dataInicio;
+                document.getElementById('promoFim').value = promocao.dataFim;
+            } else {
+                promocaoForm.reset();
+            }
+        }
+    });
+}
+
+function handlePromocaoFormSubmit(e) {
+    e.preventDefault();
+
+    const serviceId = promocaoModal.dataset.serviceId;
+    const descricao = document.getElementById('promoDescricao').value;
+    const desconto = document.getElementById('promoDesconto').value;
+    const dataInicio = document.getElementById('promoInicio').value;
+    const dataFim = document.getElementById('promoFim').value;
+
+    const promocaoData = {
+        servicoId: serviceId,
+        descricao,
+        desconto: parseFloat(desconto),
+        dataInicio,
+        dataFim
+    };
+
+    const promocaoRef = ref(database, `promocoes/${serviceId}`);
+    set(promocaoRef, promocaoData)
+        .then(() => {
+            alert('Promoção salva com sucesso!');
+            promocaoModal.classList.add('hidden');
+        })
+        .catch(error => {
+            console.error("Erro ao salvar promoção:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+// ==========================================================================
+// 7. FUNÇÕES AUXILIARES
+// ==========================================================================
+
+function capitalize(s) {
+    if (typeof s !== 'string') return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
