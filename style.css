@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 9.1 (Barra de progresso e botões fixos)
+ * Versão: 10.0 (Adição de promoção e pagamento)
  */
 
 body {
@@ -243,6 +243,22 @@ h2 {
     background-color: #218838;
 }
 
+.btn-promocao {
+    width: 100%;
+    background-color: #ffc107; /* Amarelo */
+    color: #333;
+    font-weight: bold;
+    font-size: 1.1em;
+    padding: 15px;
+    border: 2px solid #ff9800;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-promocao:hover {
+    background-color: #ff9800;
+    transform: translateY(-2px);
+}
+
 /* ========================================================================== */
 /* 5. SELEÇÃO DE HORÁRIOS */
 /* ========================================================================== */
@@ -273,7 +289,40 @@ h2 {
 }
 
 /* ========================================================================== */
-/* 6. MENSAGEM DE CONFIRMAÇÃO */
+/* 6. FORMAS DE PAGAMENTO */
+/* ========================================================================== */
+
+.payment-methods-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.payment-method-option {
+    flex: 1 1 45%;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    background-color: #f0f0f0;
+}
+
+.payment-method-option:hover {
+    background-color: #e2e2e2;
+}
+
+.payment-method-option.selected {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+/* ========================================================================== */
+/* 7. MENSAGEM DE CONFIRMAÇÃO */
 /* ========================================================================== */
 
 #confirmation {
