@@ -295,7 +295,7 @@ function resetServicoForm() {
     servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
     servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
-    const existingPromoBtn = servicoForm.querySelector('.btn-promo');
+    const existingPromoBtn = servicoForm.querySelector('#criarPromoBtn');
     if (existingPromoBtn) {
         existingPromoBtn.remove();
     }
@@ -359,25 +359,28 @@ function editService(e) {
         servicoDescricaoInput.value = servicoData.descricao;
         servicoPrecoInput.value = servicoData.precoBase || 0;
         servicoForm.dataset.key = key;
-        
+
         additionalFieldsContainer.innerHTML = '';
         if (servicoData.camposAdicionais) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
         
-        // Adicionar o botão de promoção
-        const existingPromoBtn = servicoForm.querySelector('.btn-promo');
+        // Remove o botão de promoção existente, se houver
+        const existingPromoBtn = servicoForm.querySelector('#criarPromoBtn');
         if (existingPromoBtn) {
             existingPromoBtn.remove();
         }
+        
+        // Cria e adiciona o novo botão "Criar Promoção"
         const promoBtn = document.createElement('button');
         promoBtn.type = 'button';
-        promoBtn.className = 'btn btn-promo';
+        promoBtn.className = 'btn btn-promo mt-2';
+        promoBtn.id = 'criarPromoBtn'; // ID adicionado
         promoBtn.textContent = 'Criar Promoção';
         promoBtn.dataset.serviceId = key;
         promoBtn.addEventListener('click', openPromocaoModal);
         servicoForm.appendChild(promoBtn);
-        
+
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
         // Alternar para a aba correta
         document.querySelector('[data-tab="addServicoTab"]').click();
@@ -465,183 +468,4 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
-    card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
-}
-
-function updateBookingStatus(key, newStatus) {
-    const agendamentoRef = ref(database, `agendamentos/${key}`);
-    get(agendamentoRef).then(snapshot => {
-        const agendamentoData = snapshot.val();
-        set(agendamentoRef, { ...agendamentoData, status: newStatus })
-            .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
-            .catch(error => {
-                console.error("Erro ao atualizar status:", error);
-                alert("Ocorreu um erro. Verifique o console.");
-            });
-    });
-}
-
-function deleteBooking(key) {
-    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível.')) {
-        const agendamentoRef = ref(database, `agendamentos/${key}`);
-        remove(agendamentoRef)
-            .then(() => alert('Agendamento excluído com sucesso!'))
-            .catch(error => {
-                console.error("Erro ao excluir agendamento:", error);
-                alert("Ocorreu um erro. Verifique o console.");
-            });
-    }
-}
-
-// ==========================================================================
-// 5. GERENCIAMENTO DE CONFIGURAÇÕES
-// ==========================================================================
-
-function handleConfigFormSubmit(e) {
-    e.preventDefault();
-    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Limpa o número
-    const horariosPorDia = {};
-
-    diasDaSemana.forEach(dia => {
-        const ativo = document.getElementById(`${dia}Ativo`).checked;
-        const horarioInicio = document.getElementById(`${dia}Inicio`).value;
-        const horarioFim = document.getElementById(`${dia}Fim`).value;
-        const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
-
-        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
-    });
-
-    const configRef = ref(database, 'configuracoes');
-    set(configRef, { whatsappNumber, horariosPorDia })
-        .then(() => alert('Configurações salvas com sucesso!'))
-        .catch(error => {
-            console.error("Erro ao salvar configurações:", error);
-            alert("Ocorreu um erro. Verifique o console.");
-        });
-}
-
-function loadConfig() {
-    const configRef = ref(database, 'configuracoes');
-    onValue(configRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const config = snapshot.val();
-            whatsappNumberInput.value = config.whatsappNumber;
-            diasDaSemana.forEach(dia => {
-                const diaConfig = config.horariosPorDia[dia];
-                if (diaConfig) {
-                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
-                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
-                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
-                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
-                }
-            });
-        }
-    });
-}
-
-// ==========================================================================
-// 6. GERENCIAMENTO DE MENSAGENS PERSONALIZADAS
-// ==========================================================================
-
-function handleWhatsappMessageFormSubmit(e) {
-    e.preventDefault();
-    const texto = whatsappMessageInput.value;
-    const mensagemRef = ref(database, 'mensagens/whatsapp');
-    set(mensagemRef, { texto })
-        .then(() => alert('Mensagem salva com sucesso!'))
-        .catch(error => {
-            console.error("Erro ao salvar mensagem:", error);
-            alert("Ocorreu um erro. Verifique o console.");
-        });
-}
-
-function loadWhatsappMessage() {
-    const mensagemRef = ref(database, 'mensagens/whatsapp');
-    onValue(mensagemRef, (snapshot) => {
-        if (snapshot.exists()) {
-            whatsappMessageInput.value = snapshot.val().texto;
-        } else {
-            // Mensagem padrão caso não exista
-            whatsappMessageInput.value = `Olá, {nomeCliente}!
-Seu agendamento foi confirmado.
-
-*Detalhes:*
-Data: {dataAgendamento}
-Hora: {horaAgendamento}
-Serviços: {servicosSelecionados}
-Valor Total: {orcamentoTotal}
-Forma de Pagamento: {formaPagamento}
-Observações: {observacoesCliente}
-
-Aguardamos você!`;
-        }
-    });
-}
-
-// ==========================================================================
-// 7. GERENCIAMENTO DE PROMOÇÕES
-// ==========================================================================
-
-function openPromocaoModal(e) {
-    promocaoModal.classList.remove('hidden');
-    promocaoForm.reset();
-    promocaoForm.dataset.serviceId = e.target.dataset.serviceId;
-    promocaoForm.dataset.promocaoKey = '';
-    
-    // Verifica se já existe uma promoção para esse serviço
-    const promocaoRef = ref(database, `promocoes/${e.target.dataset.serviceId}`);
-    get(promocaoRef).then(snapshot => {
-        if (snapshot.exists()) {
-            const promoData = snapshot.val();
-            document.getElementById('promoDescricao').value = promoData.descricao;
-            document.getElementById('promoDesconto').value = promoData.desconto;
-            document.getElementById('promoInicio').value = promoData.dataInicio;
-            document.getElementById('promoFim').value = promoData.dataFim;
-            promocaoForm.dataset.promocaoKey = e.target.dataset.serviceId; // A chave da promoção é o ID do serviço
-        }
-    });
-}
-
-function handlePromocaoFormSubmit(e) {
-    e.preventDefault();
-    
-    const serviceId = promocaoForm.dataset.serviceId;
-    const descricao = document.getElementById('promoDescricao').value;
-    const desconto = document.getElementById('promoDesconto').value;
-    const dataInicio = document.getElementById('promoInicio').value;
-    const dataFim = document.getElementById('promoFim').value;
-    
-    if (dataInicio > dataFim) {
-        alert('A data de início deve ser anterior ou igual à data de término.');
-        return;
-    }
-    
-    const promocaoData = {
-        descricao,
-        desconto: parseFloat(desconto),
-        dataInicio,
-        dataFim,
-        servicoId
-    };
-    
-    const promocaoRef = ref(database, `promocoes/${serviceId}`);
-    set(promocaoRef, promocaoData)
-        .then(() => {
-            alert('Promoção salva com sucesso!');
-            promocaoModal.classList.add('hidden');
-        })
-        .catch(error => {
-            console.error("Erro ao salvar promoção:", error);
-            alert("Ocorreu um erro. Verifique o console.");
-        });
-}
-
-// ==========================================================================
-// 8. FUNÇÕES AUXILIARES
-// ==========================================================================
-
-function capitalize(s) {
-    if (typeof s !== 'string') return '';
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
+    card.querySelector('.cancel-booking').addEventListener('click', ()anto de `index.html` e `admin.js`, respectivamente, para que as correções tenham efeito.
