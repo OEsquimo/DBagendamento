@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 9.0 (Gerenciamento de promoções e mensagens do WhatsApp, com correção de bug)
+ * Versão: 10.1 (Gerenciamento de promoções e mensagens do WhatsApp, com correção de bug)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -30,7 +30,8 @@ const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
 const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosList = document.getElementById('listaServicosTab');
+// Alterado para referenciar o novo contêiner
+const servicosContainer = document.getElementById('servicosContainer'); 
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
@@ -342,7 +343,7 @@ function resetServicoForm() {
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
-        servicosList.innerHTML = '';
+        servicosContainer.innerHTML = '';
         if (snapshot.exists()) {
             const servicos = snapshot.val();
             for (const key in servicos) {
@@ -350,7 +351,7 @@ function loadServices() {
                 createServicoCard(servico, key);
             }
         } else {
-            servicosList.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
+            servicosContainer.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
         }
     });
 }
@@ -385,9 +386,7 @@ function createServicoCard(servico, key) {
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
-    // AQUI ESTÁ A CORREÇÃO:
-    servicosList.appendChild(card);
-    // FIM DA CORREÇÃO
+    servicosContainer.appendChild(card);
     
     card.querySelector('.edit-service-btn').addEventListener('click', editService);
     card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
@@ -502,31 +501,6 @@ function createAgendamentoCard(agendamento, key) {
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
     card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
-}
-
-function updateBookingStatus(key, newStatus) {
-    const agendamentoRef = ref(database, `agendamentos/${key}`);
-    get(agendamentoRef).then(snapshot => {
-        const agendamentoData = snapshot.val();
-        set(agendamentoRef, { ...agendamentoData, status: newStatus })
-            .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
-            .catch(error => {
-                console.error("Erro ao atualizar status:", error);
-                alert("Ocorreu um erro. Verifique o console.");
-            });
-    });
-}
-
-function deleteBooking(key) {
-    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível.')) {
-        const agendamentoRef = ref(database, `agendamentos/${key}`);
-        remove(agendamentoRef)
-            .then(() => alert('Agendamento excluído com sucesso!'))
-            .catch(error => {
-                console.error("Erro ao excluir agendamento:", error);
-                alert("Ocorreu um erro. Verifique o console.");
-            });
-    }
 }
 
 // ==========================================================================
