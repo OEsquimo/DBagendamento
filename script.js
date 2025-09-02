@@ -91,6 +91,10 @@ async function loadPromocao() {
     try {
         const promocoesRef = ref(database, 'promocoes');
         const snapshot = await get(promocoesRef);
+        
+        // Esconde o banner por padrão
+        promocaoBanner.classList.add('hidden');
+
         if (snapshot.exists()) {
             const promocoes = snapshot.val();
             const hoje = new Date().toISOString().slice(0, 10);
@@ -109,7 +113,10 @@ async function loadPromocao() {
                 promocaoBtn.textContent = promocaoAtiva.descricao;
                 promocaoBtn.dataset.serviceId = promocaoAtiva.servicoId;
                 
-                promocaoBtn.addEventListener('click', () => {
+                // Remove qualquer ouvinte de evento antigo antes de adicionar o novo
+                const newPromocaoBtn = promocaoBtn.cloneNode(true);
+                promocaoBtn.parentNode.replaceChild(newPromocaoBtn, promocaoBtn);
+                newPromocaoBtn.addEventListener('click', () => {
                     handlePromocaoClick(promocaoAtiva.servicoId);
                 });
             }
