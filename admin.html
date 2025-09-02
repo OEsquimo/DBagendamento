@@ -16,7 +16,6 @@
             <button class="tab-btn" data-tab="listaServicosTab">Serviços Cadastrados</button>
             <button class="tab-btn" data-tab="agendamentosTab">Agendamentos</button>
             <button class="tab-btn" data-tab="configuracoesTab">Configurações</button>
-            <button class="tab-btn" data-tab="mensagensTab">Mensagem WhatsApp</button>
         </div>
         
         <div class="tab-content">
@@ -38,11 +37,68 @@
 
                     <h4>Campos Adicionais</h4>
                     <div id="additionalFieldsContainer">
+                        
+<div class="additional-field" data-type="select">
+                            <div class="form-group">
+                                <label>Nome do Campo</label>
+                                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" value="Capacidade de BTUs" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo do Campo</label>
+                                <select class="form-control field-type">
+                                    <option value="select" selected>Lista de opções (select)</option>
+                                    <option value="text">Campo de Texto</option>
+                                    <option value="number">Campo Numérico</option>
+                                    <option value="textarea">Campo de Texto Longo</option>
+                                </select>
+                            </div>
+                            <div class="options-container">
+                                <p>Opções:</p>
+                                <div class="option-list">
+                                    <div class="option-item">
+                                        <input type="text" class="form-control option-value" placeholder="Nome da opção (ex: 9.000 BTUs)" value="9000 BTUs" required>
+                                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="480.00">
+                                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                                    </div>
+                                    <div class="option-item">
+                                        <input type="text" class="form-control option-value" placeholder="Nome da opção (ex: 12.000 BTUs)" value="12000 BTUs" required>
+                                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="600.00">
+                                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
+                        </div>
                     </div>
                     <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
 
-                    <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
-                    </form>
+                    <div class="form-buttons">
+                        <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
+                        <button type="button" class="btn btn-warning mt-3 hidden" id="createPromoBtn">Criar Promoção</button>
+                    </div>
+                    
+                    <div id="promoFields" class="promo-fields hidden">
+                        <h4>Configurações da Promoção</h4>
+                        <div class="form-group">
+                            <label for="promoDiscount">Porcentagem de Desconto (%)</label>
+                            <input type="number" id="promoDiscount" class="form-control" min="0" max="100" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="promoDescriptionText">Descrição da Promoção</label>
+                            <textarea id="promoDescriptionText" class="form-control" placeholder="Ex: Promoção na instalação de ar-condicionado!"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="promoStartDate">Data de Início</label>
+                            <input type="date" id="promoStartDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="promoEndDate">Data de Término</label>
+                            <input type="date" id="promoEndDate" class="form-control">
+                        </div>
+                        <button type="button" class="btn btn-success" id="savePromoBtn">Salvar Promoção</button>
+                    </div>
+                </form>
             </section>
             
             <section id="listaServicosTab" class="tab-pane hidden">
@@ -64,61 +120,17 @@
                         <label for="whatsappNumber">Número do WhatsApp do Administrador</label>
                         <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
                     </div>
+                    <h4>Mensagem Personalizada para o WhatsApp</h4>
+                    <div class="form-group">
+                        <label for="whatsappMessageTemplate">Modelo da Mensagem</label>
+                        <textarea id="whatsappMessageTemplate" class="form-control" rows="8" placeholder="Use tags como {nome}, {telefone}, {data}, {hora}, {servicos}, {total}, {observacoes}, {pagamento}"></textarea>
+                    </div>
                     <h4>Horários de Atendimento por Dia</h4>
                     <div id="horariosContainer">
                     </div>
                     <button type="submit" class="btn btn-primary">Salvar Configurações</button>
                 </form>
             </section>
-
-            <section id="mensagensTab" class="tab-pane hidden">
-                <h3>Mensagem Personalizada do WhatsApp</h3>
-                <form id="whatsappMessageForm">
-                    <div class="form-group">
-                        <label for="whatsappMessage">Texto da Mensagem</label>
-                        <textarea id="whatsappMessage" class="form-control" rows="10"></textarea>
-                    </div>
-                    <p class="small-text">Use as tags a seguir para personalizar a mensagem:</p>
-                    <ul class="tags-list">
-                        <li>**{nomeCliente}** - Nome do cliente</li>
-                        <li>**{telefoneCliente}** - Telefone do cliente</li>
-                        <li>**{enderecoCliente}** - Endereço do cliente</li>
-                        <li>**{dataAgendamento}** - Data do agendamento</li>
-                        <li>**{horaAgendamento}** - Horário do agendamento</li>
-                        <li>**{servicosSelecionados}** - Lista dos serviços</li>
-                        <li>**{orcamentoTotal}** - Valor total do orçamento</li>
-                        <li>**{observacoesCliente}** - Observações do cliente</li>
-                        <li>**{formaPagamento}** - Forma de pagamento escolhida</li>
-                    </ul>
-                    <button type="submit" class="btn btn-primary">Salvar Mensagem</button>
-                </form>
-            </section>
-        </div>
-    </div>
-
-    <div id="promocaoModal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h3>Criar Promoção</h3>
-            <form id="promocaoForm">
-                <div class="form-group">
-                    <label for="promoDescricao">Descrição da Promoção</label>
-                    <input type="text" id="promoDescricao" class="form-control" required placeholder="Ex: 15% de desconto!">
-                </div>
-                <div class="form-group">
-                    <label for="promoDesconto">Porcentagem de Desconto (%)</label>
-                    <input type="number" id="promoDesconto" class="form-control" min="1" max="100" required>
-                </div>
-                <div class="form-group">
-                    <label for="promoInicio">Data de Início</label>
-                    <input type="date" id="promoInicio" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="promoFim">Data de Término</label>
-                    <input type="date" id="promoFim" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Salvar Promoção</button>
-            </form>
         </div>
     </div>
 
