@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.0 (Com promoção e pagamento)
+ * Versão: 11.0 (Promoções, forma de pagamento e mensagem personalizada)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,16 +44,17 @@ const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
-const promocaoBanner = document.getElementById('promocaoBanner');
-const promocaoBtn = document.getElementById('promocaoBtn');
-const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
+const promoBanner = document.getElementById('promoBanner');
+const promoTitle = document.getElementById('promoTitle');
+const promoDescription = document.getElementById('promoDescription');
+const promoButton = document.getElementById('promoButton');
+const paymentOptionsContainer = document.querySelector('.payment-options-container');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
 let servicosGlobais = {};
 let configGlobais = {};
 let promocaoAtiva = null;
-let mensagemWhatsappPadrao = '';
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
@@ -64,12 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateProgressBar(1);
     setupPhoneMask();
-    setupPaymentMethodSelection();
 });
 
 async function loadAllData() {
     await loadConfig();
-    await loadPromocao();
     loadServices();
 }
 
@@ -87,61 +86,19 @@ async function loadConfig() {
     }
 }
 
-async function loadPromocao() {
-    try {
-        const promocoesRef = ref(database, 'promocoes');
-        const snapshot = await get(promocoesRef);
-        
-        // Esconde o banner por padrão
-        promocaoBanner.classList.add('hidden');
-
-        if (snapshot.exists()) {
-            const promocoes = snapshot.val();
-            const hoje = new Date().toISOString().slice(0, 10);
-            
-            // Procura por uma promoção ativa e válida
-            for (const key in promocoes) {
-                const promo = promocoes[key];
-                if (promo.servicoId && promo.dataInicio <= hoje && promo.dataFim >= hoje) {
-                    promocaoAtiva = { ...promo, key };
-                    break;
-                }
-            }
-            
-            if (promocaoAtiva) {
-                promocaoBanner.classList.remove('hidden');
-                promocaoBtn.textContent = promocaoAtiva.descricao;
-                promocaoBtn.dataset.serviceId = promocaoAtiva.servicoId;
-                
-                // Remove qualquer ouvinte de evento antigo antes de adicionar o novo
-                const newPromocaoBtn = promocaoBtn.cloneNode(true);
-                promocaoBtn.parentNode.replaceChild(newPromocaoBtn, promocaoBtn);
-                newPromocaoBtn.addEventListener('click', () => {
-                    handlePromocaoClick(promocaoAtiva.servicoId);
-                });
-            }
-        }
-        
-        // Carregar a mensagem personalizada do WhatsApp
-        const mensagemRef = ref(database, 'mensagens/whatsapp');
-        const msgSnapshot = await get(mensagemRef);
-        if (msgSnapshot.exists()) {
-            mensagemWhatsappPadrao = msgSnapshot.val().texto;
-        }
-        
-    } catch (error) {
-        console.error("Erro ao carregar promoções ou mensagem:", error);
-    }
-}
-
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
         servicosContainer.innerHTML = '';
         if (snapshot.exists()) {
             servicosGlobais = snapshot.val();
+            checkAndDisplayPromo(servicosGlobais);
             for (const key in servicosGlobais) {
                 const service = servicosGlobais[key];
+                // Se a promoção estiver ativa, não exibe o card do serviço promovido
+                if (promocaoAtiva && promocaoAtiva.key === key) {
+                    continue;
+                }
                 createServiceCard(service, key);
             }
         } else {
@@ -151,7 +108,54 @@ function loadServices() {
 }
 
 // ==========================================================================
-// 3. ETAPA 1: SELEÇÃO DE SERVIÇOS
+// 3. SISTEMA DE PROMOÇÃO
+// ==========================================================================
+
+function checkAndDisplayPromo(servicos) {
+    promocaoAtiva = null;
+    const now = new Date().getTime();
+    for (const key in servicos) {
+        const service = servicos[key];
+        if (service.promocao) {
+            const startDate = new Date(service.promocao.dataInicio).getTime();
+            const endDate = new Date(service.promocao.dataTermino).getTime();
+            if (now >= startDate && now <= endDate) {
+                promocaoAtiva = { ...service, key };
+                break;
+            }
+        }
+    }
+
+    if (promocaoAtiva) {
+        promoTitle.textContent = promocaoAtiva.nome;
+        promoDescription.textContent = promocaoAtiva.promocao.descricao;
+        promoBanner.classList.remove('hidden');
+        promoButton.addEventListener('click', handlePromoClick);
+    } else {
+        promoBanner.classList.add('hidden');
+    }
+}
+
+function handlePromoClick() {
+    if (promocaoAtiva) {
+        // Zera a seleção anterior e adiciona o serviço da promoção
+        servicosSelecionados = [{ ...promocaoAtiva }];
+        // Aplica o desconto no preço base
+        const precoComDesconto = promocaoAtiva.precoBase * (1 - promocaoAtiva.promocao.desconto / 100);
+        servicosSelecionados[0].precoBase = precoComDesconto;
+        
+        updateSelectedServicesCount();
+        
+        // Avança para o próximo passo
+        servicosSection.classList.add('hidden');
+        servicosFormSection.classList.remove('hidden');
+        renderServiceForms();
+        updateProgressBar(2);
+    }
+}
+
+// ==========================================================================
+// 4. ETAPA 1: SELEÇÃO DE SERVIÇOS
 // ==========================================================================
 
 function createServiceCard(service, key) {
@@ -191,26 +195,6 @@ function createServiceCard(service, key) {
     servicosContainer.appendChild(card);
 }
 
-function handlePromocaoClick(serviceId) {
-    // Limpar seleções anteriores
-    servicosSelecionados = [];
-    document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
-    
-    // Encontrar o serviço da promoção e adicioná-lo
-    const serviceKey = Object.keys(servicosGlobais).find(key => key === serviceId);
-    if (serviceKey) {
-        const selectedService = { ...servicosGlobais[serviceKey], key: serviceKey };
-        selectedService.promocao = promocaoAtiva; // Adicionar a info da promo
-        servicosSelecionados.push(selectedService);
-        
-        // Simular o clique no botão Próximo
-        servicosSection.classList.add('hidden');
-        servicosFormSection.classList.remove('hidden');
-        renderServiceForms();
-        updateProgressBar(2);
-    }
-}
-
 function updateSelectedServicesCount() {
     selectedServicesCount.textContent = servicosSelecionados.length;
 }
@@ -227,7 +211,7 @@ document.getElementById('nextStep1').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS
+// 5. ETAPA 2: PREENCHIMENTO DOS CAMPOS
 // ==========================================================================
 
 function renderServiceForms() {
@@ -269,7 +253,7 @@ function renderServiceForms() {
         formGroup.innerHTML = `
             <h3>${service.nome}</h3>
             ${fieldsHtml}
-            <div class="service-price">Valor: R$ 0.00</div>
+            <div class="service-price">Valor: R$ ${service.precoBase.toFixed(2)}</div>
         `;
         servicosFormContainer.appendChild(formGroup);
     });
@@ -278,29 +262,19 @@ function renderServiceForms() {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
-    
-    // Atualiza o preço inicial para o caso da promoção
-    updatePrice();
+
     updateOrcamentoTotal();
 }
 
 function updatePrice(e) {
-    const key = e ? e.target.dataset.key : servicosSelecionados[0].key;
+    const key = e.target.dataset.key;
     const service = servicosSelecionados.find(s => s.key === key);
     if (!service) return;
 
-    const formGroup = e ? e.target.closest('.service-form-group') : document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
+    const formGroup = e.target.closest('.service-form-group');
     const newPrice = calculatePrice(service, formGroup);
     service.precoCalculado = newPrice;
-    
-    // Aplica o desconto se for uma promoção
-    if (service.promocao) {
-        const precoComDesconto = newPrice * (1 - service.promocao.desconto / 100);
-        service.precoCalculado = precoComDesconto;
-        formGroup.querySelector('.service-price').textContent = `Valor: R$ ${precoComDesconto.toFixed(2)} (Promoção: ${service.promocao.desconto}%)`;
-    } else {
-        formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
-    }
+    formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
     updateOrcamentoTotal();
 }
 
@@ -356,14 +330,7 @@ document.getElementById('nextStep2').addEventListener('click', () => {
         if (formGroup) {
             const selectedOptions = getSelectedOptions(formGroup, service);
             service.camposAdicionaisSelecionados = selectedOptions;
-            
-            // Recalcular o preço final
-            const basePrice = calculatePrice(service, formGroup);
-            if (service.promocao) {
-                service.precoCalculado = basePrice * (1 - service.promocao.desconto / 100);
-            } else {
-                service.precoCalculado = basePrice;
-            }
+            service.precoCalculado = calculatePrice(service, formGroup);
         }
     });
     
@@ -406,7 +373,7 @@ function getSelectedOptions(container, serviceData) {
 }
 
 // ==========================================================================
-// 5. ETAPA 3: INFORMAÇÕES DO CLIENTE
+// 6. ETAPA 3: INFORMAÇÕES DO CLIENTE
 // ==========================================================================
 
 function setupPhoneMask() {
@@ -449,17 +416,19 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// 6. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
+// 7. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
 // ==========================================================================
 
-function setupPaymentMethodSelection() {
-    document.querySelectorAll('.payment-method-option').forEach(option => {
+function setupPaymentOptions() {
+    document.querySelectorAll('.payment-option').forEach(option => {
         option.addEventListener('click', () => {
-            document.querySelectorAll('.payment-method-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
             option.classList.add('selected');
         });
     });
 }
+
+setupPaymentOptions();
 
 async function handleDateSelection() {
     const selectedDate = datePicker.value;
@@ -576,14 +545,14 @@ async function handleFormSubmit(e) {
     }
 
     const selectedTimeSlot = document.querySelector('.time-slot.selected');
-    const selectedPaymentMethod = document.querySelector('.payment-method-option.selected');
-    
+    const selectedPaymentOption = document.querySelector('.payment-option.selected');
+
     if (!selectedTimeSlot) {
         alert("Por favor, selecione um horário para o agendamento.");
         return;
     }
     
-    if (!selectedPaymentMethod) {
+    if (!selectedPaymentOption) {
         alert("Por favor, selecione uma forma de pagamento.");
         return;
     }
@@ -605,8 +574,8 @@ async function handleFormSubmit(e) {
         data: formatDate(datePicker.value),
         hora: selectedTimeSlot.textContent,
         observacoes: document.getElementById('observacoes').value,
-        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
-        formaPagamento: selectedPaymentMethod.dataset.method,
+        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + (s.precoCalculado || 0), 0),
+        formaPagamento: selectedPaymentOption.dataset.value,
         status: 'Pendente'
     };
 
@@ -623,7 +592,7 @@ async function handleFormSubmit(e) {
 function showConfirmation(agendamentoData) {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5);
+    updateProgressBar(5); // Um passo extra para a confirmação, se desejar
     
     const whatsappMsg = createWhatsAppMessage(agendamentoData);
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
@@ -637,49 +606,60 @@ function showConfirmation(agendamentoData) {
 }
 
 function createWhatsAppMessage(agendamentoData) {
-    let messageTemplate = mensagemWhatsappPadrao;
-    if (!messageTemplate) {
-        messageTemplate = `Olá, {nomeCliente}!
-        Seu agendamento foi confirmado.
-        
-        *Detalhes:*
-        Data: {dataAgendamento}
-        Hora: {horaAgendamento}
-        Serviços: {servicosSelecionados}
-        Valor Total: {orcamentoTotal}
-        Forma de Pagamento: {formaPagamento}
-        
-        Aguardamos você!`;
-    }
-    
-    const cliente = agendamentoData.cliente;
-    const servicosTexto = agendamentoData.servicos.map(servico => {
-        let texto = `- ${servico.nome}`;
+    const { cliente, data, hora, servicos, orcamentoTotal, observacoes, formaPagamento } = agendamentoData;
+    let messageTemplate = configGlobais.whatsappMessageTemplate || `Olá, gostaria de confirmar um agendamento.
+
+*👤 Dados do Cliente:*
+Nome: {nome}
+Telefone: {telefone}
+Endereço: {endereco}
+
+*📅 Detalhes do Agendamento:*
+Data: {data}
+Hora: {hora}
+{servicos}
+
+*💰 Orçamento Total: {total}*
+*💳 Forma de Pagamento: {pagamento}*
+
+{observacoes_text}
+
+Obrigado!`;
+
+    // Substituir tags
+    messageTemplate = messageTemplate.replace(/{nome}/g, cliente.nome);
+    messageTemplate = messageTemplate.replace(/{telefone}/g, cliente.telefone);
+    messageTemplate = messageTemplate.replace(/{endereco}/g, cliente.endereco);
+    messageTemplate = messageTemplate.replace(/{data}/g, data);
+    messageTemplate = messageTemplate.replace(/{hora}/g, hora);
+    messageTemplate = messageTemplate.replace(/{total}/g, orcamentoTotal.toFixed(2));
+    messageTemplate = messageTemplate.replace(/{pagamento}/g, formaPagamento);
+    messageTemplate = messageTemplate.replace(/{observacoes}/g, observacoes);
+    messageTemplate = messageTemplate.replace(/{observacoes_text}/g, observacoes ? `*📝 Observações:* ${observacoes}` : '');
+
+    // Gerar a lista de serviços com detalhes
+    let servicosTexto = '🛠️ Serviços:\n';
+    servicos.forEach(servico => {
+        let precoTotalServico = servico.precoCalculado || 0;
+        servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
+
         if (servico.camposAdicionaisSelecionados) {
-            const camposDetalhes = Object.entries(servico.camposAdicionaisSelecionados)
-                                       .map(([campo, valor]) => `${campo}: ${valor}`).join(', ');
-            texto += ` (${camposDetalhes})`;
+            for (const campo in servico.camposAdicionaisSelecionados) {
+                const valor = servico.camposAdicionaisSelecionados[campo];
+                let subServicoTexto = `    - ${campo}: ${valor}`;
+                servicosTexto += `${subServicoTexto}\n`;
+            }
         }
-        texto += `: R$ ${servico.precoCalculado.toFixed(2)}`;
-        return texto;
-    }).join('\n');
+    });
     
-    const finalMessage = messageTemplate
-        .replace(/{nomeCliente}/g, cliente.nome)
-        .replace(/{telefoneCliente}/g, cliente.telefone)
-        .replace(/{enderecoCliente}/g, cliente.endereco)
-        .replace(/{dataAgendamento}/g, agendamentoData.data)
-        .replace(/{horaAgendamento}/g, agendamentoData.hora)
-        .replace(/{servicosSelecionados}/g, servicosTexto)
-        .replace(/{orcamentoTotal}/g, `R$ ${agendamentoData.orcamentoTotal.toFixed(2)}`)
-        .replace(/{formaPagamento}/g, agendamentoData.formaPagamento)
-        .replace(/{observacoesCliente}/g, agendamentoData.observacoes || 'N/A');
-        
-    return finalMessage;
+    messageTemplate = messageTemplate.replace(/{servicos}/g, servicosTexto);
+
+    return messageTemplate;
 }
 
+
 // ==========================================================================
-// 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
+// 8. NAVEGAÇÃO E FUNÇÕES AUXILIARES
 // ==========================================================================
 
 function setupEventListeners() {
