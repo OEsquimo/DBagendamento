@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 10.1 (Adicionado estilos para promoção e formas de pagamento)
+ * Versão: 9.1 (Barra de progresso e botões fixos)
  */
 
 body {
@@ -142,27 +142,6 @@ h2 {
     margin-bottom: 20px;
 }
 
-/* Estilos para o banner de promoção */
-.promo-banner {
-    background-color: #ffc107;
-    color: #333;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.promo-banner h3 {
-    margin: 0 0 10px 0;
-    font-size: 1.5em;
-    color: #856404;
-}
-
-.promo-banner .btn {
-    width: auto;
-}
-
 .service-card {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -265,7 +244,7 @@ h2 {
 }
 
 /* ========================================================================== */
-/* 5. SELEÇÃO DE HORÁRIOS E PAGAMENTO */
+/* 5. SELEÇÃO DE HORÁRIOS */
 /* ========================================================================== */
 
 .time-slots-container {
@@ -288,35 +267,6 @@ h2 {
 }
 
 .time-slot.selected {
-    background-color: #007bff;
-    color: #fff;
-    border-color: #007bff;
-}
-
-.payment-options-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-}
-
-.payment-option {
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    min-width: 100px;
-    font-weight: bold;
-    transition: background-color 0.2s, border-color 0.2s;
-    background-color: #f8f9fa;
-}
-
-.payment-option:hover {
-    background-color: #e9ecef;
-}
-
-.payment-option.selected {
     background-color: #007bff;
     color: #fff;
     border-color: #007bff;
