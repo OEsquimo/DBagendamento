@@ -57,6 +57,7 @@ const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta'
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Adicione a chamada para carregar os serviços e agendamentos ao carregar a página
     loadServices();
     loadBookings();
     loadConfig();
