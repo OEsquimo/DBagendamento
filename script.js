@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.2 (Lógica de exibição de preço e nome na seleção de serviço, mensagem do WhatsApp ajustada)
+ * Versão: 10.3 (Compatibilidade com dados antigos e novos)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -168,15 +168,26 @@ function renderServiceForms() {
                 if (field.tipo === 'select' && field.opcoes) {
                     const selectOptionsHtml = field.opcoes.map(option => {
                         let optionText = '';
-                        // Monta a string da opção de forma inteligente
-                        if (option.nome && option.preco !== null && option.preco !== undefined) {
-                            optionText = `${option.nome} - R$ ${option.preco.toFixed(2)}`;
-                        } else if (option.nome) {
-                            optionText = option.nome;
-                        } else if (option.preco !== null && option.preco !== undefined) {
-                            optionText = `R$ ${option.preco.toFixed(2)}`;
+                        let optionName = '';
+                        let optionPrice = '';
+
+                        // Lógica de compatibilidade: verifica se a opção é string (antiga) ou objeto (nova)
+                        if (typeof option === 'string') {
+                            optionText = option;
+                            optionName = option;
+                        } else {
+                            if (option.nome && (option.preco !== null && option.preco !== undefined)) {
+                                optionText = `${option.nome} - R$ ${option.preco.toFixed(2)}`;
+                            } else if (option.nome) {
+                                optionText = option.nome;
+                            } else if (option.preco !== null && option.preco !== undefined) {
+                                optionText = `R$ ${option.preco.toFixed(2)}`;
+                            }
+                            optionName = option.nome || '';
+                            optionPrice = option.preco !== null && option.preco !== undefined ? option.preco : '';
                         }
-                        return optionText ? `<option value="${option.nome || ''}" data-preco="${option.preco !== null && option.preco !== undefined ? option.preco : ''}">${optionText}</option>` : '';
+                        
+                        return optionText ? `<option value="${optionName}" data-preco="${optionPrice}">${optionText}</option>` : '';
                     }).join('');
                     
                     if (selectOptionsHtml === '') return '';
@@ -244,7 +255,10 @@ function calculatePrice(serviceData, container) {
     selectElements.forEach(select => {
         const selectedOption = select.options[select.selectedIndex];
         if (selectedOption && selectedOption.dataset.preco) {
-            preco += parseFloat(selectedOption.dataset.preco);
+            const optionPrice = parseFloat(selectedOption.dataset.preco);
+            if (!isNaN(optionPrice)) {
+                preco += optionPrice;
+            }
         }
     });
 
