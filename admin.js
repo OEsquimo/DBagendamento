@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 9.0 (Com correção na navegação por abas)
+ * Versão: 10.0 (Com correção no botão de promoção e ordem de exibição)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -295,11 +295,17 @@ function resetServicoForm() {
     servicoForm.reset();
     servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
-    servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
-    const existingPromoBtn = servicoForm.querySelector('#criarPromoBtn');
-    if (existingPromoBtn) {
-        existingPromoBtn.remove();
+    
+    const existingFormNav = servicoForm.querySelector('.form-navigation');
+    if (existingFormNav) {
+        existingFormNav.remove();
     }
+    
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.className = 'btn btn-primary mt-3';
+    submitBtn.textContent = 'Salvar Serviço';
+    servicoForm.appendChild(submitBtn);
 }
 
 function loadServices() {
@@ -366,23 +372,43 @@ function editService(e) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
         
-        // Remove o botão de promoção existente, se houver
-        const existingPromoBtn = servicoForm.querySelector('#criarPromoBtn');
-        if (existingPromoBtn) {
-            existingPromoBtn.remove();
+        // Remove os botões de controle existentes
+        const existingFormNav = servicoForm.querySelector('.form-navigation');
+        if (existingFormNav) {
+            existingFormNav.remove();
+        } else {
+            const existingSubmitBtn = servicoForm.querySelector('button[type="submit"]');
+            if(existingSubmitBtn) {
+                existingSubmitBtn.remove();
+            }
         }
+        
+        // Cria um contêiner para os botões
+        const formNav = document.createElement('div');
+        formNav.className = 'form-navigation';
         
         // Cria e adiciona o novo botão "Criar Promoção"
         const promoBtn = document.createElement('button');
         promoBtn.type = 'button';
-        promoBtn.className = 'btn btn-promo mt-2';
-        promoBtn.id = 'criarPromoBtn'; // ID adicionado
+        promoBtn.className = 'btn btn-promo';
+        promoBtn.id = 'criarPromoBtn';
         promoBtn.textContent = 'Criar Promoção';
         promoBtn.dataset.serviceId = key;
         promoBtn.addEventListener('click', openPromocaoModal);
-        servicoForm.appendChild(promoBtn);
+        
+        // Cria e adiciona o botão "Atualizar Serviço"
+        const updateBtn = document.createElement('button');
+        updateBtn.type = 'submit';
+        updateBtn.className = 'btn btn-primary';
+        updateBtn.textContent = 'Atualizar Serviço';
+        
+        // Adiciona os botões ao contêiner na ordem correta
+        formNav.appendChild(promoBtn);
+        formNav.appendChild(updateBtn);
+        
+        // Adiciona o contêiner de botões ao formulário
+        servicoForm.appendChild(formNav);
 
-        servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
         // Alternar para a aba correta
         document.querySelector('[data-tab="addServicoTab"]').click();
     });
