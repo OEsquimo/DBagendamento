@@ -1,130 +1,99 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O Esquimó - Agendamento</title>
+    <title>Agendamento de Serviços</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="progress-bar">
+        <div class="step active" data-step="1">Serviços</div>
+        <div class="step" data-step="2">Detalhes</div>
+        <div class="step" data-step="3">Cliente</div>
+        <div class="step" data-step="4">Agendar</div>
+    </div>
+    
+    <div id="promocao-banner" class="promocao-banner hidden">
+        <p id="promocao-texto"></p>
+        <button id="promo-btn" class="btn btn-warning">Ver Promoção</button>
+    </div>
 
-    <div class="header-container">
-        <div class="progress-bar">
-            <div class="progress-step active" data-step="1">
-                <span class="step-number">1</span>
-                <span class="step-text">Serviços</span>
+    <div id="passo1" class="step-content active">
+        <h2>Escolha um ou mais serviços</h2>
+        <div id="servicos-container">
             </div>
-            <div class="progress-step" data-step="2">
-                <span class="step-number">2</span>
-                <span class="step-text">Detalhes</span>
+        <button id="proximoPasso1" class="btn btn-primary" disabled>Próximo</button>
+    </div>
+
+    <div id="passo2" class="step-content hidden">
+        <h2>Detalhes do Serviço</h2>
+        <div id="servicos-detalhes">
             </div>
-            <div class="progress-step" data-step="3">
-                <span class="step-number">3</span>
-                <span class="step-text">Cliente</span>
+        <button id="voltarPasso2" class="btn btn-secondary">Voltar</button>
+        <button id="proximoPasso2" class="btn btn-primary">Próximo</button>
+    </div>
+
+    <div id="passo3" class="step-content hidden">
+        <h2>Seus Dados</h2>
+        <form id="clienteForm">
+            <div class="form-group">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" required>
             </div>
-            <div class="progress-step" data-step="4">
-                <span class="step-number">4</span>
-                <span class="step-text">Agendar</span>
+            <div class="form-group">
+                <label for="telefone">Telefone (WhatsApp)</label>
+                <input type="tel" id="telefone" placeholder="(99) 99999-9999" required>
             </div>
+            <div class="form-group">
+                <label for="endereco">Endereço (com número)</label>
+                <input type="text" id="endereco" required>
+            </div>
+            <div class="form-group">
+                <label for="observacoes">Observações (opcional)</label>
+                <textarea id="observacoes"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="formaPagamento">Forma de Pagamento</label>
+                <select id="formaPagamento">
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="cartao">Cartão de Crédito/Débito</option>
+                    <option value="pix">PIX</option>
+                </select>
+            </div>
+            <button id="voltarPasso3" type="button" class="btn btn-secondary">Voltar</button>
+            <button id="proximoPasso3" type="submit" class="btn btn-primary">Próximo</button>
+        </form>
+    </div>
+
+    <div id="passo4" class="step-content hidden">
+        <h2>Agendamento</h2>
+        <div class="agendamento-info">
+            <p><strong>Serviços:</strong></p>
+            <ul id="agendamento-servicos-lista"></ul>
+            <p><strong>Total:</strong> <span id="agendamento-total"></span></p>
+            <p><strong>Cliente:</strong> <span id="agendamento-nome"></span></p>
+            <p><strong>Telefone:</strong> <span id="agendamento-telefone"></span></p>
+            <p><strong>Endereço:</strong> <span id="agendamento-endereco"></span></p>
+            <p><strong>Forma de Pagamento:</strong> <span id="agendamento-forma-pagamento"></span></p>
         </div>
+        <div class="form-group">
+            <label for="dataAgendamento">Selecione a Data:</label>
+            <input type="date" id="dataAgendamento" required>
+        </div>
+        <div class="form-group">
+            <label for="horaAgendamento">Selecione a Hora:</label>
+            <select id="horaAgendamento" required>
+                <option value="">Selecione a data primeiro</option>
+            </select>
+        </div>
+        <button id="voltarPasso4" type="button" class="btn btn-secondary">Voltar</button>
+        <button id="confirmarAgendamento" type="button" class="btn btn-primary">Confirmar Agendamento</button>
     </div>
 
-    <div class="container">
-        
-        <section id="servicos" class="active-section">
-            <div id="promocaoBanner" class="hidden">
-                <button id="promocaoBtn" class="btn btn-promocao"></button>
-            </div>
-            <h2>Escolha um ou mais serviços</h2>
-            <div id="servicosContainer">
-            </div>
-            <div class="total-summary-container">
-                <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
-            </div>
-            <div class="form-navigation-bottom">
-                <button class="btn btn-primary" id="nextStep1" style="display:none;">Próximo</button>
-            </div>
-        </section>
-
-        <section id="servicosForm" class="hidden">
-            <h2>Detalhes do Serviço</h2>
-            <div id="servicosFormContainer">
-            </div>
-            <div class="total-summary-container">
-                <span class="total-label">Orçamento Total:</span>
-                <span id="orcamentoTotal">R$ 0,00</span>
-            </div>
-            <div class="form-navigation-bottom">
-                <button class="btn btn-secondary" id="backButton1">Voltar</button>
-                <button class="btn btn-primary" id="nextStep2">Próximo</button>
-            </div>
-        </section>
-
-        <section id="clienteForm" class="hidden">
-            <h2>Suas Informações</h2>
-            <form id="clienteInfoForm">
-                <div class="form-group">
-                    <label for="nome">Nome Completo</label>
-                    <input type="text" id="nome" class="form-control" required placeholder="Digite seu nome completo">
-                </div>
-                <div class="form-group">
-                    <label for="telefone">Telefone</label>
-                    <input type="tel" id="telefone" class="form-control" required pattern="^\(\d{2}\)\s\d{5}-\d{4}$" placeholder="(xx) xxxxx-xxxx">
-                </div>
-                <div class="form-group">
-                    <label for="endereco">Endereço</label>
-                    <input type="text" id="endereco" class="form-control" placeholder="Ex: Rua A, 123, Bairro B">
-                </div>
-                <div class="form-group">
-                    <label for="observacoes">Observações (opcional)</label>
-                    <textarea id="observacoes" class="form-control" placeholder="Ex: Preferência de horário, detalhes do local."></textarea>
-                </div>
-            </form>
-            <div class="form-navigation-bottom">
-                <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
-                <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
-            </div>
-        </section>
-
-        <section id="agendamento" class="hidden">
-            <h2>Agendar</h2>
-            <form id="agendamentoForm">
-                <div class="form-group">
-                    <label for="datePicker">Escolha uma data</label>
-                    <input type="date" id="datePicker" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Horários disponíveis</label>
-                    <div id="timeSlotsContainer" class="time-slots-container">
-                        <p>Selecione uma data para ver os horários.</p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Forma de Pagamento</label>
-                    <div id="paymentMethodsContainer" class="payment-methods-container">
-                        <div class="payment-method-option" data-method="Pix">Pix</div>
-                        <div class="payment-method-option" data-method="Dinheiro">Dinheiro</div>
-                        <div class="payment-method-option" data-method="Cartão de Crédito">Cartão de Crédito</div>
-                        <div class="payment-method-option" data-method="Cartão de Débito">Cartão de Débito</div>
-                    </div>
-                </div>
-            </form>
-            <div class="form-navigation-bottom">
-                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
-                <button type="submit" class="btn btn-primary" form="agendamentoForm">Confirmar Agendamento</button>
-            </div>
-        </section>
-
-        <section id="confirmation" class="hidden">
-            <h2>Agendamento Concluído!</h2>
-            <p>Seu agendamento foi enviado com sucesso.</p>
-            <p>Em breve entraremos em contato para confirmar os detalhes.</p>
-            <p>Enviar confirmação do agendamento para o whatsapp:</p>
-            <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Enviar mensagem</a>
-        </section>
-
-    </div>
-
-    <script type="module" src="script.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+    
+    <script type="module" src="index.js"></script>
 </body>
 </html>
