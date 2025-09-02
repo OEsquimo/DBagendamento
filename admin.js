@@ -296,11 +296,13 @@ function resetServicoForm() {
     servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
     
+    // Remove os botões de controle existentes
     const existingFormNav = servicoForm.querySelector('.form-navigation');
     if (existingFormNav) {
         existingFormNav.remove();
     }
     
+    // Cria e adiciona o novo botão "Salvar Serviço"
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
     submitBtn.className = 'btn btn-primary mt-3';
@@ -462,7 +464,7 @@ function createAgendamentoCard(agendamento, key) {
         agendamento.servicos.forEach(servico => {
             servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
                 <ul>
-                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
+                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionadasSelecionados).map(([campo, valor]) => `
                         <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
                     `).join('') : ''}
                 </ul>
@@ -621,7 +623,7 @@ function loadWhatsappMessage() {
 // ==========================================================================
 
 function openPromocaoModal() {
-    const serviceId = document.querySelector('#criarPromoBtn').dataset.serviceId;
+    const serviceId = document.getElementById('criarPromoBtn').dataset.serviceId;
     promocaoModal.dataset.serviceId = serviceId;
     promocaoModal.classList.remove('hidden');
 
