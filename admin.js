@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.2 (Nova lógica de salvar e exibir campos adicionais)
+ * Versão: 7.3 (Compatibilidade com dados antigos e novos)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -165,11 +165,20 @@ function generateOptionsHTML(opcoes = []) {
         <p>Opções:</p>
         <div class="option-list">
             ${opcoes.map(option => {
-                const optionName = option.nome || '';
-                const optionPrice = option.preco !== null && option.preco !== undefined ? option.preco : '';
+                let optionName = '';
+                let optionPrice = '';
+
+                // Lógica de compatibilidade: verifica se a opção é string (antiga) ou objeto (nova)
+                if (typeof option === 'string') {
+                    optionName = option;
+                } else {
+                    optionName = option.nome || '';
+                    optionPrice = option.preco !== null && option.preco !== undefined ? option.preco : '';
+                }
+
                 return `
                     <div class="option-item">
-                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionName}" ${optionPrice === '' ? '' : 'required'}>
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionName}">
                         <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice !== '' ? optionPrice.toFixed(2) : ''}">
                         <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
                     </div>
@@ -306,11 +315,14 @@ function createServicoCard(servico, key) {
             if (campo.tipo === 'select' && campo.opcoes) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => {
                     let optionText = '';
-                    if (opcao.nome && opcao.preco) {
+                    // Lógica de compatibilidade: verifica se a opção é string (antiga) ou objeto (nova)
+                    if (typeof opcao === 'string') {
+                        optionText = opcao;
+                    } else if (opcao.nome && (opcao.preco !== null && opcao.preco !== undefined)) {
                         optionText = `${opcao.nome} - R$ ${opcao.preco.toFixed(2)}`;
                     } else if (opcao.nome) {
                         optionText = opcao.nome;
-                    } else if (opcao.preco) {
+                    } else if (opcao.preco !== null && opcao.preco !== undefined) {
                         optionText = `R$ ${opcao.preco.toFixed(2)}`;
                     }
                     return optionText ? `<li>${optionText}</li>` : '';
@@ -433,7 +445,7 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.cancel-booking').addEventListener('click', ()(() => updateBookingStatus(key, 'Cancelado')));
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
