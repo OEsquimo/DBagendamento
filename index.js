@@ -1,8 +1,7 @@
-
 /*
  * Arquivo: index.js
  * Descrição: Lógica para a página de agendamento de serviços.
- * Versão: 10.0 (Com funcionalidade de promoções)
+ * Versão: 11.0 (Corrigido e completo com funcionalidades de agendamento e promoção)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -135,6 +134,7 @@ function checkActivePromotion(promocoes) {
 
     for (const key in promocoes) {
         const promocao = promocoes[key];
+        // Verifica se a promoção está dentro do período de validade
         if (hoje >= promocao.dataInicio && hoje <= promocao.dataFim) {
             promocaoAtiva = promocao;
             break;
@@ -155,17 +155,18 @@ function handlePromoClick() {
         
         // Aplica o desconto ao preço base
         const desconto = promocaoAtiva.desconto / 100;
-        servicoPromocao.precoBase *= (1 - desconto);
+        servicoPromocao.precoBase = servicoPromocao.precoBase * (1 - desconto);
         
         servicosSelecionados = [servicoPromocao];
         
         // Marca o serviço como selecionado na interface
         const servicoCard = document.querySelector(`.servico-card[data-key="${servicoPromocao.id}"]`);
         if (servicoCard) {
+            document.querySelectorAll('.servico-card').forEach(card => card.classList.remove('selected'));
             servicoCard.classList.add('selected');
         }
         
-        // Avanca para o próximo passo
+        // Avança para o próximo passo
         navegarParaPasso(2);
     }
 }
@@ -194,6 +195,9 @@ function displayServices() {
     document.querySelectorAll('.add-service-btn').forEach(btn => {
         btn.addEventListener('click', toggleServiceSelection);
     });
+    
+    // Habilita o botão "Próximo" se houver serviços selecionados
+    proximoPasso1Btn.disabled = servicosSelecionados.length === 0;
 }
 
 function toggleServiceSelection(e) {
@@ -210,7 +214,7 @@ function toggleServiceSelection(e) {
         // Aplica o desconto da promoção se for o serviço correto
         if (promocaoAtiva && promocaoAtiva.servicoId === key) {
             const desconto = promocaoAtiva.desconto / 100;
-            servico.precoBase *= (1 - desconto);
+            servico.precoBase = servico.precoBase * (1 - desconto);
         }
         
         servicosSelecionados.push(servico);
@@ -219,7 +223,6 @@ function toggleServiceSelection(e) {
     // Habilita ou desabilita o botão "Próximo"
     proximoPasso1Btn.disabled = servicosSelecionados.length === 0;
 }
-
 
 // ==========================================================================
 // 4. LÓGICA DE NAVEGAÇÃO E DADOS
@@ -291,7 +294,6 @@ function atualizarOrcamentoTotal() {
     
     // ... (o resto da lógica de atualização do total) ...
 }
-
 
 function handleClienteFormSubmit(e) {
     e.preventDefault();
@@ -462,4 +464,3 @@ function capitalize(s) {
     if (typeof s !== 'string') return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
-
