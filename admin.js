@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 7.2 (Nova lógica de salvar e exibir campos adicionais)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -160,18 +160,17 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
-function generateOptionsHTML(opcoes = ['']) {
+function generateOptionsHTML(opcoes = []) {
     return `
         <p>Opções:</p>
         <div class="option-list">
             ${opcoes.map(option => {
-                const parts = option.split(', R$ ');
-                const optionValue = parts[0] || '';
-                const optionPrice = parts[1] || '0.00';
+                const optionName = option.nome || '';
+                const optionPrice = option.preco !== null && option.preco !== undefined ? option.preco : '';
                 return `
                     <div class="option-item">
-                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
-                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionName}" ${optionPrice === '' ? '' : 'required'}>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice !== '' ? optionPrice.toFixed(2) : ''}">
                         <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
                     </div>
                 `;
@@ -185,8 +184,8 @@ function addOptionForm(e) {
     const optionList = e.target.closest('.options-container').querySelector('.option-list');
     const optionHtml = `
         <div class="option-item mt-2">
-            <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
-            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+            <input type="text" class="form-control option-value" placeholder="Nome da opção">
+            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01">
             <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
         </div>
     `;
@@ -227,8 +226,13 @@ function handleServicoFormSubmit(e) {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
                 const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                const optionPriceInput = optionItem.querySelector('.option-price').value;
+                const optionPrice = optionPriceInput ? parseFloat(optionPriceInput) : null;
+                
+                // Salva apenas opções com nome ou preço
+                if (optionValue || (optionPrice !== null && !isNaN(optionPrice))) {
+                     opcoes.push({ nome: optionValue, preco: optionPrice });
+                }
             });
             campoData.opcoes = opcoes;
         }
@@ -300,7 +304,17 @@ function createServicoCard(servico, key) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
             if (campo.tipo === 'select' && campo.opcoes) {
-                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
+                opcoesHtml = `<ul>${campo.opcoes.map(opcao => {
+                    let optionText = '';
+                    if (opcao.nome && opcao.preco) {
+                        optionText = `${opcao.nome} - R$ ${opcao.preco.toFixed(2)}`;
+                    } else if (opcao.nome) {
+                        optionText = opcao.nome;
+                    } else if (opcao.preco) {
+                        optionText = `R$ ${opcao.preco.toFixed(2)}`;
+                    }
+                    return optionText ? `<li>${optionText}</li>` : '';
+                }).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
@@ -470,7 +484,7 @@ function handleConfigFormSubmit(e) {
     set(configRef, { whatsappNumber, horariosPorDia })
         .then(() => alert('Configurações salvas com sucesso!'))
         .catch(error => {
-                console.error("Erro ao salvar configurações:", error);
+            console.error("Erro ao salvar configurações:", error);
             alert("Ocorreu um erro. Verifique o console.");
         });
 }
