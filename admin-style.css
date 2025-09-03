@@ -1,7 +1,6 @@
 /*
  * Arquivo: admin-style.css
  * Descrição: Estilos para o Painel Administrativo do sistema.
- * Versão: 8.0 (Estilos para campos de promoção e mensagem do WhatsApp)
  */
 
 body {
@@ -176,36 +175,9 @@ h4 {
     background-color: #e0a800;
 }
 
-.btn-success {
-    background-color: #28a745;
-    color: #fff;
-}
-
-.btn-success:hover {
-    background-color: #218838;
-}
-
 .btn-sm {
     padding: 5px 10px;
     font-size: 0.8em;
-}
-
-.form-buttons {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.form-buttons .btn {
-    flex: 1;
-}
-
-/* Estilos para os campos de promoção */
-.promo-fields {
-    border: 1px dashed #ffc107;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 20px;
 }
 
 /* ========================================================================== */
