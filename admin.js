@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.3 (Compatibilidade com dados antigos e novos)
+ * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -160,26 +160,18 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
-function generateOptionsHTML(opcoes = []) {
+function generateOptionsHTML(opcoes = ['']) {
     return `
         <p>Opções:</p>
         <div class="option-list">
             ${opcoes.map(option => {
-                let optionName = '';
-                let optionPrice = '';
-
-                // Lógica de compatibilidade: verifica se a opção é string (antiga) ou objeto (nova)
-                if (typeof option === 'string') {
-                    optionName = option;
-                } else {
-                    optionName = option.nome || '';
-                    optionPrice = option.preco !== null && option.preco !== undefined ? option.preco : '';
-                }
-
+                const parts = option.split(', R$ ');
+                const optionValue = parts[0] || '';
+                const optionPrice = parts[1] || '0.00';
                 return `
                     <div class="option-item">
-                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionName}">
-                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice !== '' ? optionPrice.toFixed(2) : ''}">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
                         <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
                     </div>
                 `;
@@ -193,8 +185,8 @@ function addOptionForm(e) {
     const optionList = e.target.closest('.options-container').querySelector('.option-list');
     const optionHtml = `
         <div class="option-item mt-2">
-            <input type="text" class="form-control option-value" placeholder="Nome da opção">
-            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01">
+            <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
             <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
         </div>
     `;
@@ -235,13 +227,8 @@ function handleServicoFormSubmit(e) {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
                 const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPriceInput = optionItem.querySelector('.option-price').value;
-                const optionPrice = optionPriceInput ? parseFloat(optionPriceInput) : null;
-                
-                // Salva apenas opções com nome ou preço
-                if (optionValue || (optionPrice !== null && !isNaN(optionPrice))) {
-                     opcoes.push({ nome: optionValue, preco: optionPrice });
-                }
+                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
+                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
             });
             campoData.opcoes = opcoes;
         }
@@ -313,20 +300,7 @@ function createServicoCard(servico, key) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
             if (campo.tipo === 'select' && campo.opcoes) {
-                opcoesHtml = `<ul>${campo.opcoes.map(opcao => {
-                    let optionText = '';
-                    // Lógica de compatibilidade: verifica se a opção é string (antiga) ou objeto (nova)
-                    if (typeof opcao === 'string') {
-                        optionText = opcao;
-                    } else if (opcao.nome && (opcao.preco !== null && opcao.preco !== undefined)) {
-                        optionText = `${opcao.nome} - R$ ${opcao.preco.toFixed(2)}`;
-                    } else if (opcao.nome) {
-                        optionText = opcao.nome;
-                    } else if (opcao.preco !== null && opcao.preco !== undefined) {
-                        optionText = `R$ ${opcao.preco.toFixed(2)}`;
-                    }
-                    return optionText ? `<li>${optionText}</li>` : '';
-                }).join('')}</ul>`;
+                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
@@ -445,7 +419,7 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', ()(() => updateBookingStatus(key, 'Cancelado')));
+    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
