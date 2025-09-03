@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica para o formulário de agendamento.
- * Versão: 8.3 (Campos condicionais e validações aprimoradas)
+ * Versão: 8.5 (Correções de erros e melhorias nos campos condicionais)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -25,7 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Elementos do DOM
+// Elementos do DOM (Verificações de existência adicionadas)
 const servicosSelect = document.getElementById('servicos');
 const servicoDetalhesContainer = document.getElementById('servico-detalhes-container');
 const horarioSelect = document.getElementById('horario');
@@ -68,13 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    servicosSelect.addEventListener('change', handleServiceSelection);
-    horarioSelect.addEventListener('change', () => validateStep(2));
-    nextButtons.forEach(button => button.addEventListener('click', handleNextStep));
-    prevButtons.forEach(button => button.addEventListener('click', handlePrevStep));
-    formAgendamento.addEventListener('submit', handleFormSubmit);
-    // NOVO: Adiciona o listener para o cálculo do orçamento
-    camposAdicionaisContainer.addEventListener('change', updateOrcamentoTotal);
+    if (servicosSelect) servicosSelect.addEventListener('change', handleServiceSelection);
+    if (horarioSelect) horarioSelect.addEventListener('change', () => validateStep(2));
+    if (nextButtons) nextButtons.forEach(button => button.addEventListener('click', handleNextStep));
+    if (prevButtons) prevButtons.forEach(button => button.addEventListener('click', handlePrevStep));
+    if (formAgendamento) formAgendamento.addEventListener('submit', handleFormSubmit);
+    if (camposAdicionaisContainer) camposAdicionaisContainer.addEventListener('change', updateOrcamentoTotal);
 }
 
 // ==========================================================================
@@ -91,7 +90,7 @@ function loadConfig() {
             generateHorarios();
             updateOrcamentoTotal();
         } else {
-            alert('Configurações não encontradas. Por favor, configure o sistema no painel de administração.');
+            console.warn('Configurações não encontradas.');
         }
     });
 }
@@ -105,6 +104,7 @@ function loadServices() {
 }
 
 function renderServices() {
+    if (!servicosSelect) return;
     servicosSelect.innerHTML = '<option value="">Selecione um serviço</option>';
     for (const key in servicos) {
         const option = document.createElement('option');
@@ -151,6 +151,7 @@ function updateProgress(step) {
 // ==========================================================================
 
 function generateHorarios() {
+    if (!formAgendamento || !formAgendamento.data || !horarioSelect) return;
     const dataSelecionada = new Date(formAgendamento.data.value + 'T00:00:00');
     const diaDaSemana = diasDaSemana[dataSelecionada.getDay()];
     const configDia = config.horariosPorDia[diaDaSemana];
@@ -217,19 +218,19 @@ function getHorariosDisponiveis(inicio, fim, duracao, horariosOcupados) {
 function validateStep(step) {
     switch (step) {
         case 1:
-            if (!servicosSelect.value) {
+            if (!servicosSelect || !servicosSelect.value) {
                 alert('Por favor, selecione um serviço.');
                 return false;
             }
             return true;
         case 2:
-            if (!formAgendamento.data.value || !formAgendamento.horario.value) {
+            if (!formAgendamento || !formAgendamento.data || !formAgendamento.horario || !formAgendamento.data.value || !formAgendamento.horario.value) {
                 alert('Por favor, selecione uma data e um horário.');
                 return false;
             }
             return true;
         case 3:
-            if (!nomeInput.value || !telefoneInput.value || !enderecoInput.value) {
+            if (!nomeInput || !telefoneInput || !enderecoInput || !nomeInput.value || !telefoneInput.value || !enderecoInput.value) {
                 alert('Por favor, preencha todos os campos obrigatórios.');
                 return false;
             }
@@ -248,11 +249,13 @@ function handleServiceSelection(e) {
     selectedService = servicos[key];
     if (selectedService) {
         renderServiceForms(selectedService);
-        detalhesTab.classList.remove('disabled');
+        if (detalhesTab) {
+            detalhesTab.classList.remove('disabled');
+        }
     } else {
-        servicoDetalhesContainer.innerHTML = '';
-        camposAdicionaisContainer.innerHTML = '';
-        detalhesTab.classList.add('disabled');
+        if (servicoDetalhesContainer) servicoDetalhesContainer.innerHTML = '';
+        if (camposAdicionaisContainer) camposAdicionaisContainer.innerHTML = '';
+        if (detalhesTab) detalhesTab.classList.add('disabled');
         selectedService = null;
         orcamentoTotal = 0;
         updateOrcamentoTotal();
@@ -260,52 +263,53 @@ function handleServiceSelection(e) {
 }
 
 function renderServiceForms(servico) {
+    if (!servicoDetalhesContainer) return;
     servicoDetalhesContainer.innerHTML = `
         <h5 class="mb-3">${servico.nome}</h5>
         <p><strong>Descrição:</strong> ${servico.descricao}</p>
         <p><strong>Preço Base:</strong> R$ ${servico.precoBase.toFixed(2)}</p>
     `;
 
-    camposAdicionaisContainer.innerHTML = '';
-    
-    // NOVO: Adiciona um data-index para os campos adicionais
-    if (servico.camposAdicionais) {
-        servico.camposAdicionais.forEach((campo, index) => {
-            let fieldHtml = '';
-            const fieldId = `campo-${index}`;
-            let dependsOn = null;
-            if (index > 0) {
-                dependsOn = `campo-${index-1}`;
-            }
+    if (camposAdicionaisContainer) {
+        camposAdicionaisContainer.innerHTML = '';
+        if (servico.camposAdicionais) {
+            servico.camposAdicionais.forEach((campo, index) => {
+                let fieldHtml = '';
+                const fieldId = `campo-${index}`;
+                let dependsOn = null;
+                if (index > 0) {
+                    dependsOn = `campo-${index - 1}`;
+                }
 
-            switch (campo.tipo) {
-                case 'select':
-                    fieldHtml = generateSelectField(campo, fieldId);
-                    break;
-                case 'textarea':
-                    fieldHtml = generateTextareaField(campo, fieldId);
-                    break;
-                default:
-                    fieldHtml = generateInputField(campo, fieldId, campo.tipo);
-                    break;
-            }
-            
-            const fieldContainer = document.createElement('div');
-            fieldContainer.classList.add('additional-field-container');
-            fieldContainer.innerHTML = fieldHtml;
-            // NOVO: Define a dependência para o campo
-            if (dependsOn) {
-                fieldContainer.dataset.dependsOn = dependsOn;
-            }
-            camposAdicionaisContainer.appendChild(fieldContainer);
-        });
+                switch (campo.tipo) {
+                    case 'select':
+                        fieldHtml = generateSelectField(campo, fieldId);
+                        break;
+                    case 'textarea':
+                        fieldHtml = generateTextareaField(campo, fieldId);
+                        break;
+                    default:
+                        fieldHtml = generateInputField(campo, fieldId, campo.tipo);
+                        break;
+                }
+
+                const fieldContainer = document.createElement('div');
+                fieldContainer.classList.add('additional-field-container');
+                fieldContainer.innerHTML = fieldHtml;
+                if (dependsOn) {
+                    fieldContainer.dataset.dependsOn = dependsOn;
+                }
+                camposAdicionaisContainer.appendChild(fieldContainer);
+            });
+        }
+        updateOrcamentoTotal();
+        setupConditionalFields();
     }
-    updateOrcamentoTotal();
-    setupConditionalFields(); // NOVO: Chama a função que gerencia os campos condicionais
 }
 
-// NOVO: Gerencia a visibilidade dos campos com base na seleção
 function setupConditionalFields() {
+    if (!camposAdicionaisContainer) return;
+
     document.querySelectorAll('.additional-field-container').forEach(container => {
         if (container.dataset.dependsOn) {
             container.classList.add('hidden');
@@ -316,7 +320,7 @@ function setupConditionalFields() {
         const changedFieldId = e.target.id;
         const nextFieldContainer = camposAdicionaisContainer.querySelector(`[data-depends-on="${changedFieldId}"]`);
         if (nextFieldContainer) {
-            if (e.target.value) { // Verifica se um valor foi selecionado
+            if (e.target.value) {
                 nextFieldContainer.classList.remove('hidden');
             } else {
                 nextFieldContainer.classList.add('hidden');
@@ -361,11 +365,6 @@ function generateTextareaField(campo, fieldId) {
     `;
 }
 
-function handleAdditionalFieldChange(e) {
-    // A função de orçamento agora é chamada por um listener separado
-    // setupConditionalFields() já lida com a lógica de exibição
-}
-
 function updateOrcamentoTotal() {
     orcamentoTotal = selectedService ? selectedService.precoBase : 0;
     document.querySelectorAll('.additional-field-container select').forEach(select => {
@@ -374,7 +373,9 @@ function updateOrcamentoTotal() {
             orcamentoTotal += parseFloat(selectedOption.dataset.price);
         }
     });
-    orcamentoTotalSpan.textContent = orcamentoTotal.toFixed(2);
+    if (orcamentoTotalSpan) {
+        orcamentoTotalSpan.textContent = orcamentoTotal.toFixed(2);
+    }
 }
 
 function getServicosSelecionados() {
@@ -397,7 +398,7 @@ function getServicosSelecionados() {
                         }
                     } else {
                         if (input.value) {
-                             camposAdicionadosSelecionados[campoNome] = input.value;
+                            camposAdicionaisSelecionados[campoNome] = input.value;
                         }
                     }
                 }
@@ -440,9 +441,9 @@ function handleFormSubmit(e) {
             const mensagem = generateWhatsAppMessage(agendamento);
             window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`, '_blank');
             formAgendamento.reset();
-            servicoDetalhesContainer.innerHTML = '';
-            camposAdicionaisContainer.innerHTML = '';
-            orcamentoTotalSpan.textContent = '0.00';
+            if (servicoDetalhesContainer) servicoDetalhesContainer.innerHTML = '';
+            if (camposAdicionaisContainer) camposAdicionaisContainer.innerHTML = '';
+            if (orcamentoTotalSpan) orcamentoTotalSpan.textContent = '0.00';
             selectedService = null;
             showStep(1);
         })
