@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica para o formulário de agendamento.
- * Versão: 8.5 (Correções de erros e melhorias nos campos condicionais)
+ * Versão: 8.6 (Correções de inicialização e cálculo de orçamento)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -25,7 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Elementos do DOM (Verificações de existência adicionadas)
+// Elementos do DOM
 const servicosSelect = document.getElementById('servicos');
 const servicoDetalhesContainer = document.getElementById('servico-detalhes-container');
 const horarioSelect = document.getElementById('horario');
@@ -56,6 +56,8 @@ let orcamentoTotal = 0;
 let whatsappNumber = '';
 let whatsappTemplate = '';
 
+const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO
 // ==========================================================================
@@ -69,6 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
     if (servicosSelect) servicosSelect.addEventListener('change', handleServiceSelection);
+    if (formAgendamento && formAgendamento.data) {
+        formAgendamento.data.addEventListener('change', generateHorarios);
+    }
     if (horarioSelect) horarioSelect.addEventListener('change', () => validateStep(2));
     if (nextButtons) nextButtons.forEach(button => button.addEventListener('click', handleNextStep));
     if (prevButtons) prevButtons.forEach(button => button.addEventListener('click', handlePrevStep));
@@ -119,6 +124,7 @@ function renderServices() {
 // ==========================================================================
 
 function showStep(step) {
+    if (!formSteps || !progressCircles) return;
     formSteps.forEach(s => s.classList.remove('active'));
     document.getElementById(`step-${step}`).classList.add('active');
     updateProgress(step);
@@ -137,6 +143,7 @@ function handlePrevStep(e) {
 }
 
 function updateProgress(step) {
+    if (!progressCircles) return;
     progressCircles.forEach((circle, index) => {
         if (index < step) {
             circle.classList.add('active');
@@ -272,7 +279,7 @@ function renderServiceForms(servico) {
 
     if (camposAdicionaisContainer) {
         camposAdicionaisContainer.innerHTML = '';
-        if (servico.camposAdicionais) {
+        if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
             servico.camposAdicionais.forEach((campo, index) => {
                 let fieldHtml = '';
                 const fieldId = `campo-${index}`;
@@ -336,7 +343,7 @@ function generateSelectField(campo, fieldId) {
     return `
         <div class="form-group">
             <label for="${fieldId}">${campo.nome}</label>
-            <select class="form-control" id="${fieldId}" required>
+            <select class="form-control" id="${fieldId}">
                 <option value="">Selecione...</option>
                 ${campo.opcoes.map(option => {
                     const priceDisplay = (option.valor && option.valor > 0) ? ` (R$ ${option.valor.toFixed(2)})` : '';
@@ -351,7 +358,7 @@ function generateInputField(campo, fieldId, type) {
     return `
         <div class="form-group">
             <label for="${fieldId}">${campo.nome}</label>
-            <input type="${type}" class="form-control" id="${fieldId}" placeholder="Digite aqui..." required>
+            <input type="${type}" class="form-control" id="${fieldId}" placeholder="Digite aqui...">
         </div>
     `;
 }
@@ -367,12 +374,14 @@ function generateTextareaField(campo, fieldId) {
 
 function updateOrcamentoTotal() {
     orcamentoTotal = selectedService ? selectedService.precoBase : 0;
-    document.querySelectorAll('.additional-field-container select').forEach(select => {
-        const selectedOption = select.options[select.selectedIndex];
-        if (selectedOption && selectedOption.dataset.price) {
-            orcamentoTotal += parseFloat(selectedOption.dataset.price);
-        }
-    });
+    if (camposAdicionaisContainer) {
+        document.querySelectorAll('.additional-field-container select').forEach(select => {
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.dataset.price) {
+                orcamentoTotal += parseFloat(selectedOption.dataset.price);
+            }
+        });
+    }
     if (orcamentoTotalSpan) {
         orcamentoTotalSpan.textContent = orcamentoTotal.toFixed(2);
     }
@@ -382,29 +391,30 @@ function getServicosSelecionados() {
     const servicosSelecionados = [];
     if (selectedService) {
         const camposAdicionaisSelecionados = {};
-        document.querySelectorAll('.additional-field-container').forEach(container => {
-            const input = container.querySelector('input, select, textarea');
-            if (input) {
-                const campoNome = selectedService.camposAdicionais.find(campo => `campo-${selectedService.camposAdicionais.indexOf(campo)}` === input.id)?.nome;
-                if (campoNome) {
-                    if (input.type === 'select-one') {
-                        const selectedOption = input.options[input.selectedIndex];
-                        if (selectedOption.value) {
-                            const precoAdicional = parseFloat(selectedOption.dataset.price);
-                            camposAdicionaisSelecionados[campoNome] = {
-                                nome: selectedOption.textContent.replace(` (R$ ${precoAdicional.toFixed(2)})`, '').trim(),
-                                valor: precoAdicional
-                            };
-                        }
-                    } else {
-                        if (input.value) {
-                            camposAdicionaisSelecionados[campoNome] = input.value;
+        if (camposAdicionaisContainer) {
+            document.querySelectorAll('.additional-field-container').forEach(container => {
+                const input = container.querySelector('input, select, textarea');
+                if (input) {
+                    const campoNome = selectedService.camposAdicionais.find(campo => `campo-${selectedService.camposAdicionais.indexOf(campo)}` === input.id)?.nome;
+                    if (campoNome) {
+                        if (input.type === 'select-one') {
+                            const selectedOption = input.options[input.selectedIndex];
+                            if (selectedOption.value) {
+                                const precoAdicional = parseFloat(selectedOption.dataset.price);
+                                camposAdicionaisSelecionados[campoNome] = {
+                                    nome: selectedOption.textContent.replace(` (R$ ${precoAdicional.toFixed(2)})`, '').trim(),
+                                    valor: precoAdicional
+                                };
+                            }
+                        } else {
+                            if (input.value) {
+                                camposAdicionaisSelecionados[campoNome] = input.value;
+                            }
                         }
                     }
                 }
-            }
-        });
-
+            });
+        }
         servicosSelecionados.push({
             nome: selectedService.nome,
             precoCalculado: orcamentoTotal,
@@ -490,4 +500,3 @@ function generateWhatsAppMessage(agendamento) {
     return mensagem;
 }
 
-const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
