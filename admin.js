@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.0 (Salvamento de campos 'select' como objeto e mensagem personalizada)
+ * Versão: 8.1 (Correção do erro de sintaxe no listener do botão 'Cancelar')
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -427,7 +427,7 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', ()ato-`() => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
