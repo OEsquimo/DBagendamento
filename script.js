@@ -1,11 +1,11 @@
 /*
  * Arquivo: script.js
- * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.0 (Forma de pagamento, mensagem personalizada e novo formato de dados)
+ * Descrição: Lógica para o formulário de agendamento.
+ * Versão: 8.3 (Campos condicionais e validações aprimoradas)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, get, push, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
 // 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
@@ -26,642 +26,467 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
 // Elementos do DOM
-const servicosContainer = document.getElementById('servicosContainer');
-const servicosSection = document.getElementById('servicos');
-const servicosFormSection = document.getElementById('servicosForm');
-const clienteFormSection = document.getElementById('clienteForm');
-const agendamentoSection = document.getElementById('agendamento');
-const servicosFormContainer = document.getElementById('servicosFormContainer');
-const agendamentoForm = document.getElementById('agendamentoForm');
-const orcamentoTotalDisplay = document.getElementById('orcamentoTotal');
-const backButton1 = document.getElementById('backButton1');
-const backButton2 = document.getElementById('backButton2');
-const backButton3 = document.getElementById('backButton3');
-const confirmationPopup = document.getElementById('confirmation');
-const whatsappLink = document.getElementById('whatsappLink');
-const progressSteps = document.querySelectorAll('.progress-step');
-const datePicker = document.getElementById('datePicker');
-const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+const servicosSelect = document.getElementById('servicos');
+const servicoDetalhesContainer = document.getElementById('servico-detalhes-container');
+const horarioSelect = document.getElementById('horario');
+const formAgendamento = document.getElementById('form-agendamento');
+const nomeInput = document.getElementById('nome');
 const telefoneInput = document.getElementById('telefone');
-const selectedServicesCount = document.getElementById('selectedServicesCount');
-// NOVO: Elemento para a seleção de forma de pagamento
-const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
+const enderecoInput = document.getElementById('endereco');
+const observacoesInput = document.getElementById('observacoes');
+const orcamentoTotalSpan = document.getElementById('orcamento-total');
+const formaPagamentoSelect = document.getElementById('forma-pagamento');
+const camposAdicionaisContainer = document.getElementById('campos-adicionais-container');
 
-// Dados do Agendamento
-let servicosSelecionados = [];
-let servicosGlobais = {};
-let configGlobais = {};
+// Botões de navegação
+const servicosTab = document.getElementById('servicos-tab');
+const detalhesTab = document.getElementById('detalhes-tab');
+const clienteTab = document.getElementById('cliente-tab');
+const agendarTab = document.getElementById('agendar-tab');
+const formSteps = document.querySelectorAll('.form-step');
+const nextButtons = document.querySelectorAll('.btn-next');
+const prevButtons = document.querySelectorAll('.btn-prev');
+const progressCircles = document.querySelectorAll('.progress-circle');
+
+// Variáveis de estado
+let servicos = {};
+let config = {};
+let selectedService = null;
+let orcamentoTotal = 0;
+let whatsappNumber = '';
+let whatsappTemplate = '';
 
 // ==========================================================================
-// 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
+// 2. FUNÇÕES DE INICIALIZAÇÃO
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadAllData();
+    loadConfig();
+    loadServices();
     setupEventListeners();
-    updateProgressBar(1);
-    setupPhoneMask();
+    updateProgress(1);
 });
 
-async function loadAllData() {
-    await loadConfig();
-    loadServices();
+function setupEventListeners() {
+    servicosSelect.addEventListener('change', handleServiceSelection);
+    horarioSelect.addEventListener('change', () => validateStep(2));
+    nextButtons.forEach(button => button.addEventListener('click', handleNextStep));
+    prevButtons.forEach(button => button.addEventListener('click', handlePrevStep));
+    formAgendamento.addEventListener('submit', handleFormSubmit);
+    // NOVO: Adiciona o listener para o cálculo do orçamento
+    camposAdicionaisContainer.addEventListener('change', updateOrcamentoTotal);
 }
 
-async function loadConfig() {
-    try {
-        const configRef = ref(database, 'configuracoes');
-        const snapshot = await get(configRef);
+// ==========================================================================
+// 3. CARREGAMENTO DE DADOS DO FIREBASE
+// ==========================================================================
+
+function loadConfig() {
+    const configRef = ref(database, 'configuracoes');
+    onValue(configRef, (snapshot) => {
         if (snapshot.exists()) {
-            configGlobais = snapshot.val();
+            config = snapshot.val();
+            whatsappNumber = config.whatsappNumber;
+            whatsappTemplate = config.whatsappTemplate;
+            generateHorarios();
+            updateOrcamentoTotal();
         } else {
-            console.error("Configurações não encontradas no banco de dados.");
+            alert('Configurações não encontradas. Por favor, configure o sistema no painel de administração.');
         }
-    } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
-    }
+    });
 }
 
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
-        servicosContainer.innerHTML = '';
-        if (snapshot.exists()) {
-            servicosGlobais = snapshot.val();
-            for (const key in servicosGlobais) {
-                const service = servicosGlobais[key];
-                createServiceCard(service, key);
-            }
-        } else {
-            servicosContainer.innerHTML = '<p>Nenhum serviço disponível no momento. Por favor, volte mais tarde.</p>';
-        }
+        servicos = snapshot.val() || {};
+        renderServices();
     });
 }
 
-// ==========================================================================
-// 3. ETAPA 1: SELEÇÃO DE SERVIÇOS
-// ==========================================================================
-
-function createServiceCard(service, key) {
-    const card = document.createElement('div');
-    card.className = 'service-card';
-    card.dataset.key = key;
-
-    card.innerHTML = `
-        <h3>${service.nome}</h3>
-        <p>${service.descricao}</p>
-        <button class="btn btn-primary btn-select-service">Adicionar</button>
-    `;
-
-    card.querySelector('.btn-select-service').addEventListener('click', () => {
-        const selectedService = { ...servicosGlobais[key], key };
-        const existingIndex = servicosSelecionados.findIndex(s => s.key === key);
-        
-        if (existingIndex === -1) {
-            servicosSelecionados.push(selectedService);
-            card.classList.add('selected');
-            card.querySelector('.btn-select-service').textContent = 'Remover';
-        } else {
-            servicosSelecionados.splice(existingIndex, 1);
-            card.classList.remove('selected');
-            card.querySelector('.btn-select-service').textContent = 'Adicionar';
-        }
-        
-        updateSelectedServicesCount();
-        const nextButton = document.getElementById('nextStep1');
-        if (servicosSelecionados.length > 0) {
-            nextButton.style.display = 'block';
-        } else {
-            nextButton.style.display = 'none';
-        }
-    });
-
-    servicosContainer.appendChild(card);
-}
-
-function updateSelectedServicesCount() {
-    selectedServicesCount.textContent = servicosSelecionados.length;
-}
-
-document.getElementById('nextStep1').addEventListener('click', () => {
-    if (servicosSelecionados.length > 0) {
-        servicosSection.classList.add('hidden');
-        servicosFormSection.classList.remove('hidden');
-        renderServiceForms();
-        updateProgressBar(2);
-    } else {
-        alert('Por favor, selecione pelo menos um serviço para continuar.');
+function renderServices() {
+    servicosSelect.innerHTML = '<option value="">Selecione um serviço</option>';
+    for (const key in servicos) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = servicos[key].nome;
+        servicosSelect.appendChild(option);
     }
-});
+}
 
 // ==========================================================================
-// 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS
+// 4. NAVEGAÇÃO ENTRE ETAPAS
 // ==========================================================================
 
-function renderServiceForms() {
-    servicosFormContainer.innerHTML = '';
-    servicosSelecionados.forEach(service => {
-        const formGroup = document.createElement('div');
-        formGroup.className = 'service-form-group';
-        
-        let fieldsHtml = '';
-        if (service.camposAdicionais) {
-            fieldsHtml = service.camposAdicionais.map(field => {
-                if (field.tipo === 'select' && field.opcoes) {
-                    // CÓDIGO ATUALIZADO: Agora as opções são objetos {nome, valor}
-                    return `
-                        <label>${field.nome}</label>
-                        <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
-                            <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option.nome}" data-price="${option.valor}">${option.nome} (R$ ${option.valor.toFixed(2)})</option>`).join('')}
-                        </select>
-                    `;
-                } else if (field.tipo === 'text') {
-                    return `
-                        <label>${field.nome}</label>
-                        <input type="text" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" required>
-                    `;
-                } else if (field.tipo === 'number') {
-                    return `
-                        <label>${field.nome}</label>
-                        <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01" required>
-                    `;
-                } else if (field.tipo === 'textarea') {
-                     return `
-                        <label>${field.nome}</label>
-                        <textarea class="form-control additional-field-textarea" data-field-name="${field.nome}" data-key="${service.key}" placeholder="Digite aqui..."></textarea>
-                    `;
-                }
-            }).join('');
-        }
-        
-        formGroup.innerHTML = `
-            <h3>${service.nome}</h3>
-            ${fieldsHtml}
-            <div class="service-price">Valor: R$ 0.00</div>
-        `;
-        servicosFormContainer.appendChild(formGroup);
-    });
-
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea').forEach(field => {
-        field.addEventListener('change', updatePrice);
-        field.addEventListener('input', updatePrice);
-    });
-
-    updateOrcamentoTotal();
+function showStep(step) {
+    formSteps.forEach(s => s.classList.remove('active'));
+    document.getElementById(`step-${step}`).classList.add('active');
+    updateProgress(step);
 }
 
-function updatePrice(e) {
-    const key = e.target.dataset.key;
-    const service = servicosSelecionados.find(s => s.key === key);
-    if (!service) return;
-
-    const formGroup = e.target.closest('.service-form-group');
-    const newPrice = calculatePrice(service, formGroup);
-    service.precoCalculado = newPrice;
-    formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
-    updateOrcamentoTotal();
+function handleNextStep(e) {
+    const currentStep = parseInt(e.target.dataset.step);
+    if (validateStep(currentStep)) {
+        showStep(currentStep + 1);
+    }
 }
 
-function calculatePrice(serviceData, container) {
-    let preco = serviceData.precoBase || 0;
-    const selectElements = container.querySelectorAll('.additional-field-select');
-    const inputElements = container.querySelectorAll('.additional-field-input');
-    
-    // CÓDIGO ATUALIZADO: Calcula o preço a partir de selects usando o data-price
-    selectElements.forEach(select => {
-        const selectedOption = select.options[select.selectedIndex];
-        if (selectedOption && selectedOption.dataset.price) {
-            preco += parseFloat(selectedOption.dataset.price);
-        }
-    });
-
-    // Adiciona o valor de campos de número
-    inputElements.forEach(input => {
-        if (input.type === 'number') {
-            const inputValue = parseFloat(input.value);
-            if (!isNaN(inputValue)) {
-                preco += inputValue;
-            }
-        }
-    });
-
-    return preco;
+function handlePrevStep(e) {
+    const currentStep = parseInt(e.target.dataset.step);
+    showStep(currentStep - 1);
 }
 
-document.getElementById('nextStep2').addEventListener('click', () => {
-    let allFieldsFilled = true;
-    servicosSelecionados.forEach(service => {
-        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
-        if (formGroup) {
-            formGroup.querySelectorAll('.additional-field-select, .additional-field-input').forEach(field => {
-                if (field.value === "") {
-                    allFieldsFilled = false;
+function updateProgress(step) {
+    progressCircles.forEach((circle, index) => {
+        if (index < step) {
+            circle.classList.add('active');
+        } else {
+            circle.classList.remove('active');
+        }
+    });
+}
+
+// ==========================================================================
+// 5. GERAÇÃO E VALIDAÇÃO DE CONTEÚDO
+// ==========================================================================
+
+function generateHorarios() {
+    const dataSelecionada = new Date(formAgendamento.data.value + 'T00:00:00');
+    const diaDaSemana = diasDaSemana[dataSelecionada.getDay()];
+    const configDia = config.horariosPorDia[diaDaSemana];
+
+    horarioSelect.innerHTML = '<option value="">Selecione um horário</option>';
+    horarioSelect.disabled = true;
+
+    if (configDia && configDia.ativo) {
+        const inicio = configDia.horarioInicio;
+        const fim = configDia.horarioFim;
+        const duracao = configDia.duracaoServico;
+
+        getHorariosOcupados(formAgendamento.data.value).then(horariosOcupados => {
+            const horariosDisponiveis = getHorariosDisponiveis(inicio, fim, duracao, horariosOcupados);
+            horariosDisponiveis.forEach(horario => {
+                const option = document.createElement('option');
+                option.value = horario;
+                option.textContent = horario;
+                horarioSelect.appendChild(option);
+            });
+            horarioSelect.disabled = false;
+        });
+    }
+}
+
+function getHorariosOcupados(data) {
+    const agendamentosRef = ref(database, 'agendamentos');
+    return get(agendamentosRef).then(snapshot => {
+        const horariosOcupados = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(childSnapshot => {
+                const agendamento = childSnapshot.val();
+                if (agendamento.data === data && agendamento.status !== 'Cancelado') {
+                    horariosOcupados.push(agendamento.hora);
                 }
             });
         }
-    });
-
-    if (!allFieldsFilled) {
-        alert("Por favor, preencha todos os campos obrigatórios para continuar.");
-        return;
-    }
-
-    servicosSelecionados.forEach(service => {
-        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
-        if (formGroup) {
-            const selectedOptions = getSelectedOptions(formGroup, service);
-            service.camposAdicionaisSelecionados = selectedOptions;
-            service.precoCalculado = calculatePrice(service, formGroup);
-        }
-    });
-    
-    servicosFormSection.classList.add('hidden');
-    clienteFormSection.classList.remove('hidden');
-    updateProgressBar(3);
-});
-
-function getSelectedOptions(container, serviceData) {
-    const selectedOptions = {};
-    const selectElements = container.querySelectorAll('.additional-field-select');
-    const inputElements = container.querySelectorAll('.additional-field-input');
-    const textareaElements = container.querySelectorAll('.additional-field-textarea');
-    
-    // CÓDIGO ATUALIZADO: Coleta o nome e o valor da opção selecionada
-    selectElements.forEach(select => {
-        const selectedOption = select.options[select.selectedIndex];
-        const fieldName = select.dataset.fieldName;
-        if (selectedOption && selectedOption.value) {
-            selectedOptions[fieldName] = { 
-                nome: selectedOption.value, 
-                valor: parseFloat(selectedOption.dataset.price) 
-            };
-        }
-    });
-
-    inputElements.forEach(input => {
-        const inputValue = input.value;
-        const fieldName = input.dataset.fieldName;
-        if (inputValue) {
-            selectedOptions[fieldName] = input.type === 'number' ? parseFloat(inputValue) : inputValue;
-        }
-    });
-    
-    textareaElements.forEach(textarea => {
-        const textareaValue = textarea.value;
-        const fieldName = textarea.dataset.fieldName;
-        if (textareaValue) {
-            selectedOptions[fieldName] = textareaValue;
-        }
-    });
-
-    return selectedOptions;
-}
-
-// ==========================================================================
-// 5. ETAPA 3: INFORMAÇÕES DO CLIENTE
-// ==========================================================================
-
-function setupPhoneMask() {
-    telefoneInput.addEventListener('input', (e) => {
-        const value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
-        let maskedValue = '';
-
-        if (value.length > 0) {
-            maskedValue += `(${value.substring(0, 2)}`;
-        }
-        if (value.length > 2) {
-            maskedValue += `) ${value.substring(2, 7)}`;
-        }
-        if (value.length > 7) {
-            maskedValue += `-${value.substring(7, 11)}`;
-        }
-        
-        e.target.value = maskedValue;
+        return horariosOcupados;
     });
 }
 
-document.getElementById('nextStep3').addEventListener('click', () => {
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
+function getHorariosDisponiveis(inicio, fim, duracao, horariosOcupados) {
+    const horarios = [];
+    let [horaInicio, minutoInicio] = inicio.split(':').map(Number);
+    let [horaFim, minutoFim] = fim.split(':').map(Number);
 
-    if (!nome || !telefone) {
-        alert("Por favor, preencha nome e telefone para continuar.");
-        return;
-    }
+    let currentTime = new Date();
+    currentTime.setHours(horaInicio, minutoInicio, 0, 0);
 
-    if (!telefoneRegex.test(telefone)) {
-        alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
-        return;
-    }
+    const endTime = new Date();
+    endTime.setHours(horaFim, minutoFim, 0, 0);
 
-    clienteFormSection.classList.add('hidden');
-    agendamentoSection.classList.remove('hidden');
-    updateProgressBar(4);
-});
-
-// ==========================================================================
-// 6. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
-// ==========================================================================
-
-async function handleDateSelection() {
-    const selectedDate = datePicker.value;
-    if (!selectedDate) {
-        timeSlotsContainer.innerHTML = '<p>Selecione uma data para ver os horários.</p>';
-        return;
-    }
-
-    timeSlotsContainer.innerHTML = '<p>Carregando horários...</p>';
-    
-    // Obter a data atual sem a hora para comparação
-    const hoje = new Date();
-    const dataAtual = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const dataAgendamento = new Date(selectedDate + 'T00:00:00');
-
-    // Validação 1: Não permitir agendamento para dias passados
-    if (dataAgendamento < dataAtual) {
-        timeSlotsContainer.innerHTML = '<p>Não é possível agendar para uma data que já passou.</p>';
-        return;
-    }
-
-    // Validação 2: Não permitir agendamento para o dia atual após 14:00
-    if (dataAgendamento.getTime() === dataAtual.getTime()) {
-        if (hoje.getHours() >= 14) {
-            timeSlotsContainer.innerHTML = '<p>Agendamentos para o dia de hoje só são permitidos até as 14:00. Por favor, selecione uma data futura.</p>';
-            return;
+    while (currentTime < endTime) {
+        const horarioString = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+        if (!horariosOcupados.includes(horarioString)) {
+            horarios.push(horarioString);
         }
+        currentTime.setMinutes(currentTime.getMinutes() + duracao);
     }
-    
-    const [year, month, day] = selectedDate.split('-');
-    const dayOfWeek = getDayOfWeek(selectedDate);
-    
-    const diaConfig = configGlobais.horariosPorDia[dayOfWeek];
-    if (!diaConfig || !diaConfig.ativo) {
-        timeSlotsContainer.innerHTML = `<p>Não há agendamentos disponíveis para ${capitalize(dayOfWeek)}.</p>`;
-        return;
-    }
-    
-    const { horarioInicio, horarioFim, duracaoServico } = diaConfig;
-    const agendamentosRef = ref(database, 'agendamentos');
-    const snapshot = await get(agendamentosRef);
-    const agendamentosDoDia = [];
 
-    if (snapshot.exists()) {
-        snapshot.forEach(childSnapshot => {
-            const agendamento = childSnapshot.val();
-            // A data no Firebase está no formato DD/MM/YYYY, precisamos converter
-            const firebaseDate = `${day}/${month}/${year}`;
-            if (agendamento.data === firebaseDate && agendamento.status !== 'Cancelado') {
-                agendamentosDoDia.push(agendamento.hora);
+    return horarios;
+}
+
+function validateStep(step) {
+    switch (step) {
+        case 1:
+            if (!servicosSelect.value) {
+                alert('Por favor, selecione um serviço.');
+                return false;
             }
+            return true;
+        case 2:
+            if (!formAgendamento.data.value || !formAgendamento.horario.value) {
+                alert('Por favor, selecione uma data e um horário.');
+                return false;
+            }
+            return true;
+        case 3:
+            if (!nomeInput.value || !telefoneInput.value || !enderecoInput.value) {
+                alert('Por favor, preencha todos os campos obrigatórios.');
+                return false;
+            }
+            return true;
+        default:
+            return false;
+    }
+}
+
+// ==========================================================================
+// 6. MANIPULAÇÃO DE DADOS DO FORMULÁRIO
+// ==========================================================================
+
+function handleServiceSelection(e) {
+    const key = e.target.value;
+    selectedService = servicos[key];
+    if (selectedService) {
+        renderServiceForms(selectedService);
+        detalhesTab.classList.remove('disabled');
+    } else {
+        servicoDetalhesContainer.innerHTML = '';
+        camposAdicionaisContainer.innerHTML = '';
+        detalhesTab.classList.add('disabled');
+        selectedService = null;
+        orcamentoTotal = 0;
+        updateOrcamentoTotal();
+    }
+}
+
+function renderServiceForms(servico) {
+    servicoDetalhesContainer.innerHTML = `
+        <h5 class="mb-3">${servico.nome}</h5>
+        <p><strong>Descrição:</strong> ${servico.descricao}</p>
+        <p><strong>Preço Base:</strong> R$ ${servico.precoBase.toFixed(2)}</p>
+    `;
+
+    camposAdicionaisContainer.innerHTML = '';
+    
+    // NOVO: Adiciona um data-index para os campos adicionais
+    if (servico.camposAdicionais) {
+        servico.camposAdicionais.forEach((campo, index) => {
+            let fieldHtml = '';
+            const fieldId = `campo-${index}`;
+            let dependsOn = null;
+            if (index > 0) {
+                dependsOn = `campo-${index-1}`;
+            }
+
+            switch (campo.tipo) {
+                case 'select':
+                    fieldHtml = generateSelectField(campo, fieldId);
+                    break;
+                case 'textarea':
+                    fieldHtml = generateTextareaField(campo, fieldId);
+                    break;
+                default:
+                    fieldHtml = generateInputField(campo, fieldId, campo.tipo);
+                    break;
+            }
+            
+            const fieldContainer = document.createElement('div');
+            fieldContainer.classList.add('additional-field-container');
+            fieldContainer.innerHTML = fieldHtml;
+            // NOVO: Define a dependência para o campo
+            if (dependsOn) {
+                fieldContainer.dataset.dependsOn = dependsOn;
+            }
+            camposAdicionaisContainer.appendChild(fieldContainer);
         });
     }
-
-    const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
-    displayTimeSlots(horariosDisponiveis);
+    updateOrcamentoTotal();
+    setupConditionalFields(); // NOVO: Chama a função que gerencia os campos condicionais
 }
 
-function generateTimeSlots(startTime, endTime, interval, existingAppointments, referenceTime) {
-    const slots = [];
-    let currentTime = new Date(`2000-01-01T${startTime}:00`);
-    const end = new Date(`2000-01-01T${endTime}:00`);
-    
-    while (currentTime < end) {
-        const timeString = currentTime.toTimeString().slice(0, 5);
-        
-        // Verifica se o slot já passou, somente se for o dia de hoje
-        if (referenceTime) {
-             const [slotHour, slotMinute] = timeString.split(':').map(Number);
-             if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
-                currentTime.setMinutes(currentTime.getMinutes() + interval);
-                continue;
-            }
+// NOVO: Gerencia a visibilidade dos campos com base na seleção
+function setupConditionalFields() {
+    document.querySelectorAll('.additional-field-container').forEach(container => {
+        if (container.dataset.dependsOn) {
+            container.classList.add('hidden');
         }
-
-        if (!existingAppointments.includes(timeString)) {
-            slots.push(timeString);
-        }
-        
-        currentTime.setMinutes(currentTime.getMinutes() + interval);
-    }
-    return slots;
-}
-
-function displayTimeSlots(horariosDisponiveis) {
-    if (horariosDisponiveis.length === 0) {
-        timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para a data selecionada. Por favor, escolha outro dia.</p>';
-        return;
-    }
-
-    timeSlotsContainer.innerHTML = '';
-    horariosDisponiveis.forEach(time => {
-        const slot = document.createElement('div');
-        slot.className = 'time-slot';
-        slot.textContent = time;
-        slot.addEventListener('click', () => selectTimeSlot(slot));
-        timeSlotsContainer.appendChild(slot);
     });
-}
 
-function selectTimeSlot(selectedSlot) {
-    document.querySelectorAll('.time-slot').forEach(slot => {
-        slot.classList.remove('selected');
-    });
-    selectedSlot.classList.add('selected');
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-
-    if (!navigator.onLine) {
-        alert("Parece que você está sem conexão com a internet. Verifique sua conexão e tente novamente.");
-        return;
-    }
-
-    const selectedTimeSlot = document.querySelector('.time-slot.selected');
-    const selectedPaymentMethod = document.querySelector('#paymentMethodsContainer .time-slot.selected'); // NOVO
-
-    if (!selectedTimeSlot) {
-        alert("Por favor, selecione um horário para o agendamento.");
-        return;
-    }
-    // NOVO: Validação da forma de pagamento
-    if (!selectedPaymentMethod) {
-        alert("Por favor, selecione uma forma de pagamento.");
-        return;
-    }
-
-    const clienteData = {
-        nome: document.getElementById('nome').value,
-        telefone: document.getElementById('telefone').value,
-        endereco: document.getElementById('endereco').value,
-    };
-    
-    const agendamentoData = {
-        cliente: clienteData,
-        servicos: servicosSelecionados.map(({ key, nome, precoCalculado, camposAdicionaisSelecionados }) => ({
-            key,
-            nome,
-            precoCalculado,
-            camposAdicionaisSelecionados
-        })),
-        data: formatDate(datePicker.value),
-        hora: selectedTimeSlot.textContent,
-        observacoes: document.getElementById('observacoes').value,
-        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
-        status: 'Pendente',
-        // NOVO: Adiciona a forma de pagamento selecionada
-        formaPagamento: selectedPaymentMethod.textContent
-    };
-
-    try {
-        const agendamentosRef = ref(database, 'agendamentos');
-        await push(agendamentosRef, agendamentoData);
-        showConfirmation();
-    } catch (error) {
-        console.error("Erro ao salvar agendamento:", error);
-        alert("Ocorreu um erro ao salvar o agendamento. Por favor, tente novamente.");
-    }
-}
-
-function showConfirmation() {
-    agendamentoSection.classList.add('hidden');
-    confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5);
-    
-    const whatsappMsg = createWhatsAppMessage();
-    whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
-    
-    // Redireciona para a página inicial após o clique no link do WhatsApp
-    whatsappLink.addEventListener('click', () => {
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 500); // Pequeno atraso para dar tempo do WhatsApp abrir
-    });
-}
-
-// CÓDIGO ATUALIZADO: A função agora usa um modelo de mensagem do Firebase
-function createWhatsAppMessage() {
-    // Busca o modelo de mensagem salvo no Firebase ou usa um padrão
-    const template = configGlobais.whatsappTemplate || `
-Olá, gostaria de confirmar um agendamento.
-
-*👤 Dados do Cliente:*
-Nome: {{nome_cliente}}
-Telefone: {{telefone_cliente}}
-Endereço: {{endereco_cliente}}
-
-*📅 Detalhes do Agendamento:*
-Data: {{data_agendamento}}
-Hora: {{hora_agendamento}}
-{{servicos_selecionados}}
-
-*💰 Orçamento Total:* {{orcamento_total}}
-*💳 Forma de Pagamento:* {{forma_pagamento}}
-
-{{observacoes}}
-
-Obrigado!`;
-
-    // Constrói a lista de serviços
-    let servicosTexto = '🛠️ Serviços:\n';
-    servicosSelecionados.forEach(servico => {
-        servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
-        if (servico.camposAdicionaisSelecionados) {
-            for (const campo in servico.camposAdicionaisSelecionados) {
-                const valor = servico.camposAdicionaisSelecionados[campo];
-                // CÓDIGO ATUALIZADO: Agora o campo de select é um objeto {nome, valor}
-                const valorDisplay = typeof valor === 'object' ? `${valor.nome} (R$ ${valor.valor.toFixed(2)})` : typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor;
-                servicosTexto += `    - ${campo}: ${valorDisplay}\n`;
+    camposAdicionaisContainer.addEventListener('change', (e) => {
+        const changedFieldId = e.target.id;
+        const nextFieldContainer = camposAdicionaisContainer.querySelector(`[data-depends-on="${changedFieldId}"]`);
+        if (nextFieldContainer) {
+            if (e.target.value) { // Verifica se um valor foi selecionado
+                nextFieldContainer.classList.remove('hidden');
+            } else {
+                nextFieldContainer.classList.add('hidden');
             }
         }
     });
-
-    const placeholders = {
-        '{{nome_cliente}}': document.getElementById('nome').value,
-        '{{telefone_cliente}}': document.getElementById('telefone').value,
-        '{{endereco_cliente}}': document.getElementById('endereco').value,
-        '{{data_agendamento}}': formatDate(datePicker.value),
-        '{{hora_agendamento}}': document.querySelector('.time-slot.selected').textContent,
-        '{{servicos_selecionados}}': servicosTexto,
-        '{{orcamento_total}}': orcamentoTotalDisplay.textContent,
-        '{{forma_pagamento}}': document.querySelector('#paymentMethodsContainer .time-slot.selected').textContent, // NOVO
-        '{{observacoes}}': document.getElementById('observacoes').value.trim() ? `*📝 Observações:* ${document.getElementById('observacoes').value.trim()}` : '' // Garante que a linha de observação não apareça se o campo estiver vazio
-    };
-
-    let finalMessage = template;
-    for (const placeholder in placeholders) {
-        finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), placeholders[placeholder]);
-    }
-    
-    return finalMessage.trim(); // Remove espaços extras no final
 }
 
-// ==========================================================================
-// 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
-// ==========================================================================
-
-function setupEventListeners() {
-    datePicker.addEventListener('change', handleDateSelection);
-    agendamentoForm.addEventListener('submit', handleFormSubmit);
-
-    // NOVO: Adiciona um listener para os botões de pagamento
-    if (paymentMethodsContainer) {
-        paymentMethodsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('time-slot')) {
-                document.querySelectorAll('#paymentMethodsContainer .time-slot').forEach(el => el.classList.remove('selected'));
-                e.target.classList.add('selected');
-            }
-        });
+function generateSelectField(campo, fieldId) {
+    if (!campo.opcoes || campo.opcoes.length === 0) {
+        return '';
     }
-
-    backButton1.addEventListener('click', () => {
-        servicosFormSection.classList.add('hidden');
-        servicosSection.classList.remove('hidden');
-        updateProgressBar(1);
-    });
-
-    backButton2.addEventListener('click', () => {
-        clienteFormSection.classList.add('hidden');
-        servicosFormSection.classList.remove('hidden');
-        updateProgressBar(2);
-    });
-    
-    backButton3.addEventListener('click', () => {
-        agendamentoSection.classList.add('hidden');
-        clienteFormSection.classList.remove('hidden');
-        updateProgressBar(3);
-    });
+    return `
+        <div class="form-group">
+            <label for="${fieldId}">${campo.nome}</label>
+            <select class="form-control" id="${fieldId}" required>
+                <option value="">Selecione...</option>
+                ${campo.opcoes.map(option => {
+                    const priceDisplay = (option.valor && option.valor > 0) ? ` (R$ ${option.valor.toFixed(2)})` : '';
+                    return `<option value="${option.nome}" data-price="${option.valor}">${option.nome}${priceDisplay}</option>`;
+                }).join('')}
+            </select>
+        </div>
+    `;
 }
 
-function updateProgressBar(step) {
-    progressSteps.forEach((s, index) => {
-        if (index + 1 === step) {
-            s.classList.add('active');
-        } else {
-            s.classList.remove('active');
-        }
-    });
+function generateInputField(campo, fieldId, type) {
+    return `
+        <div class="form-group">
+            <label for="${fieldId}">${campo.nome}</label>
+            <input type="${type}" class="form-control" id="${fieldId}" placeholder="Digite aqui..." required>
+        </div>
+    `;
+}
+
+function generateTextareaField(campo, fieldId) {
+    return `
+        <div class="form-group">
+            <label for="${fieldId}">${campo.nome}</label>
+            <textarea class="form-control" id="${fieldId}" placeholder="Digite aqui..." rows="3"></textarea>
+        </div>
+    `;
+}
+
+function handleAdditionalFieldChange(e) {
+    // A função de orçamento agora é chamada por um listener separado
+    // setupConditionalFields() já lida com a lógica de exibição
 }
 
 function updateOrcamentoTotal() {
-    const total = servicosSelecionados.reduce((sum, service) => sum + (service.precoCalculado || 0), 0);
-    orcamentoTotalDisplay.textContent = `R$ ${total.toFixed(2)}`;
+    orcamentoTotal = selectedService ? selectedService.precoBase : 0;
+    document.querySelectorAll('.additional-field-container select').forEach(select => {
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.dataset.price) {
+            orcamentoTotal += parseFloat(selectedOption.dataset.price);
+        }
+    });
+    orcamentoTotalSpan.textContent = orcamentoTotal.toFixed(2);
 }
 
-function formatDate(dateString) {
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+function getServicosSelecionados() {
+    const servicosSelecionados = [];
+    if (selectedService) {
+        const camposAdicionaisSelecionados = {};
+        document.querySelectorAll('.additional-field-container').forEach(container => {
+            const input = container.querySelector('input, select, textarea');
+            if (input) {
+                const campoNome = selectedService.camposAdicionais.find(campo => `campo-${selectedService.camposAdicionais.indexOf(campo)}` === input.id)?.nome;
+                if (campoNome) {
+                    if (input.type === 'select-one') {
+                        const selectedOption = input.options[input.selectedIndex];
+                        if (selectedOption.value) {
+                            const precoAdicional = parseFloat(selectedOption.dataset.price);
+                            camposAdicionaisSelecionados[campoNome] = {
+                                nome: selectedOption.textContent.replace(` (R$ ${precoAdicional.toFixed(2)})`, '').trim(),
+                                valor: precoAdicional
+                            };
+                        }
+                    } else {
+                        if (input.value) {
+                             camposAdicionaisSelecionados[campoNome] = input.value;
+                        }
+                    }
+                }
+            }
+        });
+
+        servicosSelecionados.push({
+            nome: selectedService.nome,
+            precoCalculado: orcamentoTotal,
+            camposAdicionaisSelecionados
+        });
+    }
+    return servicosSelecionados;
 }
 
-function getDayOfWeek(dateString) {
-    const days = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const date = new Date(dateString + 'T00:00:00'); 
-    return days[date.getDay()];
+function handleFormSubmit(e) {
+    e.preventDefault();
+
+    if (!validateStep(3)) return;
+
+    const agendamento = {
+        cliente: {
+            nome: nomeInput.value,
+            telefone: telefoneInput.value,
+            endereco: enderecoInput.value,
+        },
+        data: formAgendamento.data.value,
+        hora: formAgendamento.horario.value,
+        servicos: getServicosSelecionados(),
+        orcamentoTotal: orcamentoTotal,
+        formaPagamento: formaPagamentoSelect.value,
+        observacoes: observacoesInput.value,
+        status: 'Pendente',
+        dataCriacao: new Date().toISOString()
+    };
+
+    const agendamentosRef = ref(database, 'agendamentos');
+    push(agendamentosRef, agendamento)
+        .then(() => {
+            const mensagem = generateWhatsAppMessage(agendamento);
+            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            formAgendamento.reset();
+            servicoDetalhesContainer.innerHTML = '';
+            camposAdicionaisContainer.innerHTML = '';
+            orcamentoTotalSpan.textContent = '0.00';
+            selectedService = null;
+            showStep(1);
+        })
+        .catch(error => {
+            console.error("Erro ao agendar o serviço:", error);
+            alert("Ocorreu um erro ao agendar o serviço. Por favor, tente novamente.");
+        });
 }
 
-function capitalize(s) {
-    if (typeof s !== 'string') return '';
-    return s.charAt(0).toUpperCase() + s.slice(1);
+// ==========================================================================
+// 7. FUNÇÃO DE MENSAGEM DO WHATSAPP
+// ==========================================================================
+
+function generateWhatsAppMessage(agendamento) {
+    let mensagem = whatsappTemplate;
+
+    if (!mensagem) {
+        mensagem = 'Olá, gostaria de confirmar meu agendamento. ';
+    }
+
+    const cliente = agendamento.cliente;
+    const servicosStr = agendamento.servicos.map(servico => {
+        let str = `- ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}`;
+        if (servico.camposAdicionaisSelecionados) {
+            const campos = Object.entries(servico.camposAdicionaisSelecionados).map(([nomeCampo, valor]) => {
+                const valorDisplay = typeof valor === 'object' ? `${valor.nome} (R$ ${valor.valor.toFixed(2)})` : valor;
+                return `\n    ${nomeCampo}: ${valorDisplay}`;
+            }).join('');
+            str += campos;
+        }
+        return str;
+    }).join('\n');
+
+    mensagem = mensagem.replace('{cliente.nome}', cliente.nome);
+    mensagem = mensagem.replace('{cliente.telefone}', cliente.telefone);
+    mensagem = mensagem.replace('{cliente.endereco}', cliente.endereco);
+    mensagem = mensagem.replace('{data}', agendamento.data);
+    mensagem = mensagem.replace('{hora}', agendamento.hora);
+    mensagem = mensagem.replace('{servicos}', servicosStr);
+    mensagem = mensagem.replace('{total}', `R$ ${agendamento.orcamentoTotal.toFixed(2)}`);
+    mensagem = mensagem.replace('{observacoes}', agendamento.observacoes || 'N/A');
+    mensagem = mensagem.replace('{formaPagamento}', agendamento.formaPagamento || 'N/A');
+
+    return mensagem;
 }
+
+const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
