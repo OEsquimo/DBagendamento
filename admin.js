@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.5 (Correções de inicialização e tratamento de erros)
+ * Versão: 8.6 (Correções de inicialização e tratamento de erros)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -53,12 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tab = button.dataset.tab;
-            showTab(tab);
+    if (tabButtons) {
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+                showTab(tab);
+            });
         });
-    });
+    }
 
     if (formServico) formServico.addEventListener('submit', handleServicoFormSubmit);
     if (formConfig) formConfig.addEventListener('submit', handleConfigFormSubmit);
@@ -82,11 +84,13 @@ function setupEventListeners() {
 }
 
 function showTab(tab) {
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.tab-button[data-tab="${tab}"]`).classList.add('active');
+    if (tabButtons) tabButtons.forEach(btn => btn.classList.remove('active'));
+    const tabButton = document.querySelector(`.tab-button[data-tab="${tab}"]`);
+    if (tabButton) tabButton.classList.add('active');
 
-    tabContents.forEach(content => content.classList.remove('active'));
-    document.getElementById(tab).classList.add('active');
+    if (tabContents) tabContents.forEach(content => content.classList.remove('active'));
+    const tabContent = document.getElementById(tab);
+    if (tabContent) tabContent.classList.add('active');
 }
 
 // ==========================================================================
@@ -128,10 +132,10 @@ function loadAgendamentos() {
 function loadConfig() {
     const configRef = ref(database, 'configuracoes');
     get(configRef).then((snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists() && formConfig) {
             const config = snapshot.val();
             for (const key in config) {
-                const element = formConfig ? formConfig.querySelector(`[name="${key}"]`) : null;
+                const element = formConfig.querySelector(`[name="${key}"]`);
                 if (element) {
                     if (element.type === 'checkbox') {
                         element.checked = config[key];
@@ -315,13 +319,11 @@ function handleEditServico(e) {
     const servicoRef = ref(database, `servicos/${key}`);
 
     get(servicoRef).then((snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists() && formServico) {
             const servico = snapshot.val();
-            if (formServico) {
-                formServico.nome.value = servico.nome;
-                formServico.descricao.value = servico.descricao;
-                formServico.precoBase.value = servico.precoBase;
-            }
+            formServico.nome.value = servico.nome;
+            formServico.descricao.value = servico.descricao;
+            formServico.precoBase.value = servico.precoBase;
 
             if (camposAdicionaisContainer) {
                 camposAdicionaisContainer.innerHTML = '';
@@ -360,7 +362,7 @@ function handleDeleteAgendamento(e) {
 
 function handleUpdateAgendamentoStatus(e) {
     const key = e.target.dataset.key;
-    const newStatus = e.target.textContent;
+    const newStatus = e.target.textContent.trim(); // Use trim() to clean up
     const agendamentoRef = ref(database, `agendamentos/${key}`);
     update(agendamentoRef, { status: newStatus }).then(() => {
         alert(`Status do agendamento atualizado para ${newStatus}.`);
@@ -478,25 +480,29 @@ function addOption(button, optionData = { nome: '', valor: 0.00 }) {
 }
 
 function removeCampoAdicional(button) {
-    button.closest('.campo-adicional-container').remove();
+    const container = button.closest('.campo-adicional-container');
+    if (container) container.remove();
 }
 
 function removeOption(button) {
-    button.closest('.option-item').remove();
+    const item = button.closest('.option-item');
+    if (item) item.remove();
 }
 
 function getCamposAdicionaisFromForm() {
     const camposAdicionais = [];
     document.querySelectorAll('.campo-adicional-container').forEach(container => {
-        const campoNome = container.querySelector('.campo-nome').value;
-        const campoTipo = container.querySelector('.campo-tipo').value;
+        const campoNome = container.querySelector('.campo-nome')?.value;
+        const campoTipo = container.querySelector('.campo-tipo')?.value;
+        if (!campoNome || !campoTipo) return;
+
         const campo = { nome: campoNome, tipo: campoTipo };
 
         if (campoTipo === 'select') {
             campo.opcoes = [];
             container.querySelectorAll('.option-item').forEach(optionItem => {
-                const nome = optionItem.querySelector('.option-value').value;
-                const valor = parseFloat(optionItem.querySelector('.option-price').value);
+                const nome = optionItem.querySelector('.option-value')?.value;
+                const valor = parseFloat(optionItem.querySelector('.option-price')?.value);
                 if (nome && !isNaN(valor)) {
                     campo.opcoes.push({ nome, valor });
                 }
