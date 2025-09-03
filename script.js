@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada)
+ * Versão: 11.0 (Forma de pagamento, mensagem personalizada e novo formato de dados)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,6 +44,8 @@ const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
+// NOVO: Elemento para a seleção de forma de pagamento
+const paymentMethodsContainer = document.getElementById('paymentMethodsContainer');
 
 // Dados do Agendamento
 let servicosSelecionados = [];
@@ -166,11 +168,12 @@ function renderServiceForms() {
         if (service.camposAdicionais) {
             fieldsHtml = service.camposAdicionais.map(field => {
                 if (field.tipo === 'select' && field.opcoes) {
+                    // CÓDIGO ATUALIZADO: Agora as opções são objetos {nome, valor}
                     return `
                         <label>${field.nome}</label>
                         <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
                             <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                            ${field.opcoes.map(option => `<option value="${option.nome}" data-price="${option.valor}">${option.nome} (R$ ${option.valor.toFixed(2)})</option>`).join('')}
                         </select>
                     `;
                 } else if (field.tipo === 'text') {
@@ -225,14 +228,11 @@ function calculatePrice(serviceData, container) {
     const selectElements = container.querySelectorAll('.additional-field-select');
     const inputElements = container.querySelectorAll('.additional-field-input');
     
-    // Calcula o preço a partir de selects
+    // CÓDIGO ATUALIZADO: Calcula o preço a partir de selects usando o data-price
     selectElements.forEach(select => {
-        const selectedValue = select.value;
-        if (selectedValue) {
-            const parts = selectedValue.split(', R$ ');
-            if (parts.length === 2) {
-                preco += parseFloat(parts[1]);
-            }
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.dataset.price) {
+            preco += parseFloat(selectedOption.dataset.price);
         }
     });
 
@@ -287,11 +287,15 @@ function getSelectedOptions(container, serviceData) {
     const inputElements = container.querySelectorAll('.additional-field-input');
     const textareaElements = container.querySelectorAll('.additional-field-textarea');
     
+    // CÓDIGO ATUALIZADO: Coleta o nome e o valor da opção selecionada
     selectElements.forEach(select => {
-        const selectedValue = select.value;
+        const selectedOption = select.options[select.selectedIndex];
         const fieldName = select.dataset.fieldName;
-        if (selectedValue) {
-            selectedOptions[fieldName] = selectedValue;
+        if (selectedOption && selectedOption.value) {
+            selectedOptions[fieldName] = { 
+                nome: selectedOption.value, 
+                valor: parseFloat(selectedOption.dataset.price) 
+            };
         }
     });
 
@@ -476,8 +480,15 @@ async function handleFormSubmit(e) {
     }
 
     const selectedTimeSlot = document.querySelector('.time-slot.selected');
+    const selectedPaymentMethod = document.querySelector('#paymentMethodsContainer .time-slot.selected'); // NOVO
+
     if (!selectedTimeSlot) {
         alert("Por favor, selecione um horário para o agendamento.");
+        return;
+    }
+    // NOVO: Validação da forma de pagamento
+    if (!selectedPaymentMethod) {
+        alert("Por favor, selecione uma forma de pagamento.");
         return;
     }
 
@@ -499,7 +510,9 @@ async function handleFormSubmit(e) {
         hora: selectedTimeSlot.textContent,
         observacoes: document.getElementById('observacoes').value,
         orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
-        status: 'Pendente'
+        status: 'Pendente',
+        // NOVO: Adiciona a forma de pagamento selecionada
+        formaPagamento: selectedPaymentMethod.textContent
     };
 
     try {
@@ -528,66 +541,61 @@ function showConfirmation() {
     });
 }
 
+// CÓDIGO ATUALIZADO: A função agora usa um modelo de mensagem do Firebase
 function createWhatsAppMessage() {
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const endereco = document.getElementById('endereco').value;
-    const data = formatDate(datePicker.value);
-    const hora = document.querySelector('.time-slot.selected').textContent;
-    const observacoes = document.getElementById('observacoes').value;
-    const total = orcamentoTotalDisplay.textContent;
+    // Busca o modelo de mensagem salvo no Firebase ou usa um padrão
+    const template = configGlobais.whatsappTemplate || `
+Olá, gostaria de confirmar um agendamento.
 
+*👤 Dados do Cliente:*
+Nome: {{nome_cliente}}
+Telefone: {{telefone_cliente}}
+Endereço: {{endereco_cliente}}
+
+*📅 Detalhes do Agendamento:*
+Data: {{data_agendamento}}
+Hora: {{hora_agendamento}}
+{{servicos_selecionados}}
+
+*💰 Orçamento Total:* {{orcamento_total}}
+*💳 Forma de Pagamento:* {{forma_pagamento}}
+
+{{observacoes}}
+
+Obrigado!`;
+
+    // Constrói a lista de serviços
     let servicosTexto = '🛠️ Serviços:\n';
     servicosSelecionados.forEach(servico => {
-        let precoTotalServico = servico.precoBase || 0;
-        let subServicosDetalhes = [];
-        
+        servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
                 const valor = servico.camposAdicionaisSelecionados[campo];
-                let subServicoTexto = `  - ${campo}: ${valor}`;
-
-                // Verifica se a opção tem valor para incluir
-                if (typeof valor === 'string' && valor.includes(', R$ ')) {
-                    const [descricao, preco] = valor.split(', R$ ');
-                    precoTotalServico += parseFloat(preco);
-                    // Remove o valor da mensagem para Capacidade de BTUs
-                    if (campo === 'Capacidade de BTUs') {
-                        subServicoTexto = `  - ${servico.nome} (${descricao}): R$ ${precoTotalServico.toFixed(2)}`;
-                    } else {
-                        subServicoTexto = `  - ${campo}: R$ ${preco}`;
-                    }
-                } else {
-                     subServicoTexto = `  - ${campo}: ${valor}`;
-                }
-                subServicosDetalhes.push(subServicoTexto);
+                // CÓDIGO ATUALIZADO: Agora o campo de select é um objeto {nome, valor}
+                const valorDisplay = typeof valor === 'object' ? `${valor.nome} (R$ ${valor.valor.toFixed(2)})` : typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor;
+                servicosTexto += `    - ${campo}: ${valorDisplay}\n`;
             }
-        } else {
-             servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
-        }
-        
-        if (subServicosDetalhes.length > 0) {
-            servicosTexto += subServicosDetalhes.join('\n') + '\n';
         }
     });
 
-    return `Olá, gostaria de confirmar um agendamento.
+    const placeholders = {
+        '{{nome_cliente}}': document.getElementById('nome').value,
+        '{{telefone_cliente}}': document.getElementById('telefone').value,
+        '{{endereco_cliente}}': document.getElementById('endereco').value,
+        '{{data_agendamento}}': formatDate(datePicker.value),
+        '{{hora_agendamento}}': document.querySelector('.time-slot.selected').textContent,
+        '{{servicos_selecionados}}': servicosTexto,
+        '{{orcamento_total}}': orcamentoTotalDisplay.textContent,
+        '{{forma_pagamento}}': document.querySelector('#paymentMethodsContainer .time-slot.selected').textContent, // NOVO
+        '{{observacoes}}': document.getElementById('observacoes').value.trim() ? `*📝 Observações:* ${document.getElementById('observacoes').value.trim()}` : '' // Garante que a linha de observação não apareça se o campo estiver vazio
+    };
+
+    let finalMessage = template;
+    for (const placeholder in placeholders) {
+        finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), placeholders[placeholder]);
+    }
     
-    *👤 Dados do Cliente:*
-    Nome: ${nome}
-    Telefone: ${telefone}
-    Endereço: ${endereco}
-    
-    *📅 Detalhes do Agendamento:*
-    Data: ${data}
-    Hora: ${hora}
-    ${servicosTexto}
-    
-    *💰 Orçamento Total: ${total}*
-    
-    ${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
-    
-    Obrigado!`;
+    return finalMessage.trim(); // Remove espaços extras no final
 }
 
 // ==========================================================================
@@ -597,6 +605,16 @@ function createWhatsAppMessage() {
 function setupEventListeners() {
     datePicker.addEventListener('change', handleDateSelection);
     agendamentoForm.addEventListener('submit', handleFormSubmit);
+
+    // NOVO: Adiciona um listener para os botões de pagamento
+    if (paymentMethodsContainer) {
+        paymentMethodsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('time-slot')) {
+                document.querySelectorAll('#paymentMethodsContainer .time-slot').forEach(el => el.classList.remove('selected'));
+                e.target.classList.add('selected');
+            }
+        });
+    }
 
     backButton1.addEventListener('click', () => {
         servicosFormSection.classList.add('hidden');
