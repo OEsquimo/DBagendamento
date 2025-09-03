@@ -397,7 +397,7 @@ function getServicosSelecionados() {
                         }
                     } else {
                         if (input.value) {
-                             camposAdicionaisSelecionados[campoNome] = input.value;
+                             camposAdicionadosSelecionados[campoNome] = input.value;
                         }
                     }
                 }
