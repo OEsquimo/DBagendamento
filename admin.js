@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.0 (Com navegação por abas e novo tipo de campo)
+ * Versão: 8.0 (Salvamento de campos 'select' como objeto e mensagem personalizada)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -34,6 +34,8 @@ const servicosList = document.getElementById('servicosList');
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
+// NOVO: Elemento para o template de mensagem
+const whatsappTemplateInput = document.getElementById('whatsappTemplate');
 const horariosContainer = document.getElementById('horariosContainer');
 const addFieldBtn = document.getElementById('addFieldBtn');
 const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
@@ -160,14 +162,14 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
-function generateOptionsHTML(opcoes = ['']) {
+// CÓDIGO ATUALIZADO: Agora gera HTML a partir de um array de objetos {nome, valor}
+function generateOptionsHTML(opcoes = [{ nome: '', valor: 0.00 }]) {
     return `
         <p>Opções:</p>
         <div class="option-list">
             ${opcoes.map(option => {
-                const parts = option.split(', R$ ');
-                const optionValue = parts[0] || '';
-                const optionPrice = parts[1] || '0.00';
+                const optionValue = option.nome || '';
+                const optionPrice = option.valor || 0.00;
                 return `
                     <div class="option-item">
                         <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
@@ -226,9 +228,9 @@ function handleServicoFormSubmit(e) {
         if (fieldType === 'select') {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
-                const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                const optionNome = optionItem.querySelector('.option-value').value; // NOVO
+                const optionValor = parseFloat(optionItem.querySelector('.option-price').value) || 0; // NOVO
+                opcoes.push({ nome: optionNome, valor: optionValor }); // NOVO: Salva como objeto
             });
             campoData.opcoes = opcoes;
         }
@@ -291,6 +293,7 @@ function loadServices() {
     });
 }
 
+// CÓDIGO ATUALIZADO: Renderiza o card do serviço corretamente com o novo formato de dados
 function createServicoCard(servico, key) {
     const card = document.createElement('div');
     card.className = 'card mb-3';
@@ -300,7 +303,8 @@ function createServicoCard(servico, key) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
             if (campo.tipo === 'select' && campo.opcoes) {
-                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
+                // NOVO: Lê nome e valor do objeto para exibir
+                opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao.nome} (R$ ${opcao.valor.toFixed(2)})</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
@@ -378,6 +382,7 @@ function loadBookings() {
     });
 }
 
+// CÓDIGO ATUALIZADO: Exibe os detalhes do agendamento corretamente
 function createAgendamentoCard(agendamento, key) {
     const card = document.createElement('div');
     card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
@@ -387,9 +392,11 @@ function createAgendamentoCard(agendamento, key) {
         agendamento.servicos.forEach(servico => {
             servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
                 <ul>
-                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
-                        <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
-                    `).join('') : ''}
+                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => {
+                        // NOVO: Checa se o valor é um objeto
+                        const valorDisplay = typeof valor === 'object' ? `${valor.nome} (R$ ${valor.valor.toFixed(2)})` : typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor;
+                        return `<li>${campo}: ${valorDisplay}</li>`;
+                    }).join('') : ''}
                 </ul>
             </li>`;
         });
@@ -409,6 +416,7 @@ function createAgendamentoCard(agendamento, key) {
             <h6>Serviços:</h6>
             ${servicosHtml}
             <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
+            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
             <div class="mt-3">
                 <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
@@ -419,7 +427,7 @@ function createAgendamentoCard(agendamento, key) {
     `;
     agendamentosList.appendChild(card);
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.cancel-booking').addEventListener('click', ()ato-`() => updateBookingStatus(key, 'Cancelado'));
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
@@ -455,6 +463,7 @@ function deleteBooking(key) {
 function handleConfigFormSubmit(e) {
     e.preventDefault();
     const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Limpa o número
+    const whatsappTemplate = whatsappTemplateInput.value; // NOVO: Pega o conteúdo do template
     const horariosPorDia = {};
 
     diasDaSemana.forEach(dia => {
@@ -467,7 +476,7 @@ function handleConfigFormSubmit(e) {
     });
 
     const configRef = ref(database, 'configuracoes');
-    set(configRef, { whatsappNumber, horariosPorDia })
+    set(configRef, { whatsappNumber, horariosPorDia, whatsappTemplate }) // NOVO: Salva o template
         .then(() => alert('Configurações salvas com sucesso!'))
         .catch(error => {
             console.error("Erro ao salvar configurações:", error);
@@ -481,6 +490,7 @@ function loadConfig() {
         if (snapshot.exists()) {
             const config = snapshot.val();
             whatsappNumberInput.value = config.whatsappNumber;
+            whatsappTemplateInput.value = config.whatsappTemplate || ''; // NOVO: Carrega o template
             diasDaSemana.forEach(dia => {
                 const diaConfig = config.horariosPorDia[dia];
                 if (diaConfig) {
