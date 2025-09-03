@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.3 (Correções de bugs e funcionalidade de salvar dados atualizada)
+ * Versão: 8.5 (Correções de inicialização e tratamento de erros)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -25,7 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Elementos do DOM
+// Elementos do DOM (Verificações de existência adicionadas)
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 const formServico = document.getElementById('form-servico');
@@ -46,7 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAgendamentos();
     loadConfig();
     setupEventListeners();
-    document.querySelector('.tab-button[data-tab="servicos"]').click();
+    const defaultTab = document.querySelector('.tab-button[data-tab="servicos"]');
+    if (defaultTab) {
+        defaultTab.click();
+    }
 });
 
 function setupEventListeners() {
@@ -57,20 +60,25 @@ function setupEventListeners() {
         });
     });
 
-    formServico.addEventListener('submit', handleServicoFormSubmit);
-    formConfig.addEventListener('submit', handleConfigFormSubmit);
+    if (formServico) formServico.addEventListener('submit', handleServicoFormSubmit);
+    if (formConfig) formConfig.addEventListener('submit', handleConfigFormSubmit);
 
     // Adiciona evento para os botões de adicionar campo e opção
-    document.getElementById('adicionar-campo-btn').addEventListener('click', addCampoAdicional);
-    camposAdicionaisContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('add-option-btn')) {
-            addOption(e.target);
-        } else if (e.target.classList.contains('remove-campo-btn')) {
-            removeCampoAdicional(e.target);
-        } else if (e.target.classList.contains('remove-option-btn')) {
-            removeOption(e.target);
-        }
-    });
+    const adicionarCampoBtn = document.getElementById('adicionar-campo-btn');
+    if (adicionarCampoBtn) {
+        adicionarCampoBtn.addEventListener('click', addCampoAdicional);
+    }
+    if (camposAdicionaisContainer) {
+        camposAdicionaisContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-option-btn')) {
+                addOption(e.target);
+            } else if (e.target.classList.contains('remove-campo-btn')) {
+                removeCampoAdicional(e.target);
+            } else if (e.target.classList.contains('remove-option-btn')) {
+                removeOption(e.target);
+            }
+        });
+    }
 }
 
 function showTab(tab) {
@@ -88,6 +96,7 @@ function showTab(tab) {
 function loadServicos() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
+        if (!listaServicos) return;
         listaServicos.innerHTML = '';
         if (snapshot.exists()) {
             const servicos = snapshot.val();
@@ -103,6 +112,7 @@ function loadServicos() {
 function loadAgendamentos() {
     const agendamentosRef = ref(database, 'agendamentos');
     onValue(agendamentosRef, (snapshot) => {
+        if (!listaAgendamentos) return;
         listaAgendamentos.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
@@ -121,7 +131,7 @@ function loadConfig() {
         if (snapshot.exists()) {
             const config = snapshot.val();
             for (const key in config) {
-                const element = formConfig.querySelector(`[name="${key}"]`);
+                const element = formConfig ? formConfig.querySelector(`[name="${key}"]`) : null;
                 if (element) {
                     if (element.type === 'checkbox') {
                         element.checked = config[key];
@@ -134,10 +144,12 @@ function loadConfig() {
             if (config.horariosPorDia) {
                 for (const dia in config.horariosPorDia) {
                     const diaConfig = config.horariosPorDia[dia];
-                    document.getElementById(`${dia}-ativo`).checked = diaConfig.ativo;
-                    document.getElementById(`${dia}-inicio`).value = diaConfig.horarioInicio;
-                    document.getElementById(`${dia}-fim`).value = diaConfig.horarioFim;
-                    document.getElementById(`${dia}-duracao`).value = diaConfig.duracaoServico;
+                    if (document.getElementById(`${dia}-ativo`)) {
+                        document.getElementById(`${dia}-ativo`).checked = diaConfig.ativo;
+                        document.getElementById(`${dia}-inicio`).value = diaConfig.horarioInicio;
+                        document.getElementById(`${dia}-fim`).value = diaConfig.horarioFim;
+                        document.getElementById(`${dia}-duracao`).value = diaConfig.duracaoServico;
+                    }
                 }
             }
         }
@@ -305,19 +317,26 @@ function handleEditServico(e) {
     get(servicoRef).then((snapshot) => {
         if (snapshot.exists()) {
             const servico = snapshot.val();
-            formServico.nome.value = servico.nome;
-            formServico.descricao.value = servico.descricao;
-            formServico.precoBase.value = servico.precoBase;
+            if (formServico) {
+                formServico.nome.value = servico.nome;
+                formServico.descricao.value = servico.descricao;
+                formServico.precoBase.value = servico.precoBase;
+            }
 
-            camposAdicionaisContainer.innerHTML = '';
-            if (servico.camposAdicionais) {
-                servico.camposAdicionais.forEach(campo => {
-                    addCampoAdicional(null, campo);
-                });
+            if (camposAdicionaisContainer) {
+                camposAdicionaisContainer.innerHTML = '';
+                if (servico.camposAdicionais) {
+                    servico.camposAdicionais.forEach(campo => {
+                        addCampoAdicional(null, campo);
+                    });
+                }
             }
 
             editingServicoKey = key;
-            document.getElementById('adicionar-servico-btn').textContent = "Atualizar Serviço";
+            const saveBtn = document.getElementById('adicionar-servico-btn');
+            if (saveBtn) {
+                saveBtn.textContent = "Atualizar Serviço";
+            }
             showTab('servico');
         }
     });
@@ -352,8 +371,9 @@ function handleUpdateAgendamentoStatus(e) {
 // 6. MANIPULAÇÃO DE CAMPOS DINÂMICOS
 // ==========================================================================
 
-function addCampoAdicional(e, campoData = { nome: '', tipo: 'select', opcoes: [{ nome: '', valor: 0.00 }] }) {
+function addCampoAdicional(e, campoData = { nome: '', tipo: 'select', opcoes: [] }) {
     if (e) e.preventDefault();
+    if (!camposAdicionaisContainer) return;
     const campoContainer = document.createElement('div');
     campoContainer.classList.add('campo-adicional-container', 'mb-3', 'p-3', 'border', 'rounded');
 
@@ -392,19 +412,17 @@ function addCampoAdicional(e, campoData = { nome: '', tipo: 'select', opcoes: [{
     camposAdicionaisContainer.appendChild(campoContainer);
 
     // Adiciona listener para mudança de tipo de campo
-    campoContainer.querySelector('.campo-tipo').addEventListener('change', (e) => {
-        const novoTipo = e.target.value;
-        const novoConteudo = getNewFieldContent(novoTipo, campoData);
-        campoContainer.querySelector('.field-content').innerHTML = novoConteudo;
-        // Reinicia os listeners de adicionar/remover opções
-        campoContainer.querySelector('.field-content').addEventListener('click', (e) => {
-            if (e.target.classList.contains('add-option-btn')) {
-                addOption(e.target);
-            } else if (e.target.classList.contains('remove-option-btn')) {
-                removeOption(e.target);
+    const campoTipoSelect = campoContainer.querySelector('.campo-tipo');
+    if (campoTipoSelect) {
+        campoTipoSelect.addEventListener('change', (e) => {
+            const novoTipo = e.target.value;
+            const novoConteudo = getNewFieldContent(novoTipo, campoData);
+            const fieldContentDiv = campoContainer.querySelector('.field-content');
+            if (fieldContentDiv) {
+                fieldContentDiv.innerHTML = novoConteudo;
             }
         });
-    });
+    }
 }
 
 function getNewFieldContent(novoTipo, campoData) {
@@ -448,6 +466,7 @@ function generateInputField(campoData, tipo) {
 
 function addOption(button, optionData = { nome: '', valor: 0.00 }) {
     const optionList = button.closest('.field-content').querySelector('.option-list');
+    if (!optionList) return;
     const optionItem = document.createElement('div');
     optionItem.classList.add('option-item');
     optionItem.innerHTML = `
@@ -478,7 +497,7 @@ function getCamposAdicionaisFromForm() {
             container.querySelectorAll('.option-item').forEach(optionItem => {
                 const nome = optionItem.querySelector('.option-value').value;
                 const valor = parseFloat(optionItem.querySelector('.option-price').value);
-                if (nome && valor) {
+                if (nome && !isNaN(valor)) {
                     campo.opcoes.push({ nome, valor });
                 }
             });
@@ -489,14 +508,19 @@ function getCamposAdicionaisFromForm() {
 }
 
 function resetForm() {
-    formServico.reset();
-    camposAdicionaisContainer.innerHTML = '';
+    if (formServico) formServico.reset();
+    if (camposAdicionaisContainer) camposAdicionaisContainer.innerHTML = '';
     editingServicoKey = null;
-    document.getElementById('adicionar-servico-btn').textContent = "Salvar Serviço";
+    const saveBtn = document.getElementById('adicionar-servico-btn');
+    if (saveBtn) {
+        saveBtn.textContent = "Salvar Serviço";
+    }
 }
 
-// NOVO: Adiciona a função para gerar o HTML das opções com a lógica de preço
-function generateOptionsHTML(opcoes = [{ nome: '', valor: 0.00 }]) {
+function generateOptionsHTML(opcoes = []) {
+    if (opcoes.length === 0) {
+        opcoes = [{ nome: '', valor: 0.00 }];
+    }
     return `
         ${opcoes.map(option => {
             const optionValue = option.nome || '';
