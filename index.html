@@ -6,53 +6,6 @@
     <title>O Esquimó - Instalação de Ar Condicionado</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="style.css">
-    <style>
-        .hidden {
-            display: none !important;
-        }
-        .progress-bar-container {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 2rem;
-        }
-        .progress-step {
-            width: 2rem;
-            height: 2rem;
-            background-color: #ddd;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #fff;
-        }
-        .progress-step.active {
-            background-color: #007bff;
-        }
-        .service-card {
-            border: 1px solid #ccc;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-        }
-        .service-card.selected {
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-        }
-        .time-slot {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            margin: 0.25rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .time-slot.selected {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-    </style>
 </head>
 <body>
 
@@ -125,7 +78,7 @@
                 <label for="observacoes">Observacoes (opcional)</label>
                 <textarea id="observacoes" class="form-control" rows="3"></textarea>
             </div>
-            <h4 class="mt-4">Orcamento Total: <span id="orcamentoTotal">R$ 0,00</span></h4>
+            <h4 class="mt-4">Orçamento Total: <span id="orcamentoTotal">R$ 0,00</span></h4>
             <div class="text-right mt-4">
                 <button class="btn btn-secondary" id="backButton3">Voltar</button>
                 <button type="submit" class="btn btn-success" form="agendamentoForm">Confirmar Agendamento</button>
