@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.2 (Correção do carregamento de horários)
+ * Versão: 11.3 (Mensagem Inteligente para WhatsApp)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -414,7 +414,7 @@ function setupPaymentOptions() {
 
 async function handleDateSelection() {
     if (!configGlobais.horariosPorDia) {
-        timeSlotsContainer.innerHTML = '<p>Carregando configurações. Por favor, aguarde e selecione a data novamente.</p>';
+        timeSlotsContainer.innerHTML = '<p>Carregando configurações. Por favor, selecione a data novamente.</p>';
         return;
     }
 
@@ -584,72 +584,129 @@ function showConfirmation() {
     });
 }
 
+// --- MODIFICAÇÃO INICIADA AQUI ---
 function createWhatsAppMessage() {
     const nome = document.getElementById('nome').value;
     const telefone = document.getElementById('telefone').value;
     const endereco = document.getElementById('endereco').value;
     const data = formatDate(datePicker.value);
-    const hora = document.querySelector('.time-slot.selected').textContent;
+    const hora = document.querySelector('.time-slot.selected')?.textContent || ''; // Adicionado optional chaining
     const observacoes = document.getElementById('observacoes').value;
-    const total = orcamentoTotalDisplay.textContent;
+    const total = orcamentoTotalDisplay.textContent; // Já está formatado como R$ X.XX
 
-    let servicosTexto = '🛠️ Serviços:\n';
-    servicosSelecionados.forEach(servico => {
-        let precoTotalServico = servico.precoBase || 0;
-        let subServicosDetalhes = [];
-        let isQuantidade = false;
+    let mensagemFinal = `Olá, gostaria de confirmar seu agendamento. 👋\n\n`;
 
-        if (servico.camposAdicionaisSelecionados) {
-            for (const campo in servico.camposAdicionaisSelecionados) {
-                const valor = servico.camposAdicionaisSelecionados[campo];
-                let subServicoTexto = `  - ${campo}: ${valor}`;
+    mensagemFinal += `*👤 Dados do Cliente:*\n`;
+    mensagemFinal += `Nome: ${nome}\n`;
+    mensagemFinal += `Telefone: ${telefone}\n`;
+    mensagemFinal += `Endereço: ${endereco}\n\n`;
 
-                if (typeof valor === 'string' && valor.includes(', R$ ')) {
-                    const [descricao, preco] = valor.split(', R$ ');
-                    precoTotalServico += parseFloat(preco);
-                    subServicoTexto = `  - ${campo}: ${descricao} (R$ ${preco})`;
-                } else if (!isNaN(valor)) {
-                    // Check if it's a "quantidade" field
-                    const fieldType = servico.camposAdicionais.find(f => f.nome === campo)?.tipo;
-                    if (fieldType === 'select_quantidade') {
-                        isQuantidade = true;
-                    }
-                    subServicoTexto = `  - ${campo}: ${valor}`;
+    mensagemFinal += `*📅 Detalhes do Agendamento:*\n`;
+    mensagemFinal += `Data: ${data}\n`;
+    mensagemFinal += `Hora: ${hora}\n`;
+    if (observacoes) {
+        mensagemFinal += `*📝 Observações:* ${observacoes}\n`;
+    }
+    mensagemFinal += '\n'; // Linha em branco após detalhes do agendamento
+
+    // --- Lógica Inteligente para Serviços ---
+    if (servicosSelecionados.length === 1) {
+        // Cenário: Apenas um serviço agendado
+        const servico = servicosSelecionados[0];
+        mensagemFinal += `*Serviço Agendado:*\n\n`; // Título mais direto
+        mensagemFinal += `*${servico.nome}.*\n`; // Nome do serviço em negrito
+
+        // Detalhes do ÚNICO serviço
+        const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
+        const quantidade = campoQuantidade ? parseInt(servico.camposAdicionaisSelecionados[campoQuantidade.nome]) || 1 : 1;
+
+        if (quantidade > 1) {
+            mensagemFinal += `Quantidade: ${quantidade}.\n`;
+        }
+
+        // Listar os campos adicionais para este único serviço
+        Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
+            // Ignora campo de quantidade, valores vazios ou "Não" para listagem detalhada
+            if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não") {
+                const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
+                let valorFormatado = valor;
+                let precoCampo = 0;
+
+                if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
+                    const parts = valor.split(', R$ ');
+                    valorFormatado = parts[0]; // Apenas o nome da opção
+                    precoCampo = parseFloat(parts[1]);
+                    mensagemFinal += `${campoNome}:\n  ${valorFormatado}.\n`;
+                    mensagemFinal += `  Valor: R$ ${formatPrice(precoCampo)}.\n`;
+                } else if (typeof valor === 'number') {
+                     // Se for um número (e não campo de quantidade que já foi listado)
+                     mensagemFinal += `${campoNome}:\n  R$ ${formatPrice(valor)}.\n`;
+                } else {
+                    mensagemFinal += `${campoNome}:\n  ${valor}.\n`;
                 }
-
-                subServicosDetalhes.push(subServicoTexto);
             }
-        }
+        });
 
-        if (isQuantidade) {
-             servicosTexto += `  - ${servico.nome} (${subServicosDetalhes.join(', ')}): R$ ${servico.precoCalculado.toFixed(2)}\n`;
-        } else {
-            servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
-             if (subServicosDetalhes.length > 0) {
-                servicosTexto += subServicosDetalhes.join('\n') + '\n';
+        // Valor total do único serviço
+        const valorTotalServico = servico.precoCalculado || 0;
+        mensagemFinal += `\n*Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`;
+
+    } else {
+        // Cenário: Múltiplos serviços agendados
+        mensagemFinal += '🛠️ Serviços:\n\n'; // Título padrão para múltiplos serviços
+
+        servicosSelecionados.forEach((servico, index) => {
+            mensagemFinal += `  - *${servico.nome}.*\n\n`; // Nome do serviço principal em negrito
+
+            const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
+            const quantidade = campoQuantidade ? parseInt(servico.camposAdicionaisSelecionados[campoQuantidade.nome]) || 1 : 1;
+
+            if (quantidade > 1) {
+                mensagemFinal += `  Quantidade: ${quantidade}.\n`;
             }
-        }
-    });
 
-    return `Olá, gostaria de confirmar um agendamento.
+            // Listar os campos adicionais para este serviço
+            Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
+                // Ignora campo de quantidade e valores vazios ou "Não"
+                if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não") {
+                    const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
+                    let valorFormatado = valor;
+                    let precoCampo = 0;
 
-    *👤 Dados do Cliente:*
-    Nome: ${nome}
-    Telefone: ${telefone}
-    Endereço: ${endereco}
+                    if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
+                        const parts = valor.split(', R$ ');
+                        valorFormatado = parts[0];
+                        precoCampo = parseFloat(parts[1]);
+                        mensagemFinal += `  ${campoNome}:\n    ${valorFormatado}.\n`; // Identado
+                        mensagemFinal += `    Valor: R$ ${formatPrice(precoCampo)}.\n`; // Identado
+                    } else if (typeof valor === 'number') {
+                        mensagemFinal += `  ${campoNome}:\n    R$ ${formatPrice(valor)}.\n`; // Identado
+                    } else {
+                        mensagemFinal += `  ${campoNome}:\n    ${valor}.\n`; // Identado
+                    }
+                }
+            });
 
-    *📅 Detalhes do Agendamento:*
-    Data: ${data}
-    Hora: ${hora}
-    ${servicosTexto}
+            // Valor total do serviço
+            const valorTotalServico = servico.precoCalculado || 0;
+            mensagemFinal += `\n  *Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`; // Adiciona linha em branco para separar os serviços
+        });
+    }
+    // --- FIM da Lógica Inteligente ---
 
-    *💰 Orçamento Total: ${total}*
-    *💳 Forma de Pagamento: ${formaPagamentoSelecionada}*
+    mensagemFinal += `\n*💰 Orçamento Total:* ${total}\n`; // O total já vem formatado de orcamentoTotalDisplay
+    mensagemFinal += `*💳 Forma de Pagamento:* ${formaPagamentoSelecionada}\n\n`;
+    mensagemFinal += `Obrigado! 😊`;
 
-    ${observacoes ? `*📝 Observações:* ${observacoes}` : ''}
-
-    Obrigado!`;
+    return mensagemFinal;
 }
+
+// Função auxiliar para formatar preços com vírgula nos centavos
+function formatPrice(price) {
+    if (typeof price !== 'number') return '0,00';
+    return price.toFixed(2).replace('.', ',');
+}
+// --- MODIFICAÇÃO TERMINADA AQUI ---
 
 // ==========================================================================
 // 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
