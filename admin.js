@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 7.1 (Novo tipo de campo para select sem preço)
+ * Versão: 8.0 (Campo de Quantidade)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -118,14 +118,15 @@ function addAdditionalFieldForm(fieldData = {}) {
                 <select class="form-control field-type">
                     <option value="select_com_preco" ${fieldData.tipo === 'select_com_preco' ? 'selected' : ''}>Lista de Opções (com preço)</option>
                     <option value="select_sem_preco" ${fieldData.tipo === 'select_sem_preco' ? 'selected' : ''}>Lista de Opções (sem preço)</option>
+                    <option value="select_quantidade" ${fieldData.tipo === 'select_quantidade' ? 'selected' : ''}>Campo de Quantidade</option>
                     <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
-                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
                     <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
                 </select>
             </div>
             <div class="options-container">
                 ${(fieldData.tipo === 'select_com_preco' || !fieldData.tipo) ? generateOptionsHTML(fieldData.opcoes, 'com_preco') : ''}
                 ${(fieldData.tipo === 'select_sem_preco') ? generateOptionsHTML(fieldData.opcoes, 'sem_preco') : ''}
+                ${(fieldData.tipo === 'select_quantidade') ? generateOptionsHTML(fieldData.opcoes, 'quantidade') : ''}
             </div>
             <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
         </div>
@@ -146,6 +147,8 @@ function addAdditionalFieldForm(fieldData = {}) {
             optionsContainer.innerHTML = generateOptionsHTML([], 'com_preco');
         } else if (selectedType === 'select_sem_preco') {
             optionsContainer.innerHTML = generateOptionsHTML([], 'sem_preco');
+        } else if (selectedType === 'select_quantidade') {
+            optionsContainer.innerHTML = generateOptionsHTML([], 'quantidade');
         } else {
             optionsContainer.innerHTML = '';
         }
@@ -164,6 +167,7 @@ function addAdditionalFieldForm(fieldData = {}) {
 }
 
 function generateOptionsHTML(opcoes = [''], type = 'com_preco') {
+    const isQuantity = type === 'quantidade';
     const hasPrice = type === 'com_preco';
     return `
         <p>Opções:</p>
@@ -191,7 +195,9 @@ function generateOptionsHTML(opcoes = [''], type = 'com_preco') {
 
 function addOptionForm(e) {
     const optionList = e.target.closest('.options-container').querySelector('.option-list');
-    const hasPrice = e.target.closest('.additional-field').dataset.type === 'select_com_preco';
+    const fieldType = e.target.closest('.additional-field').dataset.type;
+    const isQuantity = fieldType === 'select_quantidade';
+    const hasPrice = fieldType === 'select_com_preco';
 
     const optionHtml = `
         <div class="option-item mt-2">
@@ -233,7 +239,7 @@ function handleServicoFormSubmit(e) {
             tipo: fieldType
         };
 
-        if (fieldType === 'select_com_preco' || fieldType === 'select_sem_preco') {
+        if (fieldType === 'select_com_preco' || fieldType === 'select_sem_preco' || fieldType === 'select_quantidade') {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
                 const optionValue = optionItem.querySelector('.option-value').value;
@@ -316,10 +322,8 @@ function createServicoCard(servico, key) {
     if (servico.camposAdicionais) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
-            if (campo.tipo === 'select_com_preco' && campo.opcoes) {
+            if (campo.opcoes) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
-            } else if (campo.tipo === 'select_sem_preco' && campo.opcoes) {
-                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
