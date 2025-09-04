@@ -19,6 +19,7 @@
         </div>
         
         <div class="tab-content">
+
             <section id="addServicoTab" class="tab-pane active">
                 <h3>Cadastrar Novo Serviço</h3>
                 <form id="servicoForm">
@@ -37,8 +38,7 @@
 
                     <h4>Campos Adicionais</h4>
                     <div id="additionalFieldsContainer">
-                        
-<div class="additional-field" data-type="select">
+                         <div class="additional-field" data-type="select">
                             <div class="form-group">
                                 <label>Nome do Campo</label>
                                 <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" value="Capacidade de BTUs" required>
@@ -46,7 +46,8 @@
                             <div class="form-group">
                                 <label>Tipo do Campo</label>
                                 <select class="form-control field-type">
-                                    <option value="select" selected>Lista de opções (Nome e Preço)</option> <option value="select-single">Lista de opções (apenas Valor)</option> <option value="text">Campo de Texto</option>
+                                    <option value="select" selected>Lista de opções (select)</option>
+                                    <option value="text">Campo de Texto</option>
                                     <option value="number">Campo Numérico</option>
                                     <option value="textarea">Campo de Texto Longo</option>
                                 </select>
@@ -79,13 +80,13 @@
             <section id="listaServicosTab" class="tab-pane hidden">
                 <h3>Serviços Cadastrados</h3>
                 <div id="servicosList">
-                </div>
+                     </div>
             </section>
             
             <section id="agendamentosTab" class="tab-pane hidden">
                 <h3>Agendamentos</h3>
                 <div id="agendamentosList">
-                </div>
+                     </div>
             </section>
 
             <section id="configuracoesTab" class="tab-pane hidden">
@@ -97,7 +98,7 @@
                     </div>
                     <h4>Horários de Atendimento por Dia</h4>
                     <div id="horariosContainer">
-                    </div>
+                         </div>
                     <button type="submit" class="btn btn-primary">Salvar Configurações</button>
                 </form>
             </section>
