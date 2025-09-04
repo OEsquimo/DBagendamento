@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.1 (Reordenação ao editar serviço)
+ * Versão: 8.2 (Dois tipos de select separados)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -108,8 +108,9 @@ function setupConfigForm() {
 // ==========================================================================
 
 function addAdditionalFieldForm(fieldData = {}) {
+    const fieldType = fieldData.tipo || 'selectNomePreco';
     const fieldHtml = `
-        <div class="additional-field" data-type="${fieldData.tipo || 'select'}">
+        <div class="additional-field" data-type="${fieldType}">
             <div class="field-header">
                 <button type="button" class="btn btn-sm move-field-up-btn">↑</button>
                 <button type="button" class="btn btn-sm move-field-down-btn">↓</button>
@@ -121,14 +122,15 @@ function addAdditionalFieldForm(fieldData = {}) {
             <div class="form-group">
                 <label>Tipo do Campo</label>
                 <select class="form-control field-type">
-                    <option value="select" ${fieldData.tipo === 'select' ? 'selected' : ''}>Lista de Opções (select)</option>
-                    <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
-                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
-                    <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
+                    <option value="selectNomePreco" ${fieldType === 'selectNomePreco' ? 'selected' : ''}>Lista de opções (Nome e Preço)</option>
+                    <option value="selectApenasValor" ${fieldType === 'selectApenasValor' ? 'selected' : ''}>Lista de opções (apenas Valor)</option>
+                    <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Campo de Texto</option>
+                    <option value="number" ${fieldType === 'number' ? 'selected' : ''}>Campo Numérico</option>
+                    <option value="textarea" ${fieldType === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
                 </select>
             </div>
             <div class="options-container">
-                ${fieldData.tipo === 'select' || !fieldData.tipo ? generateOptionsHTML(fieldData.opcoes) : ''}
+                ${fieldType.startsWith('select') ? generateOptionsHTML(fieldType, fieldData.opcoes) : ''}
             </div>
             <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
         </div>
@@ -145,8 +147,8 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldTypeSelect.addEventListener('change', (e) => {
         const selectedType = e.target.value;
         fieldElement.dataset.type = selectedType;
-        if (selectedType === 'select') {
-            optionsContainer.innerHTML = generateOptionsHTML();
+        if (selectedType.startsWith('select')) {
+            optionsContainer.innerHTML = generateOptionsHTML(selectedType);
             optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
             optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
         } else {
@@ -154,7 +156,7 @@ function addAdditionalFieldForm(fieldData = {}) {
         }
     });
 
-    if (fieldElement.dataset.type === 'select') {
+    if (fieldType.startsWith('select')) {
         optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
         optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
     }
@@ -163,29 +165,48 @@ function addAdditionalFieldForm(fieldData = {}) {
     fieldElement.querySelector('.move-field-down-btn').addEventListener('click', moveFieldDown);
 }
 
-function generateOptionsHTML(opcoes = []) {
+function generateOptionsHTML(type, opcoes = []) {
     let optionsHtml = '';
     if (opcoes.length > 0) {
         optionsHtml = opcoes.map(option => {
             const parts = option.split(', R$ ');
             const optionValue = parts[0] || '';
             const optionPrice = parts.length > 1 ? parseFloat(parts[1]).toFixed(2) : '0.00';
-            return `
+            
+            if (type === 'selectNomePreco') {
+                return `
+                    <div class="option-item">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice}">
+                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                    </div>
+                `;
+            } else { // selectApenasValor
+                return `
+                    <div class="option-item">
+                        <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: Janela)" value="${optionValue}" required>
+                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                    </div>
+                `;
+            }
+        }).join('');
+    } else {
+        if (type === 'selectNomePreco') {
+            optionsHtml = `
                 <div class="option-item">
-                    <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
-                    <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice}">
+                    <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+                    <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
                     <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
                 </div>
             `;
-        }).join('');
-    } else {
-        optionsHtml = `
-            <div class="option-item">
-                <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" required>
-                <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
-                <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-            </div>
-        `;
+        } else { // selectApenasValor
+            optionsHtml = `
+                <div class="option-item">
+                    <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+                    <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+                </div>
+            `;
+        }
     }
 
     return `
@@ -199,13 +220,26 @@ function generateOptionsHTML(opcoes = []) {
 
 function addOptionForm(e) {
     const optionList = e.target.closest('.options-container').querySelector('.option-list');
-    const optionHtml = `
-        <div class="option-item mt-2">
-            <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
-            <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
-            <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-        </div>
-    `;
+    const fieldType = e.target.closest('.additional-field').dataset.type;
+
+    let optionHtml = '';
+    if (fieldType === 'selectNomePreco') {
+        optionHtml = `
+            <div class="option-item mt-2">
+                <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+                <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="0.00">
+                <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+            </div>
+        `;
+    } else { // selectApenasValor
+        optionHtml = `
+            <div class="option-item mt-2">
+                <input type="text" class="form-control option-value" placeholder="Nome da opção" required>
+                <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
+            </div>
+        `;
+    }
+
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = optionHtml;
     const newOption = tempDiv.firstElementChild;
@@ -255,12 +289,16 @@ function handleServicoFormSubmit(e) {
             tipo: fieldType
         };
 
-        if (fieldType === 'select') {
+        if (fieldType === 'selectNomePreco' || fieldType === 'selectApenasValor') {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
                 const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                if (fieldType === 'selectNomePreco') {
+                    const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
+                    opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                } else { // selectApenasValor
+                    opcoes.push(optionValue);
+                }
             });
             campoData.opcoes = opcoes;
         }
@@ -331,7 +369,7 @@ function createServicoCard(servico, key) {
     if (servico.camposAdicionais) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
-            if (campo.tipo === 'select' && campo.opcoes) {
+            if (campo.tipo.startsWith('select') && campo.opcoes) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
