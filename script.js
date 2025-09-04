@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.1 (Correção do cálculo de quantidade)
+ * Versão: 11.2 (Correção do carregamento de horários)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -413,6 +413,11 @@ function setupPaymentOptions() {
 }
 
 async function handleDateSelection() {
+    if (!configGlobais.horariosPorDia) {
+        timeSlotsContainer.innerHTML = '<p>Carregando configurações. Por favor, aguarde e selecione a data novamente.</p>';
+        return;
+    }
+
     const selectedDate = datePicker.value;
     if (!selectedDate) {
         timeSlotsContainer.innerHTML = '<p>Selecione uma data para ver os horários.</p>';
@@ -463,6 +468,31 @@ async function handleDateSelection() {
 
     const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
     displayTimeSlots(horariosDisponiveis);
+}
+
+function generateTimeSlots(startTime, endTime, interval, existingAppointments, referenceTime) {
+    const slots = [];
+    let currentTime = new Date(`2000-01-01T${startTime}:00`);
+    const end = new Date(`2000-01-01T${endTime}:00`);
+
+    while (currentTime < end) {
+        const timeString = currentTime.toTimeString().slice(0, 5);
+
+        if (referenceTime) {
+             const [slotHour, slotMinute] = timeString.split(':').map(Number);
+             if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
+                currentTime.setMinutes(currentTime.getMinutes() + interval);
+                continue;
+            }
+        }
+
+        if (!existingAppointments.includes(timeString)) {
+            slots.push(timeString);
+        }
+
+        currentTime.setMinutes(currentTime.getMinutes() + interval);
+    }
+    return slots;
 }
 
 function displayTimeSlots(horariosDisponiveis) {
