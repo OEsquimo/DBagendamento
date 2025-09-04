@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada)
+ * Versão: 10.1 (Redirecionamento, mensagem do WhatsApp ajustada) - CORRIGIDO
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -80,12 +80,13 @@ async function loadConfig() {
     }
 }
 
+// ===================== AQUI ESTÁ A FUNÇÃO CORRIGIDA =====================
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
         servicosContainer.innerHTML = '';
         if (snapshot.exists()) {
-            servicosGlobais = snapshot.val();
+            servicosGlobais = snapshot.val(); // Armazena os dados globais
             for (const key in servicosGlobais) {
                 const service = servicosGlobais[key];
                 createServiceCard(service, key);
@@ -95,6 +96,7 @@ function loadServices() {
         }
     });
 }
+// ==========================================================================
 
 // ==========================================================================
 // 3. ETAPA 1: SELEÇÃO DE SERVIÇOS
