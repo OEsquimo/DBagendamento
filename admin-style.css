@@ -15,11 +15,14 @@ body {
     min-height: 100vh;
 }
 
-/* Contêiner principal do painel, centralizado e com sombra */
+.hidden {
+    display: none;
+}
+
 .container {
     padding: 20px;
     max-width: 600px;
-    width: 100%; 
+    width: 100%;
     margin: 40px auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -27,9 +30,26 @@ body {
     box-sizing: border-box;
 }
 
-/* ========================================================================== */
-/* 1. NAVEGAÇÃO POR ABAS */
-/* ========================================================================== */
+h2 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    font-size: 1.5em;
+}
+
+h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+h4 {
+    color: #333;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
 
 .tab-navigation {
     display: flex;
@@ -38,10 +58,9 @@ body {
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
     gap: 5px;
-    flex-wrap: wrap; /* Permite que os botões quebrem a linha */
+    flex-wrap: wrap;
 }
 
-/* Estilos para os botões de abas */
 .tab-btn {
     flex: 1 1 auto;
     min-width: fit-content;
@@ -56,11 +75,14 @@ body {
     transition: all 0.2s ease;
     border-radius: 5px 5px 0 0;
     text-transform: capitalize;
-    box-sizing: border-box; 
+    box-sizing: border-box;
     text-align: center;
 }
 
-/* Estilo para o botão de aba ativo */
+.tab-btn:hover {
+    background-color: #e0e0e0;
+}
+
 .tab-btn.active {
     background-color: #007bff;
     color: #fff;
@@ -69,22 +91,23 @@ body {
     z-index: 1;
 }
 
-/* Estilo para os painéis de conteúdo das abas */
-.tab-pane {
+.tab-content {
     padding-top: 20px;
     border-top: 1px solid #eee;
     margin-top: -1px;
 }
 
-/* ========================================================================== */
-/* 2. FORMULÁRIOS E BOTÕES */
-/* ========================================================================== */
-
 .form-group {
     margin-bottom: 20px;
 }
 
-/* Estilos para campos de formulário */
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
 .form-control {
     width: 100%;
     padding: 10px;
@@ -94,18 +117,61 @@ body {
     font-size: 16px;
 }
 
-/* Estilos para botões de diferentes cores */
-.btn-primary { background-color: #007bff; color: #fff; width: 100%; }
-.btn-secondary { background-color: #6c757d; color: #fff; width: auto; }
-.btn-danger { background-color: #dc3545; color: #fff; }
-.btn-warning { background-color: #ffc107; color: #212529; }
-.btn-sm { padding: 5px 10px; font-size: 0.8em; }
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    text-transform: capitalize;
+}
 
-/* ========================================================================== */
-/* 3. LISTAS E CARDS */
-/* ========================================================================== */
+.btn-primary {
+    background-color: #007bff;
+    color: #fff;
+    width: 100%;
+    margin-top: 20px;
+}
 
-/* Estilo para os cards de serviço e agendamento */
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+    width: auto;
+    margin-top: 10px;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.8em;
+}
+
 .card {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -115,7 +181,16 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* Estilos para as "badges" de status dos agendamentos */
+.card-title {
+    margin-top: 0;
+    font-size: 1.2em;
+    color: #007bff;
+}
+
+.card-text {
+    margin-bottom: 5px;
+}
+
 .badge {
     padding: 5px 10px;
     border-radius: 12px;
@@ -127,3 +202,38 @@ body {
 .badge-pendente { background-color: #ffc107; }
 .badge-concluido { background-color: #28a745; }
 .badge-cancelado { background-color: #dc3545; }
+
+.additional-field {
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background-color: #fcfcfc;
+}
+
+.additional-field .btn-danger {
+    margin-top: 10px;
+    width: auto;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.option-item .form-control {
+    flex: 1;
+}
+
+.option-list {
+    margin-bottom: 10px;
+}
+
+.horario-dia {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
