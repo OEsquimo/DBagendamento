@@ -15,40 +15,16 @@ body {
     min-height: 100vh;
 }
 
-.hidden {
-    display: none;
-}
-
+/* Contêiner principal do painel, centralizado e com sombra */
 .container {
     padding: 20px;
     max-width: 600px;
-    width: 100%; /* Garante que o container ocupe a largura máxima permitida */
+    width: 100%; 
     margin: 40px auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
-}
-
-h2 {
-    color: #333;
-    text-align: center;
-    margin-bottom: 20px;
-    text-transform: uppercase;
-    font-size: 1.5em;
-}
-
-h3 {
-    color: #333;
-    margin-bottom: 15px;
-    font-size: 1.2em;
-}
-
-h4 {
-    color: #333;
-    margin-top: 25px;
-    margin-bottom: 15px;
-    font-size: 1.1em;
+    box-sizing: border-box;
 }
 
 /* ========================================================================== */
@@ -62,13 +38,14 @@ h4 {
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
     gap: 5px;
-    flex-wrap: wrap; /* Permite que os botões quebrem a linha se a tela for muito pequena */
+    flex-wrap: wrap; /* Permite que os botões quebrem a linha */
 }
 
+/* Estilos para os botões de abas */
 .tab-btn {
-    flex: 1 1 auto; /* Permite que os botões cresçam e encolham, mas mantêm um tamanho mínimo */
-    min-width: fit-content; /* Garante que o texto não quebre demais */
-    padding: 10px 10px; /* Aumenta um pouco o padding horizontal */
+    flex: 1 1 auto;
+    min-width: fit-content;
+    padding: 10px 10px;
     border: 1px solid #ccc;
     border-bottom: none;
     background-color: #f0f0f0;
@@ -79,14 +56,11 @@ h4 {
     transition: all 0.2s ease;
     border-radius: 5px 5px 0 0;
     text-transform: capitalize;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
-    text-align: center; /* Centraliza o texto nos botões */
+    box-sizing: border-box; 
+    text-align: center;
 }
 
-.tab-btn:hover {
-    background-color: #e0e0e0;
-}
-
+/* Estilo para o botão de aba ativo */
 .tab-btn.active {
     background-color: #007bff;
     color: #fff;
@@ -95,7 +69,8 @@ h4 {
     z-index: 1;
 }
 
-.tab-content {
+/* Estilo para os painéis de conteúdo das abas */
+.tab-pane {
     padding-top: 20px;
     border-top: 1px solid #eee;
     margin-top: -1px;
@@ -109,81 +84,28 @@ h4 {
     margin-bottom: 20px;
 }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #333;
-}
-
+/* Estilos para campos de formulário */
 .form-control {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box; /* MUITO IMPORTANTE: Garante que padding e border sejam incluídos na largura total */
+    box-sizing: border-box;
     font-size: 16px;
 }
 
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-    text-transform: capitalize;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: #fff;
-    width: 100%;
-    margin-top: 20px;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: #fff;
-    width: auto;
-    margin-top: 10px;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: #fff;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-.btn-warning {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.btn-warning:hover {
-    background-color: #e0a800;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-    font-size: 0.8em;
-}
+/* Estilos para botões de diferentes cores */
+.btn-primary { background-color: #007bff; color: #fff; width: 100%; }
+.btn-secondary { background-color: #6c757d; color: #fff; width: auto; }
+.btn-danger { background-color: #dc3545; color: #fff; }
+.btn-warning { background-color: #ffc107; color: #212529; }
+.btn-sm { padding: 5px 10px; font-size: 0.8em; }
 
 /* ========================================================================== */
 /* 3. LISTAS E CARDS */
 /* ========================================================================== */
 
+/* Estilo para os cards de serviço e agendamento */
 .card {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -193,16 +115,7 @@ h4 {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.card-title {
-    margin-top: 0;
-    font-size: 1.2em;
-    color: #007bff;
-}
-
-.card-text {
-    margin-bottom: 5px;
-}
-
+/* Estilos para as "badges" de status dos agendamentos */
 .badge {
     padding: 5px 10px;
     border-radius: 12px;
@@ -214,46 +127,3 @@ h4 {
 .badge-pendente { background-color: #ffc107; }
 .badge-concluido { background-color: #28a745; }
 .badge-cancelado { background-color: #dc3545; }
-
-/* ========================================================================== */
-/* 4. CAMPOS ADICIONAIS */
-/* ========================================================================== */
-
-.additional-field {
-    border: 1px solid #eee;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    background-color: #fcfcfc;
-}
-
-.additional-field .btn-danger {
-    margin-top: 10px;
-    width: auto;
-}
-
-.option-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.option-item .form-control {
-    flex: 1;
-}
-
-.option-list {
-    margin-bottom: 10px;
-}
-
-/* ========================================================================== */
-/* 5. CONFIGURAÇÕES */
-/* ========================================================================== */
-
-.horario-dia {
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
