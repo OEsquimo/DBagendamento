@@ -167,6 +167,17 @@ function renderServiceForms() {
         let fieldsHtml = '';
         if (service.camposAdicionais) {
             fieldsHtml = service.camposAdicionais.map(field => {
+                 // AQUI FOI ADICIONADO O CÓDIGO PARA O TIPO 'select-single'
+                if (field.tipo === 'select-single' && field.opcoes) {
+                    return `
+                        <label>${field.nome}</label>
+                        <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
+                            <option value="">Selecione...</option>
+                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                        </select>
+                    `;
+                }
+
                 if (field.tipo === 'select' && field.opcoes) {
                     return `
                         <label>${field.nome}</label>
@@ -342,6 +353,7 @@ function setupPhoneMask() {
 document.getElementById('nextStep3').addEventListener('click', () => {
     const nome = document.getElementById('nome').value;
     const telefone = document.getElementById('telefone').value;
+    const endereco = document.getElementById('endereco').value;
     const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
 
     if (!nome || !telefone) {
