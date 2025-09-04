@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 10.2 (Seleção de pagamento e novo campo de serviço)
+ * Versão: 11.0 (Correção do campo de quantidade)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -182,6 +182,14 @@ function renderServiceForms() {
                             ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
                         </select>
                     `;
+                } else if (field.tipo === 'select_quantidade' && field.opcoes) {
+                    return `
+                        <label>${field.nome}</label>
+                        <select class="form-control additional-field-quantidade" data-field-name="${field.nome}" data-key="${service.key}" required>
+                            <option value="">Selecione...</option>
+                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                        </select>
+                    `;
                 } else if (field.tipo === 'text') {
                     return `
                         <label>${field.nome}</label>
@@ -209,7 +217,7 @@ function renderServiceForms() {
         servicosFormContainer.appendChild(formGroup);
     });
 
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price').forEach(field => {
+    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price, .additional-field-quantidade').forEach(field => {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
@@ -233,6 +241,7 @@ function calculatePrice(serviceData, container) {
     let preco = serviceData.precoBase || 0;
     const selectElements = container.querySelectorAll('.additional-field-select');
     const inputElements = container.querySelectorAll('.additional-field-input');
+    const quantidadeElements = container.querySelectorAll('.additional-field-quantidade');
 
     selectElements.forEach(select => {
         const selectedValue = select.value;
@@ -253,6 +262,13 @@ function calculatePrice(serviceData, container) {
         }
     });
 
+    quantidadeElements.forEach(select => {
+        const selectedValue = select.value;
+        if (selectedValue && serviceData.precoBase) {
+            preco = serviceData.precoBase * parseInt(selectedValue);
+        }
+    });
+
     return preco;
 }
 
@@ -261,8 +277,8 @@ document.getElementById('nextStep2').addEventListener('click', () => {
     servicosSelecionados.forEach(service => {
         const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
         if (formGroup) {
-            formGroup.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price').forEach(field => {
-                if (field.value === "") {
+            formGroup.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price, .additional-field-quantidade').forEach(field => {
+                if (field.required && field.value === "") {
                     allFieldsFilled = false;
                 }
             });
@@ -292,6 +308,7 @@ function getSelectedOptions(container, serviceData) {
     const selectedOptions = {};
     const selectElementsWithPrice = container.querySelectorAll('.additional-field-select');
     const selectElementsNoPrice = container.querySelectorAll('.additional-field-select-no-price');
+    const selectElementsQuantidade = container.querySelectorAll('.additional-field-quantidade');
     const inputElements = container.querySelectorAll('.additional-field-input');
     const textareaElements = container.querySelectorAll('.additional-field-textarea');
 
@@ -304,6 +321,14 @@ function getSelectedOptions(container, serviceData) {
     });
 
     selectElementsNoPrice.forEach(select => {
+        const selectedValue = select.value;
+        const fieldName = select.dataset.fieldName;
+        if (selectedValue) {
+            selectedOptions[fieldName] = selectedValue;
+        }
+    });
+
+    selectElementsQuantidade.forEach(select => {
         const selectedValue = select.value;
         const fieldName = select.dataset.fieldName;
         if (selectedValue) {
@@ -567,6 +592,7 @@ function createWhatsAppMessage() {
     servicosSelecionados.forEach(servico => {
         let precoTotalServico = servico.precoBase || 0;
         let subServicosDetalhes = [];
+        let isQuantidade = false;
 
         if (servico.camposAdicionaisSelecionados) {
             for (const campo in servico.camposAdicionaisSelecionados) {
@@ -576,22 +602,27 @@ function createWhatsAppMessage() {
                 if (typeof valor === 'string' && valor.includes(', R$ ')) {
                     const [descricao, preco] = valor.split(', R$ ');
                     precoTotalServico += parseFloat(preco);
-                    if (campo === 'Capacidade de BTUs') {
-                        subServicoTexto = `  - ${servico.nome} (${descricao}): R$ ${precoTotalServico.toFixed(2)}`;
-                    } else {
-                        subServicoTexto = `  - ${campo}: R$ ${preco}`;
+                    subServicoTexto = `  - ${campo}: ${descricao} (R$ ${preco})`;
+                } else if (!isNaN(valor)) {
+                    // Check if it's a "quantidade" field
+                    const fieldType = servico.camposAdicionais.find(f => f.nome === campo)?.tipo;
+                    if (fieldType === 'select_quantidade') {
+                        isQuantidade = true;
                     }
-                } else {
-                     subServicoTexto = `  - ${campo}: ${valor}`;
+                    subServicoTexto = `  - ${campo}: ${valor}`;
                 }
+
                 subServicosDetalhes.push(subServicoTexto);
             }
-        } else {
-             servicosTexto += `  - ${servico.nome}: R$ ${precoTotalServico.toFixed(2)}\n`;
         }
 
-        if (subServicosDetalhes.length > 0) {
-            servicosTexto += subServicosDetalhes.join('\n') + '\n';
+        if (isQuantidade) {
+             servicosTexto += `  - ${servico.nome} (${subServicosDetalhes.join(', ')}): R$ ${servico.precoCalculado.toFixed(2)}\n`;
+        } else {
+            servicosTexto += `  - ${servico.nome}: R$ ${servico.precoCalculado.toFixed(2)}\n`;
+             if (subServicosDetalhes.length > 0) {
+                servicosTexto += subServicosDetalhes.join('\n') + '\n';
+            }
         }
     });
 
