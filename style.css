@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 9.1 (Barra de progresso e botões fixos)
+ * Versão: 9.2 (Pagamento no Passo 4)
  */
 
 body {
@@ -250,6 +250,28 @@ h2 {
     background-color: #007bff;
     color: #fff;
     border-color: #007bff;
+}
+
+.payment-options-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.payment-option-btn {
+    flex: 1 1 calc(50% - 5px);
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ccc;
+    text-align: center;
+    box-sizing: border-box;
+    font-weight: bold;
+}
+
+.payment-option-btn.selected {
+    background-color: #28a745;
+    color: #fff;
+    border-color: #28a745;
 }
 
 #confirmation {
