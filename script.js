@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.0 (Correção do campo de quantidade)
+ * Versão: 11.1 (Correção do cálculo de quantidade)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -241,7 +241,7 @@ function calculatePrice(serviceData, container) {
     let preco = serviceData.precoBase || 0;
     const selectElements = container.querySelectorAll('.additional-field-select');
     const inputElements = container.querySelectorAll('.additional-field-input');
-    const quantidadeElements = container.querySelectorAll('.additional-field-quantidade');
+    const quantidadeElement = container.querySelector('.additional-field-quantidade');
 
     selectElements.forEach(select => {
         const selectedValue = select.value;
@@ -262,13 +262,13 @@ function calculatePrice(serviceData, container) {
         }
     });
 
-    quantidadeElements.forEach(select => {
-        const selectedValue = select.value;
-        if (selectedValue && serviceData.precoBase) {
-            preco = serviceData.precoBase * parseInt(selectedValue);
-        }
-    });
+    // Se houver um campo de quantidade, multiplica o valor total (preço base + adicionais)
+    if (quantidadeElement && quantidadeElement.value) {
+        const quantidade = parseInt(quantidadeElement.value);
+        return preco * quantidade;
+    }
 
+    // Se não houver campo de quantidade, ou se ele não foi selecionado, retorna o valor normal
     return preco;
 }
 
@@ -463,31 +463,6 @@ async function handleDateSelection() {
 
     const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
     displayTimeSlots(horariosDisponiveis);
-}
-
-function generateTimeSlots(startTime, endTime, interval, existingAppointments, referenceTime) {
-    const slots = [];
-    let currentTime = new Date(`2000-01-01T${startTime}:00`);
-    const end = new Date(`2000-01-01T${endTime}:00`);
-
-    while (currentTime < end) {
-        const timeString = currentTime.toTimeString().slice(0, 5);
-
-        if (referenceTime) {
-             const [slotHour, slotMinute] = timeString.split(':').map(Number);
-             if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
-                currentTime.setMinutes(currentTime.getMinutes() + interval);
-                continue;
-            }
-        }
-
-        if (!existingAppointments.includes(timeString)) {
-            slots.push(timeString);
-        }
-
-        currentTime.setMinutes(currentTime.getMinutes() + interval);
-    }
-    return slots;
 }
 
 function displayTimeSlots(horariosDisponiveis) {
