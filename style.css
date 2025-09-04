@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 9.1 (Barra de progresso e botões fixos)
+ * Versão: 9.2 (Atualizado para o novo HTML)
  */
 
 body {
@@ -9,7 +9,7 @@ body {
     background-color: #f4f4f9;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent; /* Remove o fundo azul no clique */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .hidden {
@@ -22,14 +22,14 @@ body {
     margin: 0 auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    min-height: calc(100vh - 120px); /* Ajusta para os cabeçalhos e rodapés fixos */
+    min-height: calc(100vh - 120px);
 }
 
 /* ========================================================================== */
 /* 1. LAYOUT FIXO */
 /* ========================================================================== */
 
-.header-container {
+.progress-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -37,8 +37,16 @@ body {
     background-color: #fff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     z-index: 1000;
-    padding: 10px 0;
+    padding: 15px 0;
 }
+
+.text-center {
+    text-align: center;
+}
+
+/* ========================================================================== */
+/* 2. BARRA DE PROGRESSO */
+/* ========================================================================== */
 
 .progress-bar {
     display: flex;
@@ -47,34 +55,10 @@ body {
     max-width: 600px;
     margin: 0 auto;
     padding: 0 20px;
+    list-style: none; /* Adicionado para remover os marcadores da lista */
 }
 
-.form-navigation-bottom {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-@media (max-width: 600px) {
-    .form-navigation-bottom {
-        padding: 10px;
-    }
-}
-
-/* ========================================================================== */
-/* 2. BARRA DE PROGRESSO */
-/* ========================================================================== */
-
-.progress-step {
+.nav-step {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -85,23 +69,20 @@ body {
     font-size: 12px;
 }
 
-.progress-step.active .step-number {
-    background-color: #007bff;
-    color: #fff;
-}
-
-.progress-step.active .step-text {
+.nav-step.active {
     color: #007bff;
 }
 
-.step-number {
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    color: #495057;
-    font-weight: bold;
+.nav-step.active i {
+    color: #007bff;
+}
+
+.nav-step.completed i {
+    color: #28a745;
+}
+
+.nav-step.completed .step-text {
+    color: #28a745;
 }
 
 .step-text {
@@ -110,9 +91,18 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    transition: color 0.3s ease;
 }
 
-.progress-step:not(:last-child)::after {
+.nav-step i {
+    font-size: 1.5rem;
+    color: #ced4da;
+    margin-bottom: 5px;
+    transition: color 0.3s ease;
+}
+
+/* Linha entre os ícones */
+.nav-step:not(:last-child)::after {
     content: '';
     position: absolute;
     width: 100%;
@@ -121,19 +111,20 @@ body {
     top: 15px;
     left: 50%;
     z-index: -1;
+    transition: background 0.3s ease;
 }
 
-.progress-step.active:not(:last-child)::after {
-    background: #007bff;
+.nav-step.completed:not(:last-child)::after {
+    background: #28a745;
 }
 
 /* ========================================================================== */
 /* 3. SEÇÕES E CARDS */
 /* ========================================================================== */
 
-section {
-    padding-top: 80px; /* Para não ficar atrás do header fixo */
-    padding-bottom: 70px; /* Para não ficar atrás do footer fixo */
+.tab-content {
+    padding-top: 80px;
+    padding-bottom: 70px;
 }
 
 h2 {
@@ -142,7 +133,7 @@ h2 {
     margin-bottom: 20px;
 }
 
-.service-card {
+.card {
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 15px;
@@ -152,27 +143,37 @@ h2 {
     text-align: center;
 }
 
-.service-card:hover {
+.card:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.service-card.selected {
-    border-color: #28a745;
-    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+.card-title {
+    margin-bottom: 5px;
 }
 
-.total-summary-container {
+.card-text {
+    margin-bottom: 5px;
+}
+
+.summary-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 0;
-    border-top: 1px solid #eee;
-    margin-top: 20px;
+    box-sizing: border-box;
+    font-weight: bold;
+    font-size: 1.1em;
 }
 
-.total-label {
-    font-weight: bold;
-    color: #333;
+.summary-bar #servicosCount, .summary-bar #orcamentoTotal {
+    color: #007bff;
 }
 
 /* ========================================================================== */
@@ -205,7 +206,6 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
-    width: 48%; /* Para alinhar os botões lado a lado */
 }
 
 .btn-primary {
@@ -226,10 +226,6 @@ h2 {
     background-color: #5a6268;
 }
 
-.btn-select-service {
-    width: 100%;
-}
-
 .btn-success {
     background-color: #28a745;
     color: #fff;
@@ -243,48 +239,40 @@ h2 {
     background-color: #218838;
 }
 
+/* Botões de navegação inferior */
+.text-center .btn {
+    width: auto;
+    min-width: 120px;
+    margin: 0 5px;
+}
+
 /* ========================================================================== */
 /* 5. SELEÇÃO DE HORÁRIOS */
 /* ========================================================================== */
 
-.time-slots-container {
+.form-group.inline-group {
     display: flex;
-    flex-wrap: wrap;
     gap: 10px;
 }
 
-.time-slot {
-    padding: 10px 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-    background-color: #e9ecef;
+/* Estilo para a página de detalhes de serviço */
+.servico-detalhe {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
 }
 
-.time-slot:hover {
-    background-color: #dee2e6;
+.servico-detalhe h5 {
+    font-weight: bold;
 }
 
-.time-slot.selected {
-    background-color: #007bff;
-    color: #fff;
-    border-color: #007bff;
+.servico-detalhe .servico-valor {
+    color: #28a745;
+    font-weight: bold;
 }
 
-/* ========================================================================== */
-/* 6. MENSAGEM DE CONFIRMAÇÃO */
-/* ========================================================================== */
-
-#confirmation {
-    text-align: center;
-}
-
-#confirmation p {
-    margin-bottom: 10px;
-    font-size: 1.1em;
-}
-
-#whatsappLink {
-    margin-top: 20px;
+.servico-detalhe .campos-adicionais-form {
+    margin-top: 15px;
 }
