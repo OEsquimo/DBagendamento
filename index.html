@@ -5,92 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O Esquimó - Agendamento</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-    <div class="progress-container">
-        <ul class="progress-bar">
-            <li class="nav-step active" data-step="1">
-                <i class="fas fa-tools"></i>
-                <div class="step-text">Serviços</div>
-            </li>
-            <li class="nav-step" data-step="2">
-                <i class="fas fa-list-ul"></i>
-                <div class="step-text">Detalhes</div>
-            </li>
-            <li class="nav-step" data-step="3">
-                <i class="fas fa-user-circle"></i>
-                <div class="step-text">Cliente</div>
-            </li>
-            <li class="nav-step" data-step="4">
-                <i class="far fa-calendar-alt"></i>
-                <div class="step-text">Agendar</div>
-            </li>
-        </ul>
+    <div class="header-container">
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <span class="step-number">1</span>
+                <span class="step-text">Serviços</span>
+            </div>
+            <div class="progress-step" data-step="2">
+                <span class="step-number">2</span>
+                <span class="step-text">Detalhes</span>
+            </div>
+            <div class="progress-step" data-step="3">
+                <span class="step-number">3</span>
+                <span class="step-text">Cliente</span>
+            </div>
+            <div class="progress-step" data-step="4">
+                <span class="step-number">4</span>
+                <span class="step-text">Agendar</span>
+            </div>
+        </div>
     </div>
 
-    <div class="container mt-5">
-
-        <div id="step1" class="tab-content">
-            <h2 class="text-center">Selecione os serviços</h2>
-            <div id="servicosContainer" class="row">
+    <div class="container">
+        
+        <section id="servicos" class="active-section">
+            <h2>Escolha um ou mais serviços</h2>
+            <div id="servicosContainer">
                 </div>
-            <div class="summary-bar">
-                <span>Serviços Selecionados: <span id="servicosCount">0</span></span>
+            <div class="total-summary-container">
+                <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
             </div>
-        </div>
+            <div class="form-navigation-bottom">
+                <button class="btn btn-primary" id="nextStep1" style="display:none;">Próximo</button>
+            </div>
+        </section>
 
-        <div id="step2" class="tab-content hidden">
-            <h2 class="text-center">Detalhes do(s) Serviço(s)</h2>
-            <div id="servicoDetailsContainer">
+        <section id="servicosForm" class="hidden">
+            <h2>Detalhes do Serviço</h2>
+            <div id="servicosFormContainer">
                 </div>
-            <div class="summary-bar">
-                <span>Orçamento Total: <span id="orcamentoTotal">R$ 0.00</span></span>
+            <div class="total-summary-container">
+                <span class="total-label">Orçamento Total:</span>
+                <span id="orcamentoTotal">R$ 0,00</span>
             </div>
-        </div>
+            <div class="form-navigation-bottom">
+                <button class="btn btn-secondary" id="backButton1">Voltar</button>
+                <button class="btn btn-primary" id="nextStep2">Próximo</button>
+            </div>
+        </section>
 
-        <div id="step3" class="tab-content hidden">
-            <h2 class="text-center">Suas Informações</h2>
+        <section id="clienteForm" class="hidden">
+            <h2>Suas Informações</h2>
             <form id="clienteInfoForm">
-                <div class="form-group mb-3">
-                    <label for="agendamentoNome">Nome Completo</label>
-                    <input type="text" id="agendamentoNome" class="form-control" placeholder="Seu nome completo" required>
+                <div class="form-group">
+                    <label for="nome">Nome Completo</label>
+                    <input type="text" id="nome" class="form-control" required placeholder="Digite seu nome completo">
                 </div>
-                <div class="form-group mb-3">
-                    <label for="agendamentoTelefone">Telefone (WhatsApp)</label>
-                    <input type="tel" id="agendamentoTelefone" class="form-control" placeholder="(xx) xxxxx-xxxx" required>
+                <div class="form-group">
+                    <label for="telefone">Telefone</label>
+                    <input type="tel" id="telefone" class="form-control" required pattern="^\(\d{2}\)\s\d{5}-\d{4}$" placeholder="(xx) xxxxx-xxxx">
                 </div>
-                <div class="form-group mb-3">
-                    <label for="agendamentoEndereco">Endereço</label>
-                    <input type="text" id="agendamentoEndereco" class="form-control" placeholder="Rua, número, bairro..." required>
+                <div class="form-group">
+                    <label for="endereco">Endereço</label>
+                    <input type="text" id="endereco" class="form-control" placeholder="Ex: Rua A, 123, Bairro B">
                 </div>
-                <div class="form-group mb-3">
-                    <label for="observacoesInput">Observações (opcional)</label>
-                    <textarea id="observacoesInput" class="form-control" rows="3" placeholder="Detalhes adicionais..."></textarea>
+                <div class="form-group">
+                    <label for="observacoes">Observações (opcional)</label>
+                    <textarea id="observacoes" class="form-control" placeholder="Ex: Preferência de horário, detalhes do local."></textarea>
                 </div>
             </form>
-        </div>
-
-        <div id="step4" class="tab-content hidden">
-            <h2 class="text-center">Agendar</h2>
-            <div class="form-group mb-3">
-                <label for="dataSelect">Escolha uma data</label>
-                <select id="dataSelect" class="form-control"></select>
+            <div class="form-navigation-bottom">
+                <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
+                <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
             </div>
-            <div class="form-group mb-3">
-                <label for="horarioSelect">Escolha um horário</label>
-                <select id="horarioSelect" class="form-control"></select>
-            </div>
-        </div>
+        </section>
 
-        <div class="text-center mt-4">
-            <button id="voltarBtn" class="btn btn-secondary">Voltar</button>
-            <button id="proximoBtn" class="btn btn-primary">Próximo</button>
-            <button id="agendarBtn" class="btn btn-success hidden">Agendar</button>
-        </div>
+        <section id="agendamento" class="hidden">
+            <h2>Agendar</h2>
+            <form id="agendamentoForm">
+                <div class="form-group">
+                    <label for="datePicker">Escolha uma data</label>
+                    <input type="date" id="datePicker" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Horários disponíveis</label>
+                    <div id="timeSlotsContainer" class="time-slots-container">
+                        <p>Selecione uma data para ver os horários.</p>
+                    </div>
+                </div>
+            </form>
+            <div class="form-navigation-bottom">
+                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                <button type="submit" class="btn btn-primary" form="agendamentoForm">Confirmar Agendamento</button>
+            </div>
+        </section>
+
+        <section id="confirmation" class="hidden">
+            <h2>Agendamento Concluído!</h2>
+            <p>Seu agendamento foi enviado com sucesso.</p>
+            <p>Em breve entraremos em contato para confirmar os detalhes.</p>
+            <p>Enviar confirmação do agendamento para o whatsapp:</p>
+            <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Enviar mensagem</a>
+        </section>
+
     </div>
 
     <script type="module" src="script.js"></script>
-    </body>
+</body>
 </html>
