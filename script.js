@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 16.0 (Refinamento na lógica do carrossel, price update e envio de formulário)
+ * Versão: 18.0 (Adição do carrossel SwiperJS)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -136,6 +136,7 @@ function createServiceCard(service, key) {
 
         updateSelectedServicesCount();
         nextStep1Button.style.display = servicosSelecionados.length > 0 ? 'block' : 'none';
+        updateOrcamentoTotal(); // Atualiza o total mesmo com 0 serviços selecionados
     });
 
     servicosContainer.appendChild(card);
@@ -199,7 +200,7 @@ function renderServiceForms() {
         field.addEventListener('input', updatePrice);
     });
 
-    updateOrcamentoTotal();
+    updatePrice(); // Chama updatePrice para garantir que o valor inicial seja exibido corretamente
 }
 
 function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) {
@@ -304,7 +305,7 @@ function updatePrice() {
 
         equipmentFieldsElements.forEach(equipmentElement => {
             let priceForThisEquipment = 0;
-            let quantityForThisEquipment = 1;
+            let quantityForThisEquipment = 1; // Default para 1 se não for campo de quantidade
             const serviceConfig = servicosGlobais[service.key];
 
             equipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
@@ -323,6 +324,7 @@ function updatePrice() {
                     if (!isNaN(value)) priceForThisEquipment += value;
                 }
             });
+            // Soma o preço base do serviço + o preço dos campos adicionais para este equipamento
             totalServiceCalculatedPrice += (service.precoBase + priceForThisEquipment) * quantityForThisEquipment;
         });
 
@@ -334,7 +336,7 @@ function updatePrice() {
         }
     });
 
-    updateOrcamentoTotal();
+    updateOrcamentoTotal(); // Chama a atualização do total geral
 }
 
 function getSelectedOptions(serviceWrapperElement, serviceData) {
@@ -365,6 +367,7 @@ document.getElementById('nextStep2').addEventListener('click', () => {
     let allFieldsFilled = true;
     let priceCalculatedForAnyService = false;
 
+    // Verifica se todos os campos obrigatórios estão preenchidos e se há algum preço calculado
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (!serviceWrapper) return;
@@ -378,15 +381,23 @@ document.getElementById('nextStep2').addEventListener('click', () => {
             });
         });
 
-        if (service.precoCalculado !== undefined && service.precoCalculado !== null) {
+        // Verifica se o preço calculado para este serviço é válido (maior que zero ou preço base)
+        if (service.precoCalculado !== undefined && service.precoCalculado !== null && service.precoCalculado > 0) {
+            priceCalculatedForAnyService = true;
+        } else if (service.precoBase && service.precoBase > 0) { // Considera o preço base se não houver cálculo adicional
             priceCalculatedForAnyService = true;
         }
     });
 
-    if (!allFieldsFilled || !priceCalculatedForAnyService) {
-        alert("Por favor, preencha todos os campos obrigatórios para cada equipamento e/ou certifique-se de que um preço foi calculado.");
+    if (!allFieldsFilled) {
+        alert("Por favor, preencha todos os campos obrigatórios para cada equipamento selecionado.");
         return;
     }
+    if (!priceCalculatedForAnyService && servicosSelecionados.length > 0) {
+        alert("Por favor, selecione opções ou insira valores que resultem em um orçamento para os serviços escolhidos.");
+        return;
+    }
+
 
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
@@ -702,9 +713,9 @@ function createWhatsAppMessage() {
                     mensagemFinal += `${campoNome}:\n  ${valorFormatado}.\n`;
                     mensagemFinal += `  Valor: R$ ${formatPrice(precoCampo)}.\n`;
                 } else if (typeof valor === 'number') {
-                     mensagemFinal += `${campoNome}:\n  R$ ${formatPrice(valor)}.\n`;
+                     mensagemFinal += `  ${campoNome}:\n  R$ ${formatPrice(valor)}.\n`;
                 } else {
-                    mensagemFinal += `${campoNome}:\n  ${valor}.\n`;
+                    mensagemFinal += `  ${campoNome}:\n  ${valor}.\n`;
                 }
             }
         });
@@ -806,6 +817,18 @@ function setupEventListeners() {
         agendamentoSection.classList.remove('hidden');
         updateProgressBar(4);
     });
+    // Adicionando a inicialização do SwiperJS
+    const swiper = new Swiper(".mySwiper", {
+        loop: true,
+        pagination: {
+            el: ".swiper-pagination",
+            clickable: true,
+        },
+        navigation: {
+            nextEl: ".swiper-button-next",
+            prevEl: ".swiper-button-prev",
+        },
+    });
 }
 
 function updateProgressBar(step) {
@@ -819,7 +842,11 @@ function updateProgressBar(step) {
 }
 
 function updateOrcamentoTotal() {
-    const total = servicosSelecionados.reduce((sum, service) => sum + (service.precoCalculado !== undefined ? service.precoCalculado : 0), 0);
+    const total = servicosSelecionados.reduce((sum, service) => {
+        // Garante que estamos somando um número válido
+        const servicePrice = (service.precoCalculado !== undefined && service.precoCalculado !== null) ? service.precoCalculado : (service.precoBase || 0);
+        return sum + servicePrice;
+    }, 0); // Começa a soma com 0
     orcamentoTotalDisplay.textContent = `R$ ${formatPrice(total)}`;
 }
 
