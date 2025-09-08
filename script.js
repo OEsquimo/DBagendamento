@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 19.0 (Ajuste na adição dinâmica de equipamentos e remoção do SwiperJS)
+ * Versão: 21.0 (Correção do botão de confirmação de agendamento)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,11 +44,12 @@ const paymentOptionsContainer = document.getElementById('paymentOptionsContainer
 const nextStep1Button = document.getElementById('nextStep1');
 const clienteInfoForm = document.getElementById('clienteInfoForm');
 const agendamentoForm = document.getElementById('agendamentoForm');
+const confirmarAgendamentoBtn = document.getElementById('confirmarAgendamentoBtn'); // Botão de confirmação
 
 let servicosSelecionados = []; // Array para armazenar os serviços e seus detalhes selecionados
 let servicosGlobais = {};    // Cache de todos os serviços disponíveis
 let configGlobais = {};      // Cache das configurações do sistema
-let formaPagamentoSelecionada = '';
+let formaPagamentoSelecionada = ''; // Armazena a forma de pagamento selecionada
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
@@ -60,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateProgressBar(1);
     setupPhoneMask();
     setupPaymentOptions();
+    checkAgendamentoButtonState(); // Verifica estado inicial do botão
 });
 
 async function loadAllData() {
@@ -213,12 +215,13 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                 const isSelectField = field.tipo.startsWith('select');
                 const hasPrice = field.tipo === 'select_com_preco';
                 const isQuantityField = field.tipo === 'select_quantidade';
+                const isBTUsField = field.nome === 'Capacidade de BTUs?'; // Identifica o campo de BTUs
 
                 let inputHtml = '';
                 if (isSelectField && field.opcoes) {
                     inputHtml = `
                         <label>${field.nome}</label>
-                        <select class="form-control ${isQuantityField ? 'additional-field-quantidade' : (hasPrice ? 'additional-field-select-com-preco' : 'additional-field-select-sem-preco')}"
+                        <select class="form-control ${isQuantityField ? 'additional-field-quantidade' : (hasPrice ? 'additional-field-select-com-preco' : (isBTUsField ? 'additional-field-btus' : 'additional-field-select-sem-preco'))}"
                                 id="${fieldId}"
                                 data-field-name="${field.nome}"
                                 data-service-key="${service.key}"
@@ -323,9 +326,18 @@ function updatePrice() {
                 } else if (fieldConfig?.tipo === 'select_com_preco' && typeof field.value === 'string' && field.value.includes(', R$ ')) {
                     const price = parseFloat(field.value.split(', R$ ')[1]);
                     if (!isNaN(price)) priceForThisEquipment += price;
-                } else if (field.type === 'number') {
-                    const value = parseFloat(field.value);
-                    if (!isNaN(value)) priceForThisEquipment += value;
+                } else if (field.type === 'number' || fieldName === 'Capacidade de BTUs?') { // Inclui o campo de BTUs aqui
+                    let value = parseFloat(field.value);
+                    // Se for o campo de BTUs, você pode querer um mapeamento específico ou um cálculo baseado no valor selecionado.
+                    // Para este exemplo, vamos supor que o valor numérico em si representa um custo adicional ou que há um preço fixo associado à seleção.
+                    // Exemplo: se BTUs 9000 custa X, 12000 custa Y. Isso precisaria ser configurado em 'camposAdicionais' ou em 'servicosGlobais'.
+                    // Se o 'field.value' já contém o preço (ex: "12000 BTUs, R$ 500.00"), o tratamento acima já o pega.
+                    // Se for apenas o número (ex: "12000"), você precisará de uma lógica de tradução.
+                    if (!isNaN(value)) {
+                        // Lógica de exemplo: assume que a própria seleção (ex: "12000 BTUs") pode conter o preço se parseado corretamente.
+                        // Se apenas o número for o valor, precisará de mapeamento.
+                        priceForThisEquipment += value; // Isso pode precisar de ajuste dependendo de como os BTUs afetam o preço.
+                    }
                 }
             });
             // Soma o preço base do serviço + o preço dos campos adicionais para este equipamento
@@ -341,6 +353,7 @@ function updatePrice() {
     });
 
     updateOrcamentoTotal(); // Chama a atualização do total geral
+    checkAgendamentoButtonState(); // Verifica estado do botão de confirmação
 }
 
 function getSelectedOptions(serviceWrapperElement, serviceData) {
@@ -353,12 +366,15 @@ function getSelectedOptions(serviceWrapperElement, serviceData) {
             const serviceConfig = servicosGlobais[serviceData.key];
             const fieldConfig = serviceConfig?.camposAdicionais?.find(f => f.nome === fieldName);
 
-            if (field.value !== "" && field.value !== "Selecione..." && field.value !== "Não") {
+            if (field.value !== "" && field.value !== "Selecione..." && field.value !== "Não" && field.value !== null && field.value !== undefined) {
                 if (fieldConfig?.tipo === 'select_quantidade') {
                     selectedOptions[fieldName] = parseInt(field.value);
-                } else if (field.type === 'number') {
-                    selectedOptions[fieldName] = parseFloat(field.value);
-                } else {
+                } else if (field.type === 'number' || fieldName === 'Capacidade de BTUs?') { // Inclui BTUs aqui
+                    // Tenta parsear como número, caso contrário, usa o valor como string
+                    const parsedValue = parseFloat(field.value);
+                    selectedOptions[fieldName] = isNaN(parsedValue) ? field.value : parsedValue;
+                }
+                 else {
                     selectedOptions[fieldName] = field.value;
                 }
             }
@@ -371,7 +387,6 @@ document.getElementById('nextStep2').addEventListener('click', () => {
     let allFieldsFilled = true;
     let priceCalculatedForAnyService = false;
 
-    // Verifica se todos os campos obrigatórios estão preenchidos e se há algum preço calculado
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (!serviceWrapper) return;
@@ -385,10 +400,9 @@ document.getElementById('nextStep2').addEventListener('click', () => {
             });
         });
 
-        // Verifica se o preço calculado para este serviço é válido (maior que zero ou preço base)
         if (service.precoCalculado !== undefined && service.precoCalculado !== null && service.precoCalculado > 0) {
             priceCalculatedForAnyService = true;
-        } else if (service.precoBase && service.precoBase > 0) { // Considera o preço base se não houver cálculo adicional
+        } else if (service.precoBase && service.precoBase > 0) {
             priceCalculatedForAnyService = true;
         }
     });
@@ -402,12 +416,10 @@ document.getElementById('nextStep2').addEventListener('click', () => {
         return;
     }
 
-
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (serviceWrapper) {
             service.camposAdicionaisSelecionados = getSelectedOptions(serviceWrapper, service);
-            // Garante que o preço calculado seja usado, ou o base se não houver cálculo específico
             service.precoCalculado = service.precoCalculado !== undefined && service.precoCalculado !== null ? service.precoCalculado : (service.precoBase || 0);
         }
     });
@@ -458,6 +470,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
     clienteFormSection.classList.add('hidden');
     agendamentoSection.classList.remove('hidden');
     updateProgressBar(4);
+    handleDateSelection(); // Tenta carregar horários iniciais se a data já estiver definida
 });
 
 // ==========================================================================
@@ -470,6 +483,7 @@ function setupPaymentOptions() {
             formaPagamentoSelecionada = btn.dataset.method;
             document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
+            checkAgendamentoButtonState(); // Verifica estado do botão após selecionar pagamento
         });
     });
 }
@@ -599,10 +613,28 @@ function selectTimeSlot(selectedSlot) {
         slot.classList.remove('selected');
     });
     selectedSlot.classList.add('selected');
+    checkAgendamentoButtonState(); // Verifica estado do botão após selecionar horário
+}
+
+function checkAgendamentoButtonState() {
+    const selectedTimeSlot = document.querySelector('.time-slot.selected');
+    const isPaymentSelected = formaPagamentoSelecionada !== '';
+    
+    if (selectedTimeSlot && isPaymentSelected) {
+        confirmarAgendamentoBtn.removeAttribute('disabled');
+    } else {
+        confirmarAgendamentoBtn.setAttribute('disabled', 'true');
+    }
 }
 
 async function handleFormSubmit(e) {
     e.preventDefault();
+
+    // Adiciona uma verificação extra para garantir que o botão está habilitado
+    if (confirmarAgendamentoBtn.disabled) {
+        console.warn("Tentativa de submissão com o botão desabilitado. Abortando.");
+        return;
+    }
 
     if (!navigator.onLine) {
         alert("Parece que você está sem conexão com a internet. Verifique sua conexão e tente novamente.");
@@ -657,14 +689,14 @@ async function handleFormSubmit(e) {
 function showConfirmation() {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5);
+    updateProgressBar(5); // Assume 5 como o próximo passo para a confirmação
 
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
 
     whatsappLink.addEventListener('click', () => {
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Redireciona para a página inicial após o clique
         }, 500);
     });
 }
@@ -796,7 +828,7 @@ function setupEventListeners() {
         updateProgressBar(3);
     });
 
-    agendamentoForm.addEventListener('submit', handleFormSubmit);
+    confirmarAgendamentoBtn.addEventListener('click', handleFormSubmit); // Listener para o novo botão
     clienteInfoForm.addEventListener('submit', (e) => {
         e.preventDefault();
         document.getElementById('nextStep3').click();
@@ -820,6 +852,7 @@ function setupEventListeners() {
         clienteFormSection.classList.add('hidden');
         agendamentoSection.classList.remove('hidden');
         updateProgressBar(4);
+        handleDateSelection(); // Chama a função para carregar horários após a transição
     });
 }
 
@@ -835,10 +868,9 @@ function updateProgressBar(step) {
 
 function updateOrcamentoTotal() {
     const total = servicosSelecionados.reduce((sum, service) => {
-        // Garante que estamos somando um número válido
         const servicePrice = (service.precoCalculado !== undefined && service.precoCalculado !== null) ? service.precoCalculado : (service.precoBase || 0);
         return sum + servicePrice;
-    }, 0); // Começa a soma com 0
+    }, 0);
     orcamentoTotalDisplay.textContent = `R$ ${formatPrice(total)}`;
 }
 
