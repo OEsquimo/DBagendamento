@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 24.0 (Máscara do Telefone Corrigida, Renomeado Campo Telefone e Revisão do Botão de Agendamento)
+ * Versão: 25.0 (Máscara Telefone Aprimorada, Nome de Campo Alterado e Lógica do Botão "Confirmar Agendamento" Corrigida)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -38,7 +38,7 @@ const whatsappLink = document.getElementById('whatsappLink');
 const progressSteps = document.querySelectorAll('.progress-step');
 const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
-const telefoneInput = document.getElementById('telefone'); // O ID do input no HTML
+const telefoneInput = document.getElementById('telefone'); // ID do input de telefone
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
@@ -431,9 +431,9 @@ document.getElementById('nextStep2').addEventListener('click', () => {
 
 function setupPhoneMask() {
     console.log("Configurando máscara de telefone...");
-    // Garantir que o input com ID 'telefone' existe
+    // Verificando se o input de telefone existe antes de adicionar o listener
     if (!telefoneInput) {
-        console.error("Elemento de input do telefone não encontrado!");
+        console.error("Elemento de input do telefone ('telefone') não encontrado!");
         return;
     }
 
@@ -488,11 +488,12 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 
 function setupPaymentOptions() {
     console.log("Configurando opções de pagamento...");
-    paymentOptionsContainer.querySelectorAll('.payment-option-btn').forEach(btn => {
+    const paymentButtons = paymentOptionsContainer.querySelectorAll('.payment-option-btn');
+    paymentButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             formaPagamentoSelecionada = btn.dataset.method;
-            document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
+            paymentButtons.forEach(b => b.classList.remove('selected')); // Remove 'selected' de todos
+            btn.classList.add('selected'); // Adiciona 'selected' apenas ao clicado
             checkAgendamentoButtonState(); // Verifica estado do botão após selecionar pagamento
             console.log(`Forma de pagamento selecionada: ${formaPagamentoSelecionada}`);
         });
