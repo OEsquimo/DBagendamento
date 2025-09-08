@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 14.0 (Correção de validação de telefone, carrossel, remoção de serviço e limite diário)
+ * Versão: 15.0 (Correção de botão "Confirmar Agendamento", implementação carrossel e validação de telefone)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
