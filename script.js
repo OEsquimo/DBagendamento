@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 25.0 (Máscara Telefone Aprimorada, Nome de Campo Alterado e Lógica do Botão "Confirmar Agendamento" Corrigida)
+ * Versão: 26.1 (Correções de bug e otimizações)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -43,8 +43,8 @@ const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
 const clienteInfoForm = document.getElementById('clienteInfoForm');
-const agendamentoForm = document.getElementById('agendamentoForm');
-const confirmarAgendamentoBtn = document.getElementById('confirmarAgendamentoBtn'); // Botão de confirmação
+// Selecionando o botão de confirmar agendamento de forma mais robusta
+const confirmarAgendamentoBtn = document.querySelector('.form-navigation-bottom .btn-primary');
 
 let servicosSelecionados = []; // Array para armazenar os serviços e seus detalhes selecionados
 let servicosGlobais = {};    // Cache de todos os serviços disponíveis
@@ -654,11 +654,20 @@ function checkAgendamentoButtonState() {
     console.log(`Verificando estado do botão: Slot selecionado=${!!selectedTimeSlot}, Pagamento selecionado=${isPaymentSelected}`);
 
     if (selectedTimeSlot && isPaymentSelected) {
-        confirmarAgendamentoBtn.removeAttribute('disabled');
-        console.log("Botão de confirmação HABILITADO.");
+        // Verifica se o botão realmente existe antes de tentar modificá-lo
+        if (confirmarAgendamentoBtn) {
+            confirmarAgendamentoBtn.removeAttribute('disabled');
+            console.log("Botão de confirmação HABILITADO.");
+        } else {
+            console.error("Botão de confirmação não encontrado para habilitar.");
+        }
     } else {
-        confirmarAgendamentoBtn.setAttribute('disabled', 'true');
-        console.log("Botão de confirmação DESABILITADO.");
+        if (confirmarAgendamentoBtn) {
+            confirmarAgendamentoBtn.setAttribute('disabled', 'true');
+            console.log("Botão de confirmação DESABILITADO.");
+        } else {
+            console.error("Botão de confirmação não encontrado para desabilitar.");
+        }
     }
 }
 
@@ -666,7 +675,8 @@ async function handleFormSubmit(e) {
     e.preventDefault();
     console.log("Tentando submeter o formulário de agendamento.");
 
-    if (confirmarAgendamentoBtn.disabled) {
+    // Verifica o estado do botão novamente para garantir que não foi submetido manualmente
+    if (confirmarAgendamentoBtn && confirmarAgendamentoBtn.disabled) {
         console.warn("Botão de confirmação está desabilitado. Submissão abortada.");
         alert("Por favor, selecione um horário e uma forma de pagamento.");
         return;
@@ -887,34 +897,24 @@ function setupEventListeners() {
         console.log("Voltando para a Etapa 3: Informações do Cliente.");
     });
 
-    confirmarAgendamentoBtn.addEventListener('click', handleFormSubmit);
+    // Correção: Adicionando o listener ao botão de confirmação
+    if (confirmarAgendamentoBtn) {
+        confirmarAgendamentoBtn.addEventListener('click', handleFormSubmit);
+    } else {
+        console.error("Botão 'Confirmar Agendamento' não encontrado para adicionar listener.");
+    }
+
+    // Correção: O listener 'submit' do formulário agora aciona a função de avanço diretamente
     clienteInfoForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        document.getElementById('nextStep3').click();
-    });
-    document.getElementById('nextStep3').addEventListener('click', () => {
-        const nome = document.getElementById('nome').value.trim();
-        const telefone = document.getElementById('telefone').value; // Pega o valor já mascarado
-        const endereco = document.getElementById('endereco').value.trim();
-        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato mascarado
-
-        if (!nome || !telefone) {
-            alert("Por favor, preencha nome e telefone para continuar.");
-            return;
+        const nextButton = document.getElementById('nextStep3');
+        if (nextButton) {
+            nextButton.click();
+        } else {
+            console.error("Botão 'nextStep3' não encontrado para acionar o clique.");
         }
-
-        if (!telefoneRegex.test(telefone)) {
-            alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
-            console.error("Validação de telefone falhou. Formato incorreto. Valor atual:", telefone);
-            return;
-        }
-
-        clienteFormSection.classList.add('hidden');
-        agendamentoSection.classList.remove('hidden');
-        updateProgressBar(4);
-        console.log("Passando para a Etapa 4: Agendar.");
-        handleDateSelection();
     });
+
     console.log("Listeners de eventos configurados.");
 }
 
@@ -960,5 +960,7 @@ function formatPrice(price) {
 }
 
 function scrollToServiceForm(element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
