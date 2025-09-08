@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 18.0 (Adição do carrossel SwiperJS)
+ * Versão: 19.0 (Ajuste na adição dinâmica de equipamentos e remoção do SwiperJS)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -195,7 +195,8 @@ function renderServiceForms() {
         servicosFormContainer.appendChild(serviceWrapper);
     });
 
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea, .additional-field-quantidade').forEach(field => {
+    // Adiciona listeners para todos os campos de equipamento existentes
+    document.querySelectorAll('.equipment-fields select, .equipment-fields input, .equipment-fields textarea').forEach(field => {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
@@ -263,7 +264,7 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                 }
                 return inputHtml;
             }).join('')}
-            ${equipmentIndex > 0 ? `<button type="button" class="btn btn-danger btn-sm remove-equipment-btn">Remover Equipamento</button>` : ''}
+            ${equipmentIndex > 0 ? `<button type="button" class="remove-equipment-btn">Remover Equipamento</button>` : ''}
         </div>
     `;
     return fieldsHtml;
@@ -279,18 +280,21 @@ function addEquipmentForm(service, serviceWrapper) {
     const newEquipmentElement = tempDiv.firstElementChild;
     equipmentFormsContainer.appendChild(newEquipmentElement);
 
-    // Adiciona event listeners para os novos campos
+    // Adiciona event listeners para os novos campos criados
     newEquipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
     });
 
-    // Adiciona event listener para o botão de remover equipamento recém-criado
-    newEquipmentElement.querySelector('.remove-equipment-btn').addEventListener('click', (e) => {
-        e.target.closest('.equipment-fields').remove();
-        updatePrice();
-        scrollToServiceForm(serviceWrapper);
-    });
+    // Adiciona event listener para o botão de remover do novo equipamento
+    const removeBtn = newEquipmentElement.querySelector('.remove-equipment-btn');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+            e.target.closest('.equipment-fields').remove();
+            updatePrice();
+            scrollToServiceForm(serviceWrapper);
+        });
+    }
 
     scrollToServiceForm(serviceWrapper);
 }
@@ -816,18 +820,6 @@ function setupEventListeners() {
         clienteFormSection.classList.add('hidden');
         agendamentoSection.classList.remove('hidden');
         updateProgressBar(4);
-    });
-    // Adicionando a inicialização do SwiperJS
-    const swiper = new Swiper(".mySwiper", {
-        loop: true,
-        pagination: {
-            el: ".swiper-pagination",
-            clickable: true,
-        },
-        navigation: {
-            nextEl: ".swiper-button-next",
-            prevEl: ".swiper-button-prev",
-        },
     });
 }
 
