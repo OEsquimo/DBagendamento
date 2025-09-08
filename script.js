@@ -1,11 +1,11 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 12.0 (Múltiplos Equipamentos e Limite Diário)
+ * Versão: 14.0 (Correção de validação de telefone, carrossel, remoção de serviço e limite diário)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, get, query, orderByChild, equalTo, limitToFirst } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, get, remove, set, query, orderByChild, equalTo, limitToFirst } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ==========================================================================
 // 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
@@ -44,6 +44,8 @@ const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
+const clienteInfoForm = document.getElementById('clienteInfoForm'); // Referência ao form do cliente
+const agendamentoForm = document.getElementById('agendamentoForm'); // Referência ao form de agendamento
 
 let servicosSelecionados = []; // Array para armazenar os serviços e seus detalhes selecionados
 let servicosGlobais = {};    // Cache de todos os serviços disponíveis
@@ -175,10 +177,6 @@ function renderServiceForms() {
         if (service.camposAdicionais && service.camposAdicionais.length > 0) {
             // Renderiza o primeiro conjunto de campos como padrão
             fieldsHtml += generateEquipmentFields(service, service.camposAdicionais, 0);
-        } else {
-            // Se não há campos adicionais, talvez seja um serviço simples.
-            // Podemos adicionar um placeholder ou um campo genérico se necessário.
-            // Por enquanto, vamos apenas mostrar o nome do serviço e o valor base.
         }
 
         serviceWrapper.innerHTML = `
@@ -315,7 +313,6 @@ function updatePrice() {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (!serviceWrapper) return;
 
-        let currentServicePrice = service.precoBase || 0;
         let quantity = 1; // Padrão para 1 se não houver campo de quantidade
 
         const equipmentFieldsElements = serviceWrapper.querySelectorAll('.equipment-fields');
@@ -344,9 +341,6 @@ function updatePrice() {
                     if (!isNaN(value)) {
                         priceForThisEquipment += value;
                     }
-                } else {
-                    // Para campos de texto, textarea, select_sem_preco, etc., não adicionamos valor monetário direto
-                    // Apenas capturamos o valor selecionado/digitado em getSelectedOptions
                 }
             });
             equipmentPrices.push({ basePrice: priceForThisEquipment, quantity: quantityForThisEquipment });
@@ -363,7 +357,7 @@ function updatePrice() {
         // Atualiza o display do preço do serviço no frontend
         const servicePriceDisplay = serviceWrapper.querySelector('.service-price');
         if (servicePriceDisplay) {
-            servicePriceDisplay.textContent = `Valor: R$ ${service.precoCalculado.toFixed(2)}`;
+            servicePriceDisplay.textContent = `Valor: R$ ${formatPrice(service.precoCalculado)}`;
         }
     });
 
@@ -382,8 +376,6 @@ function getSelectedOptions(serviceWrapperElement, serviceData) {
 
             if (field.value !== "" && field.value !== "Selecione..." && field.value !== "Não") {
                 if (fieldConfig?.tipo === 'select_quantidade') {
-                    // Armazena a quantidade em uma chave específica ou associada ao nome do campo
-                    // Vamos associar ao nome do campo para facilitar a recuperação depois
                     selectedOptions[fieldName] = parseInt(field.value);
                 } else if (field.type === 'number') {
                     selectedOptions[fieldName] = parseFloat(field.value);
@@ -455,10 +447,10 @@ function setupPhoneMask() {
             maskedValue += `(${value.substring(0, 2)}`;
         }
         if (value.length > 2) {
-            maskedValue += `) ${value.substring(2, 7)}`;
+            maskedValue += `) ${value.substring(2, 7)}`; // Padrão DDD + 5 primeiros dígitos
         }
         if (value.length > 7) {
-            maskedValue += `-${value.substring(7, 11)}`;
+            maskedValue += `-${value.substring(7, 11)}`; // Padrão 4 últimos dígitos
         }
 
         e.target.value = maskedValue;
@@ -469,7 +461,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
     const nome = document.getElementById('nome').value.trim();
     const telefone = document.getElementById('telefone').value;
     const endereco = document.getElementById('endereco').value.trim();
-    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
+    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato (xx) xxxxx-xxxx
 
     if (!nome || !telefone) {
         alert("Por favor, preencha nome e telefone para continuar.");
@@ -675,7 +667,7 @@ async function handleFormSubmit(e) {
         data: formatDate(datePicker.value),
         hora: selectedTimeSlot.textContent,
         observacoes: document.getElementById('observacoes').value.trim(),
-        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + (s.precoCalculado !== undefined ? s.precoCalculado : (s.precoBase || 0)), 0),
+        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + (s.precoCalculado !== undefined ? s.precoCalculado : 0), 0),
         formaPagamento: formaPagamentoSelecionada,
         status: 'Pendente'
     };
@@ -698,11 +690,11 @@ function showConfirmation() {
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
 
+    // Adiciona um listener para limpar a seleção e voltar à página inicial após o envio
     whatsappLink.addEventListener('click', () => {
-        // Pequeno delay para garantir que o link seja clicado antes de redirecionar
         setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 500);
+            window.location.href = 'index.html'; // Volta para a página inicial
+        }, 500); // Pequeno delay para dar tempo de o link ser clicado
     });
 }
 
@@ -761,7 +753,6 @@ function createWhatsAppMessage() {
                     mensagemFinal += `${campoNome}:\n  ${valorFormatado}.\n`;
                     mensagemFinal += `  Valor: R$ ${formatPrice(precoCampo)}.\n`;
                 } else if (typeof valor === 'number') {
-                     // Se for um número (e não campo de quantidade que já foi listado)
                      mensagemFinal += `${campoNome}:\n  R$ ${formatPrice(valor)}.\n`;
                 } else {
                     mensagemFinal += `${campoNome}:\n  ${valor}.\n`;
@@ -829,7 +820,6 @@ function formatPrice(price) {
     if (typeof price !== 'number') return '0,00';
     return price.toFixed(2).replace('.', ',');
 }
-// --- MODIFICAÇÃO TERMINADA AQUI ---
 
 // ==========================================================================
 // 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
@@ -837,7 +827,6 @@ function formatPrice(price) {
 
 function setupEventListeners() {
     datePicker.addEventListener('change', handleDateSelection);
-    // agendamentoForm.addEventListener('submit', handleFormSubmit); // O submit é tratado pelo input button dentro do form
 
     backButton1.addEventListener('click', () => {
         servicosFormSection.classList.add('hidden');
@@ -858,7 +847,32 @@ function setupEventListeners() {
     });
 
     // Listener para o submit do formulário de agendamento
-    document.querySelector('#agendamentoForm button[type="submit"]').addEventListener('click', handleFormSubmit);
+    agendamentoForm.addEventListener('submit', handleFormSubmit);
+    // Listener para o submit do form de informações do cliente
+    clienteInfoForm.addEventListener('submit', (e) => {
+        e.preventDefault(); // Prevents default form submission to allow step progression
+        document.getElementById('nextStep3').click(); // Triggers the next step button click
+    });
+    document.getElementById('nextStep3').addEventListener('click', () => { // Added explicit click listener for clarity
+        const nome = document.getElementById('nome').value.trim();
+        const telefone = document.getElementById('telefone').value;
+        const endereco = document.getElementById('endereco').value.trim();
+        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato (xx) xxxxx-xxxx
+
+        if (!nome || !telefone) {
+            alert("Por favor, preencha nome e telefone para continuar.");
+            return;
+        }
+
+        if (!telefoneRegex.test(telefone)) {
+            alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
+            return;
+        }
+
+        clienteFormSection.classList.add('hidden');
+        agendamentoSection.classList.remove('hidden');
+        updateProgressBar(4);
+    });
 }
 
 function updateProgressBar(step) {
