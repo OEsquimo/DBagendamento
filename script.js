@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 22.0 (Debug completo do botão de confirmação de agendamento)
+ * Versão: 24.0 (Máscara do Telefone Corrigida, Renomeado Campo Telefone e Revisão do Botão de Agendamento)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -38,7 +38,7 @@ const whatsappLink = document.getElementById('whatsappLink');
 const progressSteps = document.querySelectorAll('.progress-step');
 const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
-const telefoneInput = document.getElementById('telefone');
+const telefoneInput = document.getElementById('telefone'); // O ID do input no HTML
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
@@ -333,7 +333,7 @@ function updatePrice() {
                 } else if (field.type === 'number' || fieldName === 'Capacidade de BTUs?') {
                     let value = parseFloat(field.value);
                     if (!isNaN(value)) {
-                        priceForThisEquipment += value; // Adapte se BTUs tiverem um custo específico
+                        priceForThisEquipment += value;
                     }
                 }
             });
@@ -349,7 +349,7 @@ function updatePrice() {
     });
 
     updateOrcamentoTotal();
-    checkAgendamentoButtonState(); // Verifica o estado do botão após atualização de preço
+    checkAgendamentoButtonState();
 }
 
 function getSelectedOptions(serviceWrapperElement, serviceData) {
@@ -430,10 +430,19 @@ document.getElementById('nextStep2').addEventListener('click', () => {
 // ==========================================================================
 
 function setupPhoneMask() {
+    console.log("Configurando máscara de telefone...");
+    // Garantir que o input com ID 'telefone' existe
+    if (!telefoneInput) {
+        console.error("Elemento de input do telefone não encontrado!");
+        return;
+    }
+
     telefoneInput.addEventListener('input', (e) => {
-        const value = e.target.value.replace(/\D/g, '');
+        const input = e.target;
+        let value = input.value.replace(/\D/g, ''); // Remove todos os caracteres não-dígitos
         let maskedValue = '';
 
+        // Aplica a máscara: (XX) XXXXX-XXXX
         if (value.length > 0) {
             maskedValue += `(${value.substring(0, 2)}`;
         }
@@ -443,16 +452,17 @@ function setupPhoneMask() {
         if (value.length > 7) {
             maskedValue += `-${value.substring(7, 11)}`;
         }
-        e.target.value = maskedValue;
+        
+        input.value = maskedValue;
+        console.log(`Valor do telefone após a máscara: ${input.value}`);
     });
-    console.log("Máscara de telefone configurada.");
 }
 
 document.getElementById('nextStep3').addEventListener('click', () => {
     const nome = document.getElementById('nome').value.trim();
-    const telefone = document.getElementById('telefone').value;
+    const telefone = document.getElementById('telefone').value; // Pega o valor já mascarado
     const endereco = document.getElementById('endereco').value.trim();
-    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
+    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato mascarado
 
     if (!nome || !telefone) {
         alert("Por favor, preencha nome e telefone para continuar.");
@@ -461,6 +471,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 
     if (!telefoneRegex.test(telefone)) {
         alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
+        console.error("Validação de telefone falhou. Formato incorreto. Valor atual:", telefone);
         return;
     }
 
@@ -468,7 +479,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
     agendamentoSection.classList.remove('hidden');
     updateProgressBar(4);
     console.log("Passando para a Etapa 4: Agendar.");
-    handleDateSelection(); // Chama a função para carregar horários após a transição
+    handleDateSelection();
 });
 
 // ==========================================================================
@@ -476,6 +487,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 // ==========================================================================
 
 function setupPaymentOptions() {
+    console.log("Configurando opções de pagamento...");
     paymentOptionsContainer.querySelectorAll('.payment-option-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             formaPagamentoSelecionada = btn.dataset.method;
@@ -485,7 +497,6 @@ function setupPaymentOptions() {
             console.log(`Forma de pagamento selecionada: ${formaPagamentoSelecionada}`);
         });
     });
-    console.log("Opções de pagamento configuradas.");
 }
 
 async function handleDateSelection() {
@@ -722,10 +733,16 @@ function showConfirmation() {
     updateProgressBar(5); // Assumindo 5 como o próximo passo para a confirmação
 
     const whatsappMsg = createWhatsAppMessage();
-    whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
-    console.log("Link do WhatsApp criado:", whatsappLink.href);
+    // Certifique-se que configGlobais.whatsappNumber está definido
+    if (configGlobais && configGlobais.whatsappNumber) {
+        whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
+        console.log("Link do WhatsApp criado:", whatsappLink.href);
+    } else {
+        console.warn("Número do WhatsApp não configurado. Link do WhatsApp não gerado.");
+        // Opcional: desabilitar ou ocultar o link do WhatsApp se o número não estiver configurado
+        // whatsappLink.style.display = 'none';
+    }
 
-    // Adiciona o listener apenas uma vez
     if (!whatsappLink.dataset.listenerAttached) {
         whatsappLink.addEventListener('click', () => {
             setTimeout(() => {
@@ -876,9 +893,9 @@ function setupEventListeners() {
     });
     document.getElementById('nextStep3').addEventListener('click', () => {
         const nome = document.getElementById('nome').value.trim();
-        const telefone = document.getElementById('telefone').value;
+        const telefone = document.getElementById('telefone').value; // Pega o valor já mascarado
         const endereco = document.getElementById('endereco').value.trim();
-        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
+        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato mascarado
 
         if (!nome || !telefone) {
             alert("Por favor, preencha nome e telefone para continuar.");
@@ -887,6 +904,7 @@ function setupEventListeners() {
 
         if (!telefoneRegex.test(telefone)) {
             alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
+            console.error("Validação de telefone falhou. Formato incorreto. Valor atual:", telefone);
             return;
         }
 
@@ -894,7 +912,7 @@ function setupEventListeners() {
         agendamentoSection.classList.remove('hidden');
         updateProgressBar(4);
         console.log("Passando para a Etapa 4: Agendar.");
-        handleDateSelection(); // Chama a função para carregar horários após a transição
+        handleDateSelection();
     });
     console.log("Listeners de eventos configurados.");
 }
