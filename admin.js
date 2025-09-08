@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.0 (Campo de Quantidade)
+ * Versão: 9.0 (Limite de Serviço por Dia)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -95,6 +95,10 @@ function setupConfigForm() {
                 <label for="${dia}Duracao">Duração (minutos):</label>
                 <input type="number" class="form-control horario-duracao" id="${dia}Duracao" value="60" min="15" step="15">
             </div>
+            <div class="form-group">
+                <label for="${dia}Limite">Limite de Agendamentos (por dia):</label>
+                <input type="number" class="form-control horario-limite" id="${dia}Limite" value="0" min="0">
+            </div>
         `;
         horariosContainer.appendChild(div);
     });
@@ -121,6 +125,7 @@ function addAdditionalFieldForm(fieldData = {}) {
                     <option value="select_quantidade" ${fieldData.tipo === 'select_quantidade' ? 'selected' : ''}>Campo de Quantidade</option>
                     <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
                     <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
+                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
                 </select>
             </div>
             <div class="options-container">
@@ -195,7 +200,8 @@ function generateOptionsHTML(opcoes = [''], type = 'com_preco') {
 
 function addOptionForm(e) {
     const optionList = e.target.closest('.options-container').querySelector('.option-list');
-    const fieldType = e.target.closest('.additional-field').dataset.type;
+    const fieldElement = e.target.closest('.additional-field');
+    const fieldType = fieldElement.dataset.type;
     const isQuantity = fieldType === 'select_quantidade';
     const hasPrice = fieldType === 'select_com_preco';
 
@@ -319,16 +325,18 @@ function createServicoCard(servico, key) {
     card.className = 'card mb-3';
 
     let camposAdicionaisHtml = '';
-    if (servico.camposAdicionais) {
+    if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
-            if (campo.opcoes) {
+            if (campo.opcoes && campo.opcoes.length > 0) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
             return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
         }).join('');
+    } else {
+        camposAdicionaisHtml = '<p>Nenhum campo adicional.</p>';
     }
 
     card.innerHTML = `
@@ -337,7 +345,7 @@ function createServicoCard(servico, key) {
             <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
             <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
             <h6>Campos Adicionais:</h6>
-            <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
+            ${camposAdicionaisHtml}
             <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
@@ -409,12 +417,23 @@ function createAgendamentoCard(agendamento, key) {
     let servicosHtml = '<ul>';
     if (agendamento.servicos) {
         agendamento.servicos.forEach(servico => {
+            let camposDetalhados = '';
+            if (servico.camposAdicionaisSelecionados) {
+                Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
+                    if (valor !== "" && valor !== "Não") { // Evita mostrar campos vazios ou "Não"
+                        let valorFormatado = valor;
+                        if (typeof valor === 'number') {
+                            valorFormatado = `R$ ${valor.toFixed(2)}`;
+                        } else if (typeof valor === 'string' && valor.includes(', R$ ')) {
+                            // Extrai o nome da opção se for do tipo "Opção, R$ Preço"
+                            valorFormatado = valor.split(', R$ ')[0];
+                        }
+                        camposDetalhados += `<li>${campoNome}: ${valorFormatado}</li>`;
+                    }
+                });
+            }
             servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
-                <ul>
-                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
-                        <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
-                    `).join('') : ''}
-                </ul>
+                ${camposDetalhados ? `<ul>${camposDetalhados}</ul>` : ''}
             </li>`;
         });
     }
@@ -487,8 +506,9 @@ function handleConfigFormSubmit(e) {
         const horarioInicio = document.getElementById(`${dia}Inicio`).value;
         const horarioFim = document.getElementById(`${dia}Fim`).value;
         const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
+        const limiteServico = parseInt(document.getElementById(`${dia}Limite`).value) || 0; // Captura o novo campo
 
-        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
+        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico, limiteServico };
     });
 
     const configRef = ref(database, 'configuracoes');
@@ -505,15 +525,38 @@ function loadConfig() {
     onValue(configRef, (snapshot) => {
         if (snapshot.exists()) {
             const config = snapshot.val();
-            whatsappNumberInput.value = config.whatsappNumber;
+            whatsappNumberInput.value = config.whatsappNumber || '';
             diasDaSemana.forEach(dia => {
-                const diaConfig = config.horariosPorDia[dia];
+                const diaConfig = config.horariosPorDia && config.horariosPorDia[dia];
+                const diaAtivoInput = document.getElementById(`${dia}Ativo`);
+                const inicioInput = document.getElementById(`${dia}Inicio`);
+                const fimInput = document.getElementById(`${dia}Fim`);
+                const duracaoInput = document.getElementById(`${dia}Duracao`);
+                const limiteInput = document.getElementById(`${dia}Limite`); // Referência ao novo campo
+
                 if (diaConfig) {
-                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
-                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
-                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
-                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
+                    diaAtivoInput.checked = diaConfig.ativo !== undefined ? diaConfig.ativo : false;
+                    inicioInput.value = diaConfig.horarioInicio || '08:00';
+                    fimInput.value = diaConfig.horarioFim || '18:00';
+                    duracaoInput.value = diaConfig.duracaoServico || 60;
+                    limiteInput.value = diaConfig.limiteServico !== undefined ? diaConfig.limiteServico : 0; // Define o valor do limite
+                } else {
+                    // Define valores padrão se a configuração para o dia não existir
+                    diaAtivoInput.checked = false;
+                    inicioInput.value = '08:00';
+                    fimInput.value = '18:00';
+                    duracaoInput.value = 60;
+                    limiteInput.value = 0;
                 }
+            });
+        } else {
+             // Se não houver configurações salvas, preenche com valores padrão
+             diasDaSemana.forEach(dia => {
+                document.getElementById(`${dia}Ativo`).checked = false;
+                document.getElementById(`${dia}Inicio`).value = '08:00';
+                document.getElementById(`${dia}Fim`).value = '18:00';
+                document.getElementById(`${dia}Duracao`).value = 60;
+                document.getElementById(`${dia}Limite`).value = 0;
             });
         }
     });
