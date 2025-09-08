@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 26.1 (Correções de bug e otimizações)
+ * Versão: 26.2 (Correções finais e validações aprimoradas)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -43,8 +43,7 @@ const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
 const clienteInfoForm = document.getElementById('clienteInfoForm');
-// Selecionando o botão de confirmar agendamento de forma mais robusta
-const confirmarAgendamentoBtn = document.querySelector('.form-navigation-bottom .btn-primary');
+const confirmarAgendamentoBtn = document.querySelector('.form-navigation-bottom .btn-primary'); // Botão de confirmação
 
 let servicosSelecionados = []; // Array para armazenar os serviços e seus detalhes selecionados
 let servicosGlobais = {};    // Cache de todos os serviços disponíveis
@@ -122,11 +121,17 @@ function createServiceCard(service, key) {
     card.className = 'service-card';
     card.dataset.key = key;
 
+    // Verifica se o serviço já está selecionado para definir o estado inicial do botão
+    const isSelected = servicosSelecionados.some(s => s.key === key);
+
     card.innerHTML = `
         <h3>${service.nome}</h3>
         <p>${service.descricao}</p>
-        <button class="btn btn-primary btn-select-service">Adicionar</button>
+        <button class="btn btn-primary btn-select-service">${isSelected ? 'Remover' : 'Adicionar'}</button>
     `;
+    if (isSelected) {
+        card.classList.add('selected');
+    }
 
     card.querySelector('.btn-select-service').addEventListener('click', () => {
         const selectedService = { ...servicosGlobais[key], key };
@@ -143,8 +148,8 @@ function createServiceCard(service, key) {
         }
 
         updateSelectedServicesCount();
-        nextStep1Button.style.display = servicosSelecionados.length > 0 ? 'block' : 'none';
         updateOrcamentoTotal();
+        checkNextStep1ButtonState(); // Atualiza estado do botão Próximo da Etapa 1
         console.log(`Serviço ${service.nome} ${existingIndex === -1 ? 'adicionado' : 'removido'}. Total de serviços: ${servicosSelecionados.length}`);
     });
 
@@ -153,6 +158,12 @@ function createServiceCard(service, key) {
 
 function updateSelectedServicesCount() {
     selectedServicesCount.textContent = servicosSelecionados.length;
+}
+
+function checkNextStep1ButtonState() {
+    const hasSelectedServices = servicosSelecionados.length > 0;
+    nextStep1Button.style.display = hasSelectedServices ? 'block' : 'none';
+    console.log(`Botão Próximo Etapa 1 ${hasSelectedServices ? 'Habilitado' : 'Desabilitado'}`);
 }
 
 nextStep1Button.addEventListener('click', () => {
@@ -232,7 +243,7 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                                 data-field-name="${field.nome}"
                                 data-service-key="${service.key}"
                                 data-equipment-index="${equipmentIndex}"
-                                required>
+                                ${field.obrigatorio ? 'required' : ''}>
                             <option value="">Selecione...</option>
                             ${field.opcoes.map(option => {
                                 const optionValue = option.split(', R$ ')[0];
@@ -248,7 +259,7 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                                data-field-name="${field.nome}"
                                data-service-key="${service.key}"
                                data-equipment-index="${equipmentIndex}"
-                               required>
+                               ${field.obrigatorio ? 'required' : ''}>
                     `;
                 } else if (field.tipo === 'number') {
                     inputHtml = `
@@ -258,7 +269,8 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                                data-field-name="${field.nome}"
                                data-service-key="${service.key}"
                                data-equipment-index="${equipmentIndex}"
-                               step="0.01" required>
+                               step="0.01"
+                               ${field.obrigatorio ? 'required' : ''}>
                     `;
                 } else if (field.tipo === 'textarea') {
                      inputHtml = `
@@ -268,7 +280,7 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                                   data-field-name="${field.nome}"
                                   data-service-key="${service.key}"
                                   data-equipment-index="${equipmentIndex}"
-                                  placeholder="Digite aqui..."></textarea>
+                                  ${field.obrigatorio ? 'required' : ''}></textarea>
                     `;
                 }
                 return inputHtml;
@@ -349,7 +361,7 @@ function updatePrice() {
     });
 
     updateOrcamentoTotal();
-    checkAgendamentoButtonState();
+    checkAgendamentoButtonState(); // Verifica estado do botão de agendamento
 }
 
 function getSelectedOptions(serviceWrapperElement, serviceData) {
@@ -389,8 +401,10 @@ document.getElementById('nextStep2').addEventListener('click', () => {
         const equipmentFieldsElements = serviceWrapper.querySelectorAll('.equipment-fields');
         equipmentFieldsElements.forEach(equipmentElement => {
             equipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
+                // Verifica se o campo é obrigatório E se está vazio ou com valor padrão inválido
                 if (field.required && (field.value === "" || field.value === "Selecione...")) {
                     allFieldsFilled = false;
+                    console.warn(`Campo obrigatório vazio encontrado: ${field.id || field.name}`);
                 }
             });
         });
@@ -431,7 +445,6 @@ document.getElementById('nextStep2').addEventListener('click', () => {
 
 function setupPhoneMask() {
     console.log("Configurando máscara de telefone...");
-    // Verificando se o input de telefone existe antes de adicionar o listener
     if (!telefoneInput) {
         console.error("Elemento de input do telefone ('telefone') não encontrado!");
         return;
@@ -466,12 +479,13 @@ document.getElementById('nextStep3').addEventListener('click', () => {
 
     if (!nome || !telefone) {
         alert("Por favor, preencha nome e telefone para continuar.");
+        console.warn("Validação Etapa 3 falhou: Nome ou telefone não preenchidos.");
         return;
     }
 
     if (!telefoneRegex.test(telefone)) {
         alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
-        console.error("Validação de telefone falhou. Formato incorreto. Valor atual:", telefone);
+        console.error("Validação Etapa 3 falhou: Formato de telefone inválido. Valor:", telefone);
         return;
     }
 
@@ -506,6 +520,7 @@ async function handleDateSelection() {
     if (!selectedDate) {
         timeSlotsContainer.innerHTML = '<p>Selecione uma data para ver os horários.</p>';
         console.log("Nenhuma data selecionada.");
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado se não houver data
         return;
     }
 
@@ -516,6 +531,7 @@ async function handleDateSelection() {
         if (!configGlobais || !configGlobais.horariosPorDia) {
             timeSlotsContainer.innerHTML = '<p>Configurações de horário não encontradas. Entre em contato com o administrador.</p>';
             console.error("Configurações de horário ainda indisponíveis após recarga.");
+            checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
             return;
         }
     }
@@ -527,6 +543,7 @@ async function handleDateSelection() {
     if (dataAgendamento < dataAtual) {
         timeSlotsContainer.innerHTML = '<p>Não é possível agendar para uma data que já passou.</p>';
         console.log("Data selecionada é no passado.");
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
         return;
     }
 
@@ -534,6 +551,7 @@ async function handleDateSelection() {
     if (dataAgendamento.getTime() === dataAtual.getTime() && hoje.getHours() >= limiteHorarioHoje) {
         timeSlotsContainer.innerHTML = `<p>Agendamentos para o dia de hoje só são permitidos até as ${limiteHorarioHoje}:00. Por favor, selecione uma data futura.</p>`;
         console.log("Data selecionada é hoje, após o limite de horário.");
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
         return;
     }
 
@@ -543,6 +561,7 @@ async function handleDateSelection() {
     if (!diaConfig || !diaConfig.ativo) {
         timeSlotsContainer.innerHTML = `<p>Não há agendamentos disponíveis para ${capitalize(dayOfWeek)}.</p>`;
         console.log(`Dia ${capitalize(dayOfWeek)} inativo nas configurações.`);
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
         return;
     }
 
@@ -573,6 +592,7 @@ async function handleDateSelection() {
     if (limiteDiario > 0 && agendamentosDoDiaCount >= limiteDiario) {
         timeSlotsContainer.innerHTML = '<p>Desculpe, o limite de agendamentos para esta data já foi atingido.</p>';
         console.log(`Limite diário de ${limiteDiario} agendamentos atingido para ${selectedDate}.`);
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
         return;
     }
 
@@ -623,6 +643,7 @@ function displayTimeSlots(horariosDisponiveis) {
     if (horariosDisponiveis.length === 0) {
         timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para a data selecionada. Por favor, escolha outro dia.</p>';
         console.log("Nenhum slot de horário gerado.");
+        checkAgendamentoButtonState(); // Garante que o botão de confirmar esteja desabilitado
         return;
     }
 
@@ -651,22 +672,21 @@ function checkAgendamentoButtonState() {
     const selectedTimeSlot = document.querySelector('.time-slot.selected');
     const isPaymentSelected = formaPagamentoSelecionada !== '';
     
-    console.log(`Verificando estado do botão: Slot selecionado=${!!selectedTimeSlot}, Pagamento selecionado=${isPaymentSelected}`);
+    console.log(`Verificando estado do botão 'Confirmar Agendamento': Slot selecionado=${!!selectedTimeSlot}, Pagamento selecionado=${isPaymentSelected}`);
 
     if (selectedTimeSlot && isPaymentSelected) {
-        // Verifica se o botão realmente existe antes de tentar modificá-lo
         if (confirmarAgendamentoBtn) {
             confirmarAgendamentoBtn.removeAttribute('disabled');
-            console.log("Botão de confirmação HABILITADO.");
+            console.log("Botão 'Confirmar Agendamento' HABILITADO.");
         } else {
-            console.error("Botão de confirmação não encontrado para habilitar.");
+            console.error("Botão 'Confirmar Agendamento' não encontrado para habilitar.");
         }
     } else {
         if (confirmarAgendamentoBtn) {
             confirmarAgendamentoBtn.setAttribute('disabled', 'true');
-            console.log("Botão de confirmação DESABILITADO.");
+            console.log("Botão 'Confirmar Agendamento' DESABILITADO.");
         } else {
-            console.error("Botão de confirmação não encontrado para desabilitar.");
+            console.error("Botão 'Confirmar Agendamento' não encontrado para desabilitar.");
         }
     }
 }
@@ -675,7 +695,6 @@ async function handleFormSubmit(e) {
     e.preventDefault();
     console.log("Tentando submeter o formulário de agendamento.");
 
-    // Verifica o estado do botão novamente para garantir que não foi submetido manualmente
     if (confirmarAgendamentoBtn && confirmarAgendamentoBtn.disabled) {
         console.warn("Botão de confirmação está desabilitado. Submissão abortada.");
         alert("Por favor, selecione um horário e uma forma de pagamento.");
@@ -744,14 +763,11 @@ function showConfirmation() {
     updateProgressBar(5); // Assumindo 5 como o próximo passo para a confirmação
 
     const whatsappMsg = createWhatsAppMessage();
-    // Certifique-se que configGlobais.whatsappNumber está definido
     if (configGlobais && configGlobais.whatsappNumber) {
         whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
         console.log("Link do WhatsApp criado:", whatsappLink.href);
     } else {
         console.warn("Número do WhatsApp não configurado. Link do WhatsApp não gerado.");
-        // Opcional: desabilitar ou ocultar o link do WhatsApp se o número não estiver configurado
-        // whatsappLink.style.display = 'none';
     }
 
     if (!whatsappLink.dataset.listenerAttached) {
@@ -897,14 +913,12 @@ function setupEventListeners() {
         console.log("Voltando para a Etapa 3: Informações do Cliente.");
     });
 
-    // Correção: Adicionando o listener ao botão de confirmação
     if (confirmarAgendamentoBtn) {
         confirmarAgendamentoBtn.addEventListener('click', handleFormSubmit);
     } else {
         console.error("Botão 'Confirmar Agendamento' não encontrado para adicionar listener.");
     }
 
-    // Correção: O listener 'submit' do formulário agora aciona a função de avanço diretamente
     clienteInfoForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const nextButton = document.getElementById('nextStep3');
