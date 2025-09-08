@@ -1,7 +1,7 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 9.0 (Limite de Serviço por Dia)
+ * Versão: 10.0 (Inclui exclusão de serviço e restauração de limite)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -29,7 +29,7 @@ const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
 const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosList = document.getElementById('listaServicosTab');
+const servicosListElement = document.getElementById('listaServicosTab'); // Renomeado para evitar conflito com a var global
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
@@ -304,9 +304,9 @@ function resetServicoForm() {
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
-        const servicosListElement = document.getElementById('servicosList');
-        if (servicosListElement) {
-            servicosListElement.innerHTML = '';
+        const servicesListElement = document.getElementById('listaServicosTab'); // Nome correto do ID
+        if (servicesListElement) {
+            servicesListElement.innerHTML = '';
             if (snapshot.exists()) {
                 const servicos = snapshot.val();
                 for (const key in servicos) {
@@ -314,7 +314,7 @@ function loadServices() {
                     createServicoCard(servico, key);
                 }
             } else {
-                servicosListElement.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
+                servicesListElement.innerHTML = '<p>Nenhum serviço cadastrado.</p>';
             }
         }
     });
@@ -350,9 +350,9 @@ function createServicoCard(servico, key) {
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
-    const servicosListElement = document.getElementById('servicosList');
-    if (servicosListElement) {
-        servicosListElement.appendChild(card);
+    const servicesListElement = document.getElementById('listaServicosTab');
+    if (servicesListElement) {
+        servicesListElement.appendChild(card);
     }
     card.querySelector('.edit-service-btn').addEventListener('click', editService);
     card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
@@ -420,7 +420,7 @@ function createAgendamentoCard(agendamento, key) {
             let camposDetalhados = '';
             if (servico.camposAdicionaisSelecionados) {
                 Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
-                    if (valor !== "" && valor !== "Não") { // Evita mostrar campos vazios ou "Não"
+                    if (valor !== "" && valor !== "Não" && valor !== null && valor !== undefined) { // Evita mostrar campos vazios ou "Não"
                         let valorFormatado = valor;
                         if (typeof valor === 'number') {
                             valorFormatado = `R$ ${valor.toFixed(2)}`;
@@ -432,7 +432,7 @@ function createAgendamentoCard(agendamento, key) {
                     }
                 });
             }
-            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
+            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado ? servico.precoCalculado.toFixed(2) : '0.00'}
                 ${camposDetalhados ? `<ul>${camposDetalhados}</ul>` : ''}
             </li>`;
         });
@@ -451,7 +451,7 @@ function createAgendamentoCard(agendamento, key) {
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
-            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
+            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal ? agendamento.orcamentoTotal.toFixed(2) : '0.00'}</p>
             <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
             <div class="mt-3">
