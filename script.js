@@ -1,16 +1,13 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 15.0 (Correção de botão "Confirmar Agendamento", implementação carrossel e validação de telefone)
+ * Versão: 16.0 (Refinamento na lógica do carrossel, price update e envio de formulário)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push, get, remove, set, query, orderByChild, equalTo, limitToFirst } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ==========================================================================
-// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
-// ==========================================================================
-
+// Configuração do Firebase (mantida a mesma)
 const firebaseConfig = {
     apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
     authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -25,6 +22,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
+// Seletores de elementos DOM
 const servicosContainer = document.getElementById('servicosContainer');
 const servicosSection = document.getElementById('servicos');
 const servicosFormSection = document.getElementById('servicosForm');
@@ -44,8 +42,8 @@ const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 const nextStep1Button = document.getElementById('nextStep1');
-const clienteInfoForm = document.getElementById('clienteInfoForm'); // Referência ao form do cliente
-const agendamentoForm = document.getElementById('agendamentoForm'); // Referência ao form de agendamento
+const clienteInfoForm = document.getElementById('clienteInfoForm');
+const agendamentoForm = document.getElementById('agendamentoForm');
 
 let servicosSelecionados = []; // Array para armazenar os serviços e seus detalhes selecionados
 let servicosGlobais = {};    // Cache de todos os serviços disponíveis
@@ -137,11 +135,7 @@ function createServiceCard(service, key) {
         }
 
         updateSelectedServicesCount();
-        if (servicosSelecionados.length > 0) {
-            nextStep1Button.style.display = 'block';
-        } else {
-            nextStep1Button.style.display = 'none';
-        }
+        nextStep1Button.style.display = servicosSelecionados.length > 0 ? 'block' : 'none';
     });
 
     servicosContainer.appendChild(card);
@@ -167,10 +161,10 @@ nextStep1Button.addEventListener('click', () => {
 // ==========================================================================
 
 function renderServiceForms() {
-    servicosFormContainer.innerHTML = ''; // Limpa o contêiner antes de renderizar
+    servicosFormContainer.innerHTML = ''; // Limpa o contêiner
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.createElement('div');
-        serviceWrapper.className = 'service-wrapper'; // Contêiner para cada serviço com seus equipamentos
+        serviceWrapper.className = 'service-wrapper';
         serviceWrapper.dataset.key = service.key;
 
         let fieldsHtml = '';
@@ -189,10 +183,9 @@ function renderServiceForms() {
                     + Adicionar Outro Equipamento
                 </button>
             ` : ''}
-            <div class="service-price">Valor: R$ ${service.precoCalculado ? service.precoCalculado.toFixed(2) : (service.precoBase || 0).toFixed(2)}</div>
+            <div class="service-price">Valor: R$ ${service.precoCalculado ? formatPrice(service.precoCalculado) : formatPrice(service.precoBase || 0)}</div>
         `;
 
-        // Adiciona evento para o botão de adicionar equipamento
         const addEquipmentBtn = serviceWrapper.querySelector('.add-equipment-btn');
         if (addEquipmentBtn) {
             addEquipmentBtn.addEventListener('click', () => addEquipmentForm(service, serviceWrapper));
@@ -201,7 +194,6 @@ function renderServiceForms() {
         servicosFormContainer.appendChild(serviceWrapper);
     });
 
-    // Adiciona event listeners para todos os campos gerados
     document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea, .additional-field-quantidade').forEach(field => {
         field.addEventListener('change', updatePrice);
         field.addEventListener('input', updatePrice);
@@ -214,11 +206,11 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
     let fieldsHtml = `
         <div class="equipment-fields" data-equipment-index="${equipmentIndex}">
             ${camposAdicionais.map(field => {
-                const fieldName = field.nome.replace(/\s+/g, '_').toLowerCase(); // Cria um nome de campo mais amigável para data attributes
-                const fieldId = `${service.key}-${fieldName}-equip-${equipmentIndex}`; // ID único para o campo
-                const isQuantityField = field.tipo === 'select_quantidade';
+                const fieldName = field.nome.replace(/\s+/g, '_').toLowerCase();
+                const fieldId = `${service.key}-${fieldName}-equip-${equipmentIndex}`;
                 const isSelectField = field.tipo.startsWith('select');
                 const hasPrice = field.tipo === 'select_com_preco';
+                const isQuantityField = field.tipo === 'select_quantidade';
 
                 let inputHtml = '';
                 if (isSelectField && field.opcoes) {
@@ -232,7 +224,7 @@ function generateEquipmentFields(service, camposAdicionais, equipmentIndex = 0) 
                                 required>
                             <option value="">Selecione...</option>
                             ${field.opcoes.map(option => {
-                                const optionValue = option.split(', R$ ')[0]; // Pega apenas o nome da opção
+                                const optionValue = option.split(', R$ ')[0];
                                 return `<option value="${option}">${optionValue}</option>`;
                             }).join('')}
                         </select>
@@ -295,66 +287,47 @@ function addEquipmentForm(service, serviceWrapper) {
     // Adiciona event listener para o botão de remover equipamento recém-criado
     newEquipmentElement.querySelector('.remove-equipment-btn').addEventListener('click', (e) => {
         e.target.closest('.equipment-fields').remove();
-        updatePrice(); // Recalcula o preço total após remover um equipamento
-        scrollToServiceForm(serviceWrapper); // Rola para o serviço correspondente
+        updatePrice();
+        scrollToServiceForm(serviceWrapper);
     });
 
-    // Rola suavemente para o novo equipamento adicionado
     scrollToServiceForm(serviceWrapper);
 }
-
-function scrollToServiceForm(element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 
 function updatePrice() {
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (!serviceWrapper) return;
 
-        let quantity = 1; // Padrão para 1 se não houver campo de quantidade
-
+        let totalServiceCalculatedPrice = 0;
         const equipmentFieldsElements = serviceWrapper.querySelectorAll('.equipment-fields');
-        let equipmentPrices = [];
 
         equipmentFieldsElements.forEach(equipmentElement => {
             let priceForThisEquipment = 0;
             let quantityForThisEquipment = 1;
+            const serviceConfig = servicosGlobais[service.key];
 
             equipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
                 const fieldName = field.dataset.fieldName;
-                const serviceConfig = servicosGlobais[service.key];
                 const fieldConfig = serviceConfig?.camposAdicionais?.find(f => f.nome === fieldName);
 
-                if (field.value === "" || field.value === "Selecione..." || field.value === "Não") return; // Ignora valores vazios ou "Não"
+                if (field.value === "" || field.value === "Selecione..." || field.value === "Não") return;
 
                 if (fieldConfig?.tipo === 'select_quantidade') {
                     quantityForThisEquipment = parseInt(field.value) || 1;
                 } else if (fieldConfig?.tipo === 'select_com_preco' && typeof field.value === 'string' && field.value.includes(', R$ ')) {
                     const price = parseFloat(field.value.split(', R$ ')[1]);
-                    if (!isNaN(price)) {
-                        priceForThisEquipment += price;
-                    }
+                    if (!isNaN(price)) priceForThisEquipment += price;
                 } else if (field.type === 'number') {
                     const value = parseFloat(field.value);
-                    if (!isNaN(value)) {
-                        priceForThisEquipment += value;
-                    }
+                    if (!isNaN(value)) priceForThisEquipment += value;
                 }
             });
-            equipmentPrices.push({ basePrice: priceForThisEquipment, quantity: quantityForThisEquipment });
+            totalServiceCalculatedPrice += (service.precoBase + priceForThisEquipment) * quantityForThisEquipment;
         });
 
-        // Calcula o total do serviço considerando quantidade e preço base + adicionais
-        let totalServiceCalculatedPrice = 0;
-        equipmentPrices.forEach(item => {
-            const itemTotal = (service.precoBase + item.basePrice) * item.quantity;
-            totalServiceCalculatedPrice += itemTotal;
-        });
         service.precoCalculado = totalServiceCalculatedPrice;
 
-        // Atualiza o display do preço do serviço no frontend
         const servicePriceDisplay = serviceWrapper.querySelector('.service-price');
         if (servicePriceDisplay) {
             servicePriceDisplay.textContent = `Valor: R$ ${formatPrice(service.precoCalculado)}`;
@@ -368,7 +341,7 @@ function getSelectedOptions(serviceWrapperElement, serviceData) {
     const selectedOptions = {};
     const equipmentFieldsElements = serviceWrapperElement.querySelectorAll('.equipment-fields');
 
-    equipmentFieldsElements.forEach((equipmentElement, equipmentIndex) => {
+    equipmentFieldsElements.forEach(equipmentElement => {
         equipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
             const fieldName = field.dataset.fieldName;
             const serviceConfig = servicosGlobais[serviceData.key];
@@ -388,16 +361,14 @@ function getSelectedOptions(serviceWrapperElement, serviceData) {
     return selectedOptions;
 }
 
-
 document.getElementById('nextStep2').addEventListener('click', () => {
     let allFieldsFilled = true;
-    let validPriceCalculated = false; // Flag para garantir que o preço foi calculado
+    let priceCalculatedForAnyService = false;
 
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (!serviceWrapper) return;
 
-        // Verifica campos obrigatórios dentro de cada equipamento
         const equipmentFieldsElements = serviceWrapper.querySelectorAll('.equipment-fields');
         equipmentFieldsElements.forEach(equipmentElement => {
             equipmentElement.querySelectorAll('select, input, textarea').forEach(field => {
@@ -407,25 +378,22 @@ document.getElementById('nextStep2').addEventListener('click', () => {
             });
         });
 
-        // Verifica se o preço foi calculado para este serviço
-        if (service.precoCalculado === undefined || service.precoCalculado === null) {
-            allFieldsFilled = false; // Considera como não preenchido se o preço não foi calculado
-        } else {
-            validPriceCalculated = true; // Pelo menos um serviço teve preço calculado
+        if (service.precoCalculado !== undefined && service.precoCalculado !== null) {
+            priceCalculatedForAnyService = true;
         }
     });
 
-    if (!allFieldsFilled || !validPriceCalculated) {
-        alert("Por favor, preencha todos os campos obrigatórios para cada equipamento e/ou selecione os campos de preço.");
+    if (!allFieldsFilled || !priceCalculatedForAnyService) {
+        alert("Por favor, preencha todos os campos obrigatórios para cada equipamento e/ou certifique-se de que um preço foi calculado.");
         return;
     }
 
-    // Armazena as opções selecionadas e o preço calculado para cada serviço
     servicosSelecionados.forEach(service => {
         const serviceWrapper = document.querySelector(`.service-wrapper[data-key="${service.key}"]`);
         if (serviceWrapper) {
             service.camposAdicionaisSelecionados = getSelectedOptions(serviceWrapper, service);
-            service.precoCalculado = service.precoCalculado !== undefined ? service.precoCalculado : (service.precoBase || 0); // Garante que haja um preço
+            // Garante que o preço calculado seja usado, ou o base se não houver cálculo específico
+            service.precoCalculado = service.precoCalculado !== undefined && service.precoCalculado !== null ? service.precoCalculado : (service.precoBase || 0);
         }
     });
 
@@ -447,12 +415,11 @@ function setupPhoneMask() {
             maskedValue += `(${value.substring(0, 2)}`;
         }
         if (value.length > 2) {
-            maskedValue += `) ${value.substring(2, 7)}`; // Padrão DDD + 5 primeiros dígitos
+            maskedValue += `) ${value.substring(2, 7)}`;
         }
         if (value.length > 7) {
-            maskedValue += `-${value.substring(7, 11)}`; // Padrão 4 últimos dígitos
+            maskedValue += `-${value.substring(7, 11)}`;
         }
-
         e.target.value = maskedValue;
     });
 }
@@ -461,7 +428,7 @@ document.getElementById('nextStep3').addEventListener('click', () => {
     const nome = document.getElementById('nome').value.trim();
     const telefone = document.getElementById('telefone').value;
     const endereco = document.getElementById('endereco').value.trim();
-    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato (xx) xxxxx-xxxx
+    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
 
     if (!nome || !telefone) {
         alert("Por favor, preencha nome e telefone para continuar.");
@@ -501,7 +468,7 @@ async function handleDateSelection() {
 
     if (!configGlobais || !configGlobais.horariosPorDia) {
         timeSlotsContainer.innerHTML = '<p>Carregando configurações. Por favor, selecione a data novamente.</p>';
-        await loadConfig(); // Tenta recarregar a config se estiver ausente
+        await loadConfig();
         if (!configGlobais || !configGlobais.horariosPorDia) {
             timeSlotsContainer.innerHTML = '<p>Configurações de horário não encontradas. Entre em contato com o administrador.</p>';
             return;
@@ -512,19 +479,16 @@ async function handleDateSelection() {
     const dataAtual = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     const dataAgendamento = new Date(selectedDate + 'T00:00:00');
 
-    // --- Validações de Data ---
     if (dataAgendamento < dataAtual) {
         timeSlotsContainer.innerHTML = '<p>Não é possível agendar para uma data que já passou.</p>';
         return;
     }
 
-    // Verifica se a data selecionada é hoje e se o horário atual já passou do limite para agendamento hoje
     const limiteHorarioHoje = 14; // Hora limite para agendamentos no mesmo dia
     if (dataAgendamento.getTime() === dataAtual.getTime() && hoje.getHours() >= limiteHorarioHoje) {
         timeSlotsContainer.innerHTML = `<p>Agendamentos para o dia de hoje só são permitidos até as ${limiteHorarioHoje}:00. Por favor, selecione uma data futura.</p>`;
         return;
     }
-    // --- Fim Validações de Data ---
 
     const dayOfWeek = getDayOfWeek(selectedDate);
     const diaConfig = configGlobais.horariosPorDia[dayOfWeek];
@@ -535,20 +499,18 @@ async function handleDateSelection() {
     }
 
     const { horarioInicio, horarioFim, duracaoServico, limiteServico } = diaConfig;
-    const limiteDiario = parseInt(limiteServico) || 0; // Pega o limite diário do admin
+    const limiteDiario = parseInt(limiteServico) || 0;
 
     timeSlotsContainer.innerHTML = '<p>Calculando horários disponíveis...</p>';
 
-    // Conta os agendamentos já existentes para a data selecionada
-    const agendamentosRef = ref(database, 'agendamentos');
-    const snapshot = await get(agendamentosRef);
+    const snapshot = await get(ref(database, 'agendamentos'));
     let agendamentosDoDiaCount = 0;
     let existingAppointmentTimes = [];
 
     if (snapshot.exists()) {
         snapshot.forEach(childSnapshot => {
             const agendamento = childSnapshot.val();
-            const firebaseDate = formatDate(selectedDate); // Formato DD/MM/YYYY
+            const firebaseDate = formatDate(selectedDate);
             if (agendamento.data === firebaseDate && agendamento.status !== 'Cancelado') {
                 agendamentosDoDiaCount++;
                 existingAppointmentTimes.push(agendamento.hora);
@@ -556,13 +518,11 @@ async function handleDateSelection() {
         });
     }
 
-    // Verifica se o limite diário já foi atingido
     if (limiteDiario > 0 && agendamentosDoDiaCount >= limiteDiario) {
         timeSlotsContainer.innerHTML = '<p>Desculpe, o limite de agendamentos para esta data já foi atingido.</p>';
         return;
     }
 
-    // Gera os horários disponíveis
     const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, existingAppointmentTimes, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
     displayTimeSlots(horariosDisponiveis);
 }
@@ -573,17 +533,16 @@ function generateTimeSlots(startTime, endTime, intervalMinutes, existingAppointm
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
     let currentTime = new Date();
-    currentTime.setHours(startHour, startMinute, 0, 0); // Define a hora de início
+    currentTime.setHours(startHour, startMinute, 0, 0);
 
     const endDateTime = new Date();
-    endDateTime.setHours(endHour, endMinute, 0, 0); // Define a hora de fim
+    endDateTime.setHours(endHour, endMinute, 0, 0);
 
     const intervalMs = intervalMinutes * 60 * 1000;
 
     while (currentTime < endDateTime) {
         const timeString = currentTime.toTimeString().slice(0, 5);
 
-        // Verifica se o horário atual é anterior ao horário de referência (se for o dia de hoje)
         if (referenceTime) {
              const [slotHour, slotMinute] = timeString.split(':').map(Number);
              const refHour = referenceTime.getHours();
@@ -595,7 +554,6 @@ function generateTimeSlots(startTime, endTime, intervalMinutes, existingAppointm
             }
         }
 
-        // Verifica se o horário já está ocupado
         if (!existingAppointments.includes(timeString)) {
             slots.push(timeString);
         }
@@ -653,12 +611,11 @@ async function handleFormSubmit(e) {
         endereco: document.getElementById('endereco').value.trim(),
     };
 
-    // Prepara os serviços com os campos selecionados e preços calculados
     const formattedServicos = servicosSelecionados.map(service => ({
         key: service.key,
         nome: service.nome,
-        precoCalculado: service.precoCalculado !== undefined ? service.precoCalculado : (service.precoBase || 0), // Garante que o preço esteja presente
-        camposAdicionaisSelecionados: service.camposAdicionaisSelecionados || {} // Armazena as opções selecionadas
+        precoCalculado: service.precoCalculado !== undefined ? service.precoCalculado : (service.precoBase || 0),
+        camposAdicionaisSelecionados: service.camposAdicionaisSelecionados || {}
     }));
 
     const agendamentoData = {
@@ -690,11 +647,10 @@ function showConfirmation() {
     const whatsappMsg = createWhatsAppMessage();
     whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
 
-    // Adiciona um listener para limpar a seleção e voltar à página inicial após o envio
     whatsappLink.addEventListener('click', () => {
         setTimeout(() => {
-            window.location.href = 'index.html'; // Volta para a página inicial
-        }, 500); // Pequeno delay para dar tempo de o link ser clicado
+            window.location.href = 'index.html';
+        }, 500);
     });
 }
 
@@ -705,7 +661,7 @@ function createWhatsAppMessage() {
     const data = formatDate(datePicker.value);
     const hora = document.querySelector('.time-slot.selected')?.textContent || 'N/A';
     const observacoes = document.getElementById('observacoes').value.trim();
-    const total = orcamentoTotalDisplay.textContent; // Já está formatado como R$ X.XX
+    const total = orcamentoTotalDisplay.textContent;
 
     let mensagemFinal = `Olá, gostaria de confirmar seu agendamento. 👋\n\n`;
 
@@ -720,16 +676,13 @@ function createWhatsAppMessage() {
     if (observacoes) {
         mensagemFinal += `*📝 Observações:* ${observacoes}\n`;
     }
-    mensagemFinal += '\n'; // Linha em branco após detalhes do agendamento
+    mensagemFinal += '\n';
 
-    // --- Lógica Inteligente para Serviços ---
     if (servicosSelecionados.length === 1) {
-        // Cenário: Apenas um serviço agendado
         const servico = servicosSelecionados[0];
-        mensagemFinal += `*Serviço Agendado:*\n\n`; // Título mais direto
-        mensagemFinal += `*${servico.nome}.*\n`; // Nome do serviço em negrito
+        mensagemFinal += `*Serviço Agendado:*\n\n`;
+        mensagemFinal += `*${servico.nome}.*\n`;
 
-        // Detalhes do ÚNICO serviço
         const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
         const quantidadeSelecionada = servico.camposAdicionaisSelecionados ? servico.camposAdicionaisSelecionados[campoQuantidade?.nome] : undefined;
         const quantidade = campoQuantidade && quantidadeSelecionada !== undefined ? parseInt(quantidadeSelecionada) : 1;
@@ -738,18 +691,14 @@ function createWhatsAppMessage() {
             mensagemFinal += `Quantidade: ${quantidade}.\n`;
         }
 
-        // Listar os campos adicionais para este único serviço
         Object.entries(servico.camposAdicionaisSelecionados || {}).forEach(([campoNome, valor]) => {
-            // Ignora campo de quantidade e valores vazios ou "Não" para listagem detalhada
             if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não" && valor !== null && valor !== undefined) {
                 const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
                 let valorFormatado = valor;
-                let precoCampo = 0;
-
                 if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
                     const parts = valor.split(', R$ ');
-                    valorFormatado = parts[0]; // Apenas o nome da opção
-                    precoCampo = parseFloat(parts[1]);
+                    valorFormatado = parts[0];
+                    const precoCampo = parseFloat(parts[1]);
                     mensagemFinal += `${campoNome}:\n  ${valorFormatado}.\n`;
                     mensagemFinal += `  Valor: R$ ${formatPrice(precoCampo)}.\n`;
                 } else if (typeof valor === 'number') {
@@ -760,16 +709,14 @@ function createWhatsAppMessage() {
             }
         });
 
-        // Valor total do único serviço
         const valorTotalServico = servico.precoCalculado || 0;
         mensagemFinal += `\n*Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`;
 
     } else {
-        // Cenário: Múltiplos serviços agendados
-        mensagemFinal += '🛠️ Serviços:\n\n'; // Título padrão para múltiplos serviços
+        mensagemFinal += '🛠️ Serviços:\n\n';
 
         servicosSelecionados.forEach((servico, index) => {
-            mensagemFinal += `  - *${servico.nome}.*\n\n`; // Nome do serviço principal em negrito
+            mensagemFinal += `  - *${servico.nome}.*\n\n`;
 
             const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
             const quantidadeSelecionada = servico.camposAdicionaisSelecionados ? servico.camposAdicionaisSelecionados[campoQuantidade?.nome] : undefined;
@@ -779,46 +726,34 @@ function createWhatsAppMessage() {
                 mensagemFinal += `  Quantidade: ${quantidade}.\n`;
             }
 
-            // Listar os campos adicionais para este serviço
             Object.entries(servico.camposAdicionaisSelecionados || {}).forEach(([campoNome, valor]) => {
-                // Ignora campo de quantidade e valores vazios ou "Não"
                 if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não" && valor !== null && valor !== undefined) {
                     const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
                     let valorFormatado = valor;
-                    let precoCampo = 0;
-
                     if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
                         const parts = valor.split(', R$ ');
                         valorFormatado = parts[0];
-                        precoCampo = parseFloat(parts[1]);
-                        mensagemFinal += `  ${campoNome}:\n    ${valorFormatado}.\n`; // Identado
-                        mensagemFinal += `    Valor: R$ ${formatPrice(precoCampo)}.\n`; // Identado
+                        const precoCampo = parseFloat(parts[1]);
+                        mensagemFinal += `  ${campoNome}:\n    ${valorFormatado}.\n`;
+                        mensagemFinal += `    Valor: R$ ${formatPrice(precoCampo)}.\n`;
                     } else if (typeof valor === 'number') {
-                        mensagemFinal += `  ${campoNome}:\n    R$ ${formatPrice(valor)}.\n`; // Identado
+                        mensagemFinal += `  ${campoNome}:\n    R$ ${formatPrice(valor)}.\n`;
                     } else {
-                        mensagemFinal += `  ${campoNome}:\n    ${valor}.\n`; // Identado
+                        mensagemFinal += `  ${campoNome}:\n    ${valor}.\n`;
                     }
                 }
             });
 
-            // Valor total do serviço
             const valorTotalServico = servico.precoCalculado || 0;
-            mensagemFinal += `\n  *Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`; // Adiciona linha em branco para separar os serviços
+            mensagemFinal += `\n  *Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`;
         });
     }
-    // --- Fim da Lógica Inteligente ---
 
-    mensagemFinal += `\n*💰 Orçamento Total:* ${total}\n`; // O total já vem formatado de orcamentoTotalDisplay
+    mensagemFinal += `\n*💰 Orçamento Total:* ${total}\n`;
     mensagemFinal += `*💳 Forma de Pagamento:* ${formaPagamentoSelecionada}\n\n`;
     mensagemFinal += `Obrigado! 😊`;
 
     return mensagemFinal;
-}
-
-// Função auxiliar para formatar preços com vírgula nos centavos
-function formatPrice(price) {
-    if (typeof price !== 'number') return '0,00';
-    return price.toFixed(2).replace('.', ',');
 }
 
 // ==========================================================================
@@ -846,18 +781,16 @@ function setupEventListeners() {
         updateProgressBar(3);
     });
 
-    // Listener para o submit do formulário de agendamento
     agendamentoForm.addEventListener('submit', handleFormSubmit);
-    // Listener para o submit do form de informações do cliente
     clienteInfoForm.addEventListener('submit', (e) => {
-        e.preventDefault(); // Prevents default form submission to allow step progression
-        document.getElementById('nextStep3').click(); // Triggers the next step button click
+        e.preventDefault();
+        document.getElementById('nextStep3').click();
     });
-    document.getElementById('nextStep3').addEventListener('click', () => { // Added explicit click listener for clarity
+    document.getElementById('nextStep3').addEventListener('click', () => {
         const nome = document.getElementById('nome').value.trim();
         const telefone = document.getElementById('telefone').value;
         const endereco = document.getElementById('endereco').value.trim();
-        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/; // Regex para o formato (xx) xxxxx-xxxx
+        const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
 
         if (!nome || !telefone) {
             alert("Por favor, preencha nome e telefone para continuar.");
@@ -905,4 +838,13 @@ function getDayOfWeek(dateString) {
 function capitalize(s) {
     if (typeof s !== 'string') return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatPrice(price) {
+    if (typeof price !== 'number') return '0,00';
+    return price.toFixed(2).replace('.', ',');
+}
+
+function scrollToServiceForm(element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
