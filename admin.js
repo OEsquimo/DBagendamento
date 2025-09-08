@@ -541,12 +541,12 @@ function loadConfig() {
                     duracaoInput.value = diaConfig.duracaoServico || 60;
                     limiteInput.value = diaConfig.limiteServico !== undefined ? diaConfig.limiteServico : 0; // Define o valor do limite
                 } else {
-                    // Define valores padrão se a configuração para o dia não existir
-                    diaAtivoInput.checked = false;
-                    inicioInput.value = '08:00';
-                    fimInput.value = '18:00';
-                    duracaoInput.value = 60;
-                    limiteInput.value = 0;
+                     // Define valores padrão se a configuração para o dia não existir
+                     diaAtivoInput.checked = false;
+                     inicioInput.value = '08:00';
+                     fimInput.value = '18:00';
+                     duracaoInput.value = 60;
+                     limiteInput.value = 0;
                 }
             });
         } else {
