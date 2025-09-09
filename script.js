@@ -8,19 +8,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getDatabase, ref, onValue, push, set, remove, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // Configuração Firebase (substitua com suas credenciais)
+
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_AUTH_DOMAIN",
-    databaseURL: "SUA_DATABASE_URL",
-    projectId: "SEU_PROJECT_ID",
-    storageBucket: "SEU_STORAGE_BUCKET",
-    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-    appId: "SEU_APP_ID"
+    apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
+    authDomain: "agendamento-esquimo.firebaseapp.com",
+    databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
+    projectId: "agendamento-esquimo",
+    storageBucket: "agendamento-esquimo.firebasestorage.app",
+    messagingSenderId: "348946727206",
+    appId: "1:348946727206:web:f5989788f13c259be0c1e7",
+    measurementId: "G-Z0EMQ3XQ1D"
 };
 
-// Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+
+
+
 
 // Variáveis Globais
 let allServices = []; // Armazena todos os serviços disponíveis
