@@ -22,12 +22,12 @@ body {
 .container {
     padding: 20px;
     max-width: 600px;
-    width: 100%; /* Garante que o container ocupe a largura máxima permitida */
+    width: 100%;
     margin: 40px auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
+    box-sizing: border-box;
 }
 
 h2 {
@@ -62,13 +62,13 @@ h4 {
     border-bottom: 1px solid #eee;
     padding-bottom: 5px;
     gap: 5px;
-    flex-wrap: wrap; /* Permite que os botões quebrem a linha se a tela for muito pequena */
+    flex-wrap: wrap;
 }
 
 .tab-btn {
-    flex: 1 1 auto; /* Permite que os botões cresçam e encolham, mas mantêm um tamanho mínimo */
-    min-width: fit-content; /* Garante que o texto não quebre demais */
-    padding: 10px 10px; /* Aumenta um pouco o padding horizontal */
+    flex: 1 1 auto;
+    min-width: fit-content;
+    padding: 10px 10px;
     border: 1px solid #ccc;
     border-bottom: none;
     background-color: #f0f0f0;
@@ -79,8 +79,8 @@ h4 {
     transition: all 0.2s ease;
     border-radius: 5px 5px 0 0;
     text-transform: capitalize;
-    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura total */
-    text-align: center; /* Centraliza o texto nos botões */
+    box-sizing: border-box;
+    text-align: center;
 }
 
 .tab-btn:hover {
@@ -121,7 +121,7 @@ h4 {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box; /* MUITO IMPORTANTE: Garante que padding e border sejam incluídos na largura total */
+    box-sizing: border-box;
     font-size: 16px;
 }
 
@@ -178,6 +178,15 @@ h4 {
 .btn-sm {
     padding: 5px 10px;
     font-size: 0.8em;
+}
+
+.btn-light {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.btn-light:hover {
+    background-color: #e2e6ea;
 }
 
 /* ========================================================================== */
@@ -258,16 +267,28 @@ h4 {
     margin-bottom: 15px;
 }
 
+.form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.form-check-input {
+    margin-right: 10px;
+}
+
+.form-check-label {
+    margin-bottom: 0;
+}
+
 /* ========================================================================== */
 /* 6. NOVOS ESTILOS PARA MENSAGENS E PROMOÇÕES */
 /* ========================================================================== */
 
-/* Seção de mensagens */
 #listaMensagens .card {
     margin-bottom: 15px;
 }
 
-/* Seção de promoção */
 .promotion-section {
     border-top: 1px solid #eee;
     padding-top: 20px;
@@ -282,7 +303,6 @@ h4 {
     background-color: #f9f9f9;
 }
 
-/* Estilos para variáveis nas mensagens */
 code {
     background-color: #f4f4f4;
     padding: 2px 6px;
@@ -291,11 +311,10 @@ code {
     color: #d63384;
 }
 
-/* Melhorias de espaçamento */
 .mt-3 { margin-top: 1rem; }
 .mt-4 { margin-top: 1.5rem; }
 
-/* Responsividade para abas */
+/* Responsividade */
 @media (max-width: 480px) {
     .tab-btn {
         font-size: 12px;
@@ -305,5 +324,14 @@ code {
     .container {
         padding: 15px;
         margin: 20px auto;
+    }
+    
+    .option-item {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .option-item .form-control {
+        width: 100%;
     }
 }
