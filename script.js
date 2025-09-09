@@ -1,47 +1,167 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 12.1 (Correções no carrossel, quantidade e botões)
+ * Versão: 13.0 (Correção de ReferenceError em loadAllData e outras correções)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, push, set, remove, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ... (Configuração Firebase e Variáveis Globais permanecem as mesmas) ...
+// Configuração Firebase (substitua com suas credenciais)
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_AUTH_DOMAIN",
+    databaseURL: "SUA_DATABASE_URL",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
 
-// Elementos do DOM (adicionados)
-const selectedTimeInput = document.getElementById('selectedTime'); // Necessário para o formulário de agendamento
+// Inicializa Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// Variáveis Globais
+let allServices = []; // Armazena todos os serviços disponíveis
+let servicosSelecionados = []; // Array para os serviços que o cliente escolheu
+let globalConfig = {}; // Para armazenar configurações globais (horários, etc.)
+
+// Elementos do DOM
+const serviceListContainer = document.getElementById('serviceList');
+const servicosFormContainer = document.getElementById('servicosFormContainer');
+const orcamentoTotalDisplay = document.getElementById('orcamentoTotal');
+const confirmationPopup = document.getElementById('confirmationPopup');
+const whatsappLink = document.getElementById('whatsappLink');
+const datePicker = document.getElementById('dataAgendamento');
+const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+const agendamentoForm = document.getElementById('agendamentoForm');
+const selectedTimeInput = document.getElementById('selectedTime'); // Input escondido para o horário selecionado
+const orcamentoTotalDisplayInConfirmation = document.getElementById('confirmationDetails'); // Elemento na confirmação
+const confirmationMessageDiv = document.getElementById('confirmationMessage'); // Div para link do WhatsApp
+
+// Barras de Progresso e Seções
+const progressBar = document.getElementById('progressBar');
+const progressSteps = document.querySelectorAll('.progress-step');
+const servicosSection = document.getElementById('servicosSection');
+const servicosFormSection = document.getElementById('servicosFormSection');
+const clienteFormSection = document.getElementById('clienteFormSection');
+const agendamentoSection = document.getElementById('agendamentoSection');
+const nextStep1 = document.getElementById('nextStep1');
+const nextStep2 = document.getElementById('nextStep2');
+const nextStep3 = document.getElementById('nextStep3');
+const backButton1 = document.getElementById('backButton1');
+const backButton2 = document.getElementById('backButton2');
+const backButton3 = document.getElementById('backButton3');
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadAllData();
+    loadAllData(); // <- Esta é a função que estava faltando
     setupEventListeners();
     updateProgressBar(1);
     setupPhoneMask();
-    loadPromocoes(); // Mantido, mas funcionalidade de promoções no cliente não implementada aqui
+    loadPromocoes(); // Carrega promoções (se houver interface para cliente ver)
 });
 
-// ... (loadAllData, loadConfig, loadServices permanecem as mesmas) ...
+/**
+ * Carrega todos os dados necessários para a aplicação:
+ * - Serviços do Firebase
+ * - Configurações (horários, etc.) do Firebase
+ * - Promoções (se aplicável para exibição ao cliente)
+ */
+async function loadAllData() {
+    await loadServices();
+    await loadConfig();
+    // loadPromocoes() // Chamada no DOMContentLoaded, mas pode ser chamada aqui se necessário
+}
+
+async function loadServices() {
+    const servicesRef = ref(database, 'servicos');
+    onValue(servicesRef, (snapshot) => {
+        allServices = []; // Limpa a lista antes de adicionar novos serviços
+        if (snapshot.exists()) {
+            snapshot.forEach(childSnapshot => {
+                allServices.push({ key: childSnapshot.key, ...childSnapshot.val() });
+            });
+            renderServiceList();
+        } else {
+            serviceListContainer.innerHTML = '<p>Nenhum serviço cadastrado no momento.</p>';
+        }
+    }, {
+        // Ignora o cache para garantir dados sempre atualizados
+        // cache: 'no-store' // Descomente se necessário, mas onValue já tende a ser em tempo real
+    });
+}
+
+async function loadConfig() {
+    const configRef = ref(database, 'configuracoes');
+    onValue(configRef, (snapshot) => {
+        if (snapshot.exists()) {
+            globalConfig = snapshot.val();
+            // Atualiza elementos que dependem da config, como a geração de horários
+            const selectedDate = datePicker.value;
+            if (selectedDate) {
+                loadTimeSlots(selectedDate);
+            }
+        } else {
+            globalConfig = {}; // Configurações padrão ou vazias
+        }
+    });
+}
+
+function renderServiceList() {
+    serviceListContainer.innerHTML = '';
+    if (allServices.length === 0) {
+        serviceListContainer.innerHTML = '<p>Nenhum serviço disponível no momento.</p>';
+        return;
+    }
+    allServices.forEach(service => {
+        const serviceCard = document.createElement('div');
+        serviceCard.className = 'service-card';
+        serviceCard.dataset.key = service.key;
+        
+        let promotionHtml = '';
+        if (service.promocao) {
+            const today = new Date().toISOString().split('T')[0];
+            const startDate = new Date(service.promocao.dataInicio);
+            const endDate = new Date(service.promocao.dataFim);
+            const currentDate = new Date(today);
+
+            if (startDate <= currentDate && currentDate <= endDate) {
+                promotionHtml = `
+                    <div class="promotion-badge">
+                        🔥 ${service.promocao.porcentagem}% OFF
+                    </div>
+                `;
+            }
+        }
+
+        serviceCard.innerHTML = `
+            <div class="service-info">
+                <h3>${service.nome}</h3>
+                <p>${service.descricao}</p>
+                <p class="service-price">R$ ${service.precoBase !== undefined ? service.precoBase.toFixed(2) : '0.00'}</p>
+                ${promotionHtml}
+            </div>
+            <button class="btn btn-primary btn-select-service">Adicionar</button>
+        `;
+        serviceListContainer.appendChild(serviceCard);
+    });
+    updateSelectedServicesCount();
+}
 
 // ==========================================================================
 // 3. ETAPA 1: SELEÇÃO DE SERVIÇOS
 // ==========================================================================
 
-// ... (createServiceCard, updateSelectedServicesCount permanecem as mesmas) ...
-
-document.getElementById('nextStep1').addEventListener('click', () => {
-    if (servicosSelecionados.length > 0) {
-        servicosSection.classList.add('hidden');
-        servicosFormSection.classList.remove('hidden');
-        renderServiceForms();
-        updateProgressBar(2);
-    } else {
-        alert('Por favor, selecione pelo menos um serviço para continuar.');
-    }
-});
+function updateSelectedServicesCount() {
+    const count = servicosSelecionados.length;
+    nextStep1.style.display = count > 0 ? 'block' : 'none'; // Mostra botão "Próximo" apenas se houver serviço selecionado
+    document.getElementById('selectedServicesCount').textContent = `(${count} serviço(s) selecionado(s))`;
+}
 
 // ==========================================================================
 // 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS (COM CARROSSEL)
@@ -49,44 +169,49 @@ document.getElementById('nextStep1').addEventListener('click', () => {
 
 function renderServiceForms() {
     servicosFormContainer.innerHTML = '';
-    servicosSelecionados.forEach(service => {
-        // Inicializa equipamentos se não existirem
+    servicosSelecionados.forEach((service, serviceIndex) => {
+        // Inicializa equipamentos se não existirem, com a quantidade padrão 1
         if (!service.equipamentos || service.equipamentos.length === 0) {
-            service.equipamentos = [{ quantidade: 1, preco: service.precoBase || 0 }]; // Começa com um equipamento
+            service.equipamentos = [{ 
+                quantidade: 1, 
+                precoCalculadoIndividual: service.precoBase || 0,
+                campos: {} // Inicializa campos como um objeto vazio
+            }];
         }
 
         const carouselDiv = document.createElement('div');
         carouselDiv.className = 'service-carousel';
-        carouselDiv.dataset.key = service.key;
+        carouselDiv.dataset.key = service.key; // Usa a chave do serviço como identificador
+        carouselDiv.dataset.serviceIndex = serviceIndex; // Índice no array servicosSelecionados
 
         carouselDiv.innerHTML = `
             <h3>${service.nome}</h3>
             <div class="carousel-container">
-                <div class="carousel-slides" data-key="${service.key}">
+                <div class="carousel-slides" data-service-key="${service.key}">
                     ${service.equipamentos.map((equip, index) => `
-                        <div class="carousel-slide" data-index="${index}" data-equip-key="${index}">
+                        <div class="carousel-slide" data-index="${index}">
                             <div class="form-group">
                                 <label>Quantidade</label>
                                 <input type="number" class="form-control equipment-quantity" value="${equip.quantidade || 1}" min="1" required>
                             </div>
-                            ${generateEquipmentFields(service, index)}
-                            <div class="equipment-price">Valor: R$ ${calculateEquipmentPrice(service, index).toFixed(2)}</div>
-                            <button type="button" class="btn btn-danger remove-equipment-btn" style="${index === 0 ? 'display: none;' : 'display: block;'}">
-                                ❌ Remover Equipamento
+                            ${generateEquipmentFields(service, index, equip.campos)}
+                            <div class="equipment-price">Valor: R$ ${calculateEquipmentPrice(service, index, equip.campos, service.precoBase || 0, service.promocao).toFixed(2)}</div>
+                            <button type="button" class="btn btn-danger btn-sm remove-equipment-btn" style="${index === 0 ? 'display: none;' : 'display: block;'}">
+                                ❌ Remover
                             </button>
                         </div>
                     `).join('')}
                 </div>
                 <div class="carousel-navigation">
-                    <button type="button" class="carousel-btn prev-btn" disabled>← Anterior</button>
+                    <button type="button" class="carousel-btn prev-btn" disabled>←</button>
                     <span class="carousel-counter">Equipamento 1 de ${service.equipamentos.length}</span>
-                    <button type="button" class="carousel-btn next-btn" disabled>Próximo →</button>
+                    <button type="button" class="carousel-btn next-btn" disabled>→</button>
                 </div>
             </div>
-            <button type="button" class="btn btn-secondary add-equipment-btn" data-key="${service.key}">
-                ➕ Adicionar outro equipamento
+            <button type="button" class="btn btn-secondary add-equipment-btn" data-service-key="${service.key}">
+                ➕ Adicionar Equipamento
             </button>
-            <div class="service-total">Total do serviço: R$ ${service.equipamentos.reduce((sum, equip, idx) => sum + calculateEquipmentPrice(service, idx), 0).toFixed(2)}</div>
+            <div class="service-total">Total do serviço: R$ ${calculateServiceTotal(service).toFixed(2)}</div>
         `;
 
         servicosFormContainer.appendChild(carouselDiv);
@@ -96,12 +221,13 @@ function renderServiceForms() {
     updateOrcamentoTotal();
 }
 
-function generateEquipmentFields(service, index) {
+function generateEquipmentFields(service, index, existingFields = {}) {
     let fieldsHtml = '';
     if (service.camposAdicionais) {
         fieldsHtml = service.camposAdicionais.map(field => {
-            // Verifica se o campo é do tipo 'select' e se é para BTUs (ou similar que tem preço)
             const isPriceField = field.tipo === 'select' && field.opcoes && !field.opcoes.every(opt => opt.includes(', R$ 0.00'));
+            const fieldName = field.nome.replace(/\s+/g, '-').toLowerCase(); // Gera um ID mais seguro
+            const currentValue = existingFields[field.nome] || '';
 
             if (field.tipo === 'select') {
                 return `
@@ -109,16 +235,14 @@ function generateEquipmentFields(service, index) {
                         <label>${field.nome}</label>
                         <select class="form-control additional-field-select ${isPriceField ? 'price-field' : ''}" 
                                 data-field-name="${field.nome}" 
-                                data-key="${service.key}" 
-                                data-index="${index}" 
                                 data-is-price-field="${isPriceField}"
                                 required>
-                            <option value="">Selecione...</option>
+                            <option value="">Selecione ${field.nome}...</option>
                             ${field.opcoes.map(option => {
                                 const optionParts = option.split(', R$ ');
                                 const optionValue = optionParts[0];
-                                const optionPrice = optionParts.length > 1 ? parseFloat(optionParts[1].replace('R$ ', '')) : 0;
-                                return `<option value="${optionValue}" data-price="${optionPrice}">${optionValue}</option>`;
+                                const optionPrice = optionParts.length > 1 ? parseFloat(optionParts[1].replace('R$ ', '')).toFixed(2) : '0.00';
+                                return `<option value="${optionValue}" data-price="${optionPrice}" ${currentValue === optionValue ? 'selected' : ''}>${optionValue}</option>`;
                             }).join('')}
                         </select>
                     </div>
@@ -129,9 +253,7 @@ function generateEquipmentFields(service, index) {
                         <label>${field.nome}</label>
                         <input type="text" class="form-control additional-field-input" 
                                data-field-name="${field.nome}" 
-                               data-key="${service.key}" 
-                               data-index="${index}" 
-                               required>
+                               value="${currentValue}" required>
                     </div>
                 `;
             } else if (field.tipo === 'number') {
@@ -140,10 +262,7 @@ function generateEquipmentFields(service, index) {
                         <label>${field.nome}</label>
                         <input type="number" class="form-control additional-field-input" 
                                data-field-name="${field.nome}" 
-                               data-key="${service.key}" 
-                               data-index="${index}" 
-                               step="0.01" 
-                               required>
+                               value="${currentValue}" step="0.01" required>
                     </div>
                 `;
             } else if (field.tipo === 'textarea') {
@@ -152,9 +271,7 @@ function generateEquipmentFields(service, index) {
                         <label>${field.nome}</label>
                         <textarea class="form-control additional-field-textarea" 
                                   data-field-name="${field.nome}" 
-                                  data-key="${service.key}" 
-                                  data-index="${index}" 
-                                  placeholder="Digite aqui..."></textarea>
+                                  required>${currentValue}</textarea>
                     </div>
                 `;
             }
@@ -164,96 +281,108 @@ function generateEquipmentFields(service, index) {
 }
 
 function setupCarouselEvents() {
-    // Remover listeners antigos para evitar duplicação ao re-renderizar
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea, .equipment-quantity, .add-equipment-btn, .remove-equipment-btn, .prev-btn, .next-btn')
-        .forEach(el => {
-            el.replaceWith(el.cloneNode(true)); // Remove e recria para limpar listeners
+    // Limpa listeners antigos antes de adicionar novos para evitar duplicação
+    document.querySelectorAll('.service-carousel').forEach(carousel => {
+        const serviceKey = carousel.dataset.key;
+        
+        // Botão Adicionar Equipamento
+        const addBtn = carousel.querySelector('.add-equipment-btn');
+        if (addBtn) addBtn.removeEventListener('click', handleAddEquipment); // Remove listener antigo
+        addBtn.addEventListener('click', handleAddEquipment);
+
+        // Botões de navegação
+        carousel.querySelectorAll('.prev-btn').forEach(btn => {
+            btn.removeEventListener('click', handlePrevClick);
+            btn.addEventListener('click', handlePrevClick);
+        });
+        carousel.querySelectorAll('.next-btn').forEach(btn => {
+            btn.removeEventListener('click', handleNextClick);
+            btn.addEventListener('click', handleNextClick);
         });
 
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea')
-        .forEach(field => {
-            field.addEventListener('change', updatePriceForServiceWrapper);
-            field.addEventListener('input', updatePriceForServiceWrapper); // Para inputs numéricos e de texto
+        // Campos de input e select dentro dos slides
+        carousel.querySelectorAll('.carousel-slide select, .carousel-slide input, .carousel-slide textarea').forEach(field => {
+            field.removeEventListener('input', handleFieldChange);
+            field.removeEventListener('change', handleFieldChange);
+            field.addEventListener('input', handleFieldChange);
+            field.addEventListener('change', handleFieldChange);
         });
 
-    document.querySelectorAll('.equipment-quantity').forEach(input => {
-        input.addEventListener('input', updateQuantityWrapper);
-    });
-
-    document.querySelectorAll('.add-equipment-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const serviceKey = e.target.dataset.key;
-            const service = servicosSelecionados.find(s => s.key === serviceKey);
-            const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
-            const slidesContainer = carousel.querySelector('.carousel-slides');
-
-            if (service) {
-                const newIndex = slidesContainer.children.length;
-                const newSlide = document.createElement('div');
-                newSlide.className = 'carousel-slide';
-                newSlide.dataset.index = newIndex;
-                newSlide.dataset.equipKey = newIndex; // Nova propriedade para identificar equipamento único
-                newSlide.innerHTML = `
-                    <div class="form-group">
-                        <label>Quantidade</label>
-                        <input type="number" class="form-control equipment-quantity" value="1" min="1" required>
-                    </div>
-                    ${generateEquipmentFields(service, newIndex)}
-                    <div class="equipment-price">Valor: R$ 0.00</div>
-                    <button type="button" class="btn btn-danger remove-equipment-btn">
-                        ❌ Remover Equipamento
-                    </button>
-                `;
-
-                slidesContainer.appendChild(newSlide);
-
-                // Adicionar eventos aos novos campos
-                newSlide.querySelectorAll('select, input, textarea').forEach(field => {
-                    field.addEventListener('change', updatePriceForServiceWrapper);
-                    field.addEventListener('input', updatePriceForServiceWrapper);
-                });
-                newSlide.querySelector('.equipment-quantity').addEventListener('input', updateQuantityWrapper);
-
-                // Adicionar evento ao botão remover
-                newSlide.querySelector('.remove-equipment-btn').addEventListener('click', () => removeEquipment(serviceKey, newIndex));
-
-                // Atualizar navegação e botões de remover
-                updateCarouselNavigation(serviceKey);
-                updateAllRemoveButtonsVisibility(serviceKey); // Garante que todos os botões remove sejam visíveis se > 1 slide
-
-                // Adicionar novo equipamento ao array do serviço
-                if (!service.equipamentos) service.equipamentos = [];
-                service.equipamentos.push({ quantidade: 1, preco: 0 });
-
-                updatePriceForService(serviceKey); // Atualiza o total do serviço
-                updateOrcamentoTotal(); // Atualiza o orçamento geral
-            }
+        // Botões de remover equipamento
+        carousel.querySelectorAll('.remove-equipment-btn').forEach(btn => {
+            btn.removeEventListener('click', handleRemoveEquipment);
+            btn.addEventListener('click', handleRemoveEquipment);
         });
     });
+}
 
-    // Eventos para navegação do carrossel
-    document.querySelectorAll('.prev-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const serviceKey = e.target.closest('.service-carousel').dataset.key;
-            navigateCarousel(serviceKey, -1);
+function handleAddEquipment(e) {
+    const serviceKey = e.target.dataset.serviceKey;
+    const serviceIndex = parseInt(e.target.closest('.service-carousel').dataset.serviceIndex);
+    const service = servicosSelecionados[serviceIndex];
+    
+    if (service) {
+        // Adiciona um novo equipamento ao array do serviço com valores padrão
+        service.equipamentos.push({ 
+            quantidade: 1, 
+            precoCalculadoIndividual: service.precoBase || 0, 
+            campos: {} 
         });
-    });
+        renderServiceForms(); // Re-renderiza todos os formulários para atualizar o carrossel
+        updateOrcamentoTotal();
+    }
+}
 
-    document.querySelectorAll('.next-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const serviceKey = e.target.closest('.service-carousel').dataset.key;
-            navigateCarousel(serviceKey, 1);
-        });
-    });
+function handleRemoveEquipment(e) {
+    const slide = e.target.closest('.carousel-slide');
+    const serviceIndex = parseInt(slide.closest('.service-carousel').dataset.serviceIndex);
+    const equipmentIndex = parseInt(slide.dataset.index);
+    const service = servicosSelecionados[serviceIndex];
 
-    // Event listener para o botão remover (agora aplicado a todos os botões dinamicamente)
-    document.querySelectorAll('.remove-equipment-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const serviceKey = e.target.closest('.service-carousel').dataset.key;
-            const slideIndex = parseInt(e.target.closest('.carousel-slide').dataset.index);
-            removeEquipment(serviceKey, slideIndex);
-        });
-    });
+    if (service && service.equipamentos.length > 1) { // Só remove se houver mais de um equipamento
+        service.equipamentos.splice(equipmentIndex, 1);
+        renderServiceForms(); // Re-renderiza para atualizar a UI
+        updateOrcamentoTotal();
+    } else {
+        alert("Você deve manter pelo menos um equipamento por serviço.");
+    }
+}
+
+function handlePrevClick(e) {
+    const carousel = e.target.closest('.service-carousel');
+    const serviceKey = carousel.dataset.key;
+    navigateCarousel(serviceKey, -1);
+}
+
+function handleNextClick(e) {
+    const carousel = e.target.closest('.service-carousel');
+    const serviceKey = carousel.dataset.key;
+    navigateCarousel(serviceKey, 1);
+}
+
+function handleFieldChange(e) {
+    const field = e.target;
+    const slide = field.closest('.carousel-slide');
+    const serviceIndex = parseInt(slide.closest('.service-carousel').dataset.serviceIndex);
+    const equipmentIndex = parseInt(slide.dataset.index);
+    const service = servicosSelecionados[serviceIndex];
+    
+    if (service && service.equipamentos && service.equipamentos[equipmentIndex]) {
+        const fieldName = field.dataset.fieldName;
+        const fieldType = field.tagName.toLowerCase();
+        let fieldValue = field.value;
+
+        // Atualiza o objeto de campos para este equipamento
+        if (fieldType === 'select') {
+            const selectedOption = field.options[field.selectedIndex];
+            fieldValue = selectedOption ? selectedOption.value : '';
+        }
+        service.equipamentos[equipmentIndex].campos[fieldName] = fieldValue;
+
+        // Atualiza o preço do equipamento e o total do serviço
+        updatePriceForService(serviceIndex);
+        updateOrcamentoTotal();
+    }
 }
 
 function navigateCarousel(serviceKey, direction) {
@@ -261,210 +390,113 @@ function navigateCarousel(serviceKey, direction) {
     const slidesContainer = carousel.querySelector('.carousel-slides');
     const slides = carousel.querySelectorAll('.carousel-slide');
     const currentSlide = slidesContainer.querySelector('.carousel-slide:not([style*="transform"])'); // Encontra o slide visível
-    let currentIndex = currentSlide ? Array.from(slides).indexOf(currentSlide) : 0;
-
-    const newIndex = currentIndex + direction;
-
-    if (newIndex >= 0 && newIndex < slides.length) {
-        slidesContainer.style.transform = `translateX(-${newIndex * 100}%)`;
-        updateCarouselNavigation(serviceKey);
-    }
-}
-
-function updateCarouselNavigation(serviceKey) {
-    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
-    const slides = carousel.querySelectorAll('.carousel-slide');
-    const prevBtn = carousel.querySelector('.prev-btn');
-    const nextBtn = carousel.querySelector('.next-btn');
-    const counter = carousel.querySelector('.carousel-counter');
-
-    const currentSlide = carousel.querySelector('.carousel-slides').style.transform.includes('translateX(0px)') ?
-                         carousel.querySelector('.carousel-slide[data-index="0"]') :
-                         carousel.querySelector(`.carousel-slide[style*="transform"]`); // Tentativa de achar o slide atual
-
+    
     let currentIndex = 0;
     if (currentSlide) {
-        currentIndex = parseInt(currentSlide.dataset.index);
+        currentIndex = Array.from(slides).indexOf(currentSlide);
     } else {
-         // Se não encontrar transform, assume o primeiro slide como atual
-         slides.forEach((slide, index) => {
+        // Se não achar um slide com transform, assume o primeiro como atual
+        slides.forEach((slide, index) => {
             if (slide.style.transform === '' || slide.style.transform.includes('translateX(0px)')) {
                 currentIndex = index;
             }
         });
     }
 
-
+    const newIndex = currentIndex + direction;
     const totalSlides = slides.length;
+
+    if (newIndex >= 0 && newIndex < totalSlides) {
+        slidesContainer.style.transform = `translateX(-${newIndex * 100}%)`;
+        updateCarouselNavigation(serviceKey, newIndex, totalSlides);
+    }
+}
+
+function updateCarouselNavigation(serviceKey, currentIndex, totalSlides) {
+    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+    const prevBtn = carousel.querySelector('.prev-btn');
+    const nextBtn = carousel.querySelector('.next-btn');
+    const counter = carousel.querySelector('.carousel-counter');
 
     counter.textContent = `Equipamento ${currentIndex + 1} de ${totalSlides}`;
     prevBtn.disabled = currentIndex === 0;
     nextBtn.disabled = currentIndex === totalSlides - 1;
 }
 
-function updateAllRemoveButtonsVisibility(serviceKey) {
-    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
-    const slides = carousel.querySelectorAll('.carousel-slide');
-    const removeBtns = carousel.querySelectorAll('.remove-equipment-btn');
+function calculateEquipmentPrice(serviceData, equipmentIndex, camposEquipamento = {}, precoBase = 0, promocao = null) {
+    let precoCalculado = precoBase; // Começa com o preço base do serviço
 
-    if (slides.length <= 1) {
-        removeBtns.forEach(btn => btn.style.display = 'none');
-    } else {
-        removeBtns.forEach(btn => btn.style.display = 'block');
-    }
-}
-
-function removeEquipment(serviceKey, index) {
-    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
-    const slidesContainer = carousel.querySelector('.carousel-slides');
-    const slides = carousel.querySelectorAll('.carousel-slide');
-    const service = servicosSelecionados.find(s => s.key === serviceKey);
-
-    if (slides.length > 1) {
-        // Remover o slide e o equipamento correspondente
-        slides[index].remove();
-        if (service && service.equipamentos) {
-            service.equipamentos.splice(index, 1);
-        }
-
-        // Reindexar os slides restantes
-        carousel.querySelectorAll('.carousel-slide').forEach((slide, newIndex) => {
-            slide.dataset.index = newIndex;
-            slide.dataset.equipKey = newIndex; // Atualiza o identificador único do equipamento
-            slide.querySelectorAll('select, input, textarea').forEach(field => {
-                field.dataset.index = newIndex;
-            });
-        });
-
-        // Reposicionar carrossel se o primeiro slide foi removido
-        if (index === 0 && slides.length > 0) {
-            slidesContainer.style.transform = 'translateX(0px)';
-        } else if (slides.length > 0) {
-             // Tenta manter a visualização atual
-            const currentTransform = slidesContainer.style.transform;
-            const currentOffset = currentTransform ? parseFloat(currentTransform.split('translateX(')[1]) : 0;
-            slidesContainer.style.transform = `translateX(${currentOffset}px)`;
-        }
-
-
-        // Atualizar navegação e botões de remover
-        updateCarouselNavigation(serviceKey);
-        updateAllRemoveButtonsVisibility(serviceKey);
-
-        updatePriceForService(serviceKey);
-        updateOrcamentoTotal();
-    }
-}
-
-function updateQuantityWrapper(e) {
-    const quantityInput = e.target;
-    const slide = quantityInput.closest('.carousel-slide');
-    const serviceKey = slide.dataset.key; // Assumindo que serviceKey está em outro nível, ou ajustando o data-key
-    const service = servicosSelecionados.find(s => s.key === serviceKey);
-    const equipmentIndex = parseInt(slide.dataset.index);
-
-    if (service && service.equipamentos && service.equipamentos[equipmentIndex]) {
-        service.equipamentos[equipmentIndex].quantidade = parseInt(quantityInput.value);
-        updatePriceForService(serviceKey);
-        updateOrcamentoTotal();
-    }
-}
-
-
-function updatePriceForServiceWrapper(e) {
-    const field = e.target;
-    const slide = field.closest('.carousel-slide');
-    const serviceKey = slide.dataset.key;
-    const service = servicosSelecionados.find(s => s.key === serviceKey);
-    const equipmentIndex = parseInt(slide.dataset.index);
-
-    updatePriceForService(serviceKey);
-    updateOrcamentoTotal();
-}
-
-
-function updatePriceForService(serviceKey) {
-    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
-    const service = servicosSelecionados.find(s => s.key === serviceKey);
-    let totalServico = 0;
-
-    if (!service || !service.equipamentos) return;
-
-    service.equipamentos.forEach((equip, index) => {
-        const slide = carousel.querySelector(`.carousel-slide[data-index="${index}"]`);
-        if (slide) {
-            const equipmentPrice = calculateEquipmentPrice(service, index, slide);
-            totalServico += equipmentPrice;
-            const equipmentPriceDisplay = slide.querySelector('.equipment-price');
-            if(equipmentPriceDisplay) {
-                 equipmentPriceDisplay.textContent = `Valor: R$ ${equipmentPrice.toFixed(2)}`;
+    // Adiciona preço dos campos de seleção que têm valor associado
+    if (serviceData.camposAdicionais) {
+        serviceData.camposAdicionais.forEach(field => {
+            if (field.tipo === 'select' && field.opcoes && camposEquipamento[field.nome]) {
+                const selectedOptionValue = camposEquipamento[field.nome];
+                const optionData = field.opcoes.find(opt => opt.startsWith(selectedOptionValue + ', R$ '));
+                if (optionData) {
+                    const optionPrice = parseFloat(optionData.split(', R$ ')[1].replace(',', '.')) || 0;
+                    precoCalculado += optionPrice;
+                }
             }
+        });
+    }
+    
+    // Aplica desconto de promoção, se houver e estiver ativo
+    if (promocao) {
+        const today = new Date().toISOString().split('T')[0];
+        const startDate = new Date(promocao.dataInicio);
+        const endDate = new Date(promocao.dataFim);
+        const currentDate = new Date(today);
+
+        if (startDate <= currentDate && currentDate <= endDate) {
+            const desconto = precoCalculado * (promocao.porcentagem / 100);
+            precoCalculado -= desconto;
+        }
+    }
+    
+    // Garante que o preço não seja negativo
+    return Math.max(0, precoCalculado);
+}
+
+function calculateServiceTotal(service) {
+    let total = 0;
+    if (service.equipamentos) {
+        service.equipamentos.forEach((equip, index) => {
+            const price = calculateEquipmentPrice(service, index, equip.campos, service.precoBase, service.promocao);
+            total += price * equip.quantidade;
+        });
+    }
+    return total;
+}
+
+function updatePriceForService(serviceIndex) {
+    const service = servicosSelecionados[serviceIndex];
+    const carousel = document.querySelector(`.service-carousel[data-service-index="${serviceIndex}"]`);
+    if (!carousel || !service) return;
+
+    let newServiceTotal = 0;
+    
+    carousel.querySelectorAll('.carousel-slide').forEach((slide, index) => {
+        const equip = service.equipamentos[index];
+        const equipmentPrice = calculateEquipmentPrice(service, index, equip.campos, service.precoBase, service.promocao);
+        newServiceTotal += equipmentPrice * equip.quantidade;
+        
+        const priceDisplay = slide.querySelector('.equipment-price');
+        if (priceDisplay) {
+            priceDisplay.textContent = `Valor: R$ ${equipmentPrice.toFixed(2)}`;
         }
     });
 
     const serviceTotalDisplay = carousel.querySelector('.service-total');
-    if(serviceTotalDisplay) {
-        serviceTotalDisplay.textContent = `Total do serviço: R$ ${totalServico.toFixed(2)}`;
+    if (serviceTotalDisplay) {
+        serviceTotalDisplay.textContent = `Total do serviço: R$ ${newServiceTotal.toFixed(2)}`;
     }
 }
-
-function calculateEquipmentPrice(serviceData, equipmentIndex, slideElement) {
-    let precoEquipamento = serviceData.precoBase || 0;
-    let quantidade = 1; // Padrão
-
-    // Encontrar a quantidade do slide atual
-    const quantityInput = slideElement.querySelector('.equipment-quantity');
-    if (quantityInput) {
-        quantidade = parseInt(quantityInput.value) || 1;
-    }
-
-    const selectElements = slideElement.querySelectorAll('.additional-field-select');
-    const inputElements = slideElement.querySelectorAll('.additional-field-input');
-
-    selectElements.forEach(select => {
-        if (select.value && select.dataset.isPriceField === 'true') {
-            const selectedOption = select.options[select.selectedIndex];
-            const optionPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
-            precoEquipamento += optionPrice;
-        }
-    });
-
-    inputElements.forEach(input => {
-        if (input.value) {
-            if (input.type === 'number') {
-                precoEquipamento += parseFloat(input.value);
-            } else {
-                // Para campos de texto, podemos definir um custo fixo ou tratar de outra forma se necessário.
-                // Por enquanto, campos de texto não adicionam preço diretamente.
-            }
-        }
-    });
-
-    // Armazenar o preço calculado no objeto de equipamento para referência posterior
-    if (serviceData.equipamentos && serviceData.equipamentos[equipmentIndex]) {
-        serviceData.equipamentos[equipmentIndex].preco = precoEquipamento;
-    }
-
-    return precoEquipamento * quantidade;
-}
-
 
 function updateOrcamentoTotal() {
     let total = 0;
     servicosSelecionados.forEach(service => {
-        if (service.equipamentos) {
-            service.equipamentos.forEach((equip, index) => {
-                const carousel = document.querySelector(`.service-carousel[data-key="${service.key}"]`);
-                if (carousel) {
-                     const slide = carousel.querySelector(`.carousel-slide[data-index="${index}"]`);
-                     if(slide) {
-                        total += calculateEquipmentPrice(service, index, slide);
-                     }
-                }
-            });
-        }
+        total += calculateServiceTotal(service);
     });
-
     orcamentoTotalDisplay.textContent = `Total do Orçamento: R$ ${total.toFixed(2)}`;
 }
 
@@ -473,73 +505,199 @@ function updateOrcamentoTotal() {
 // ==========================================================================
 
 function setupEventListeners() {
-    // ... (backButton1, backButton2, backButton3 listeners permanecem os mesmos) ...
+    // Eventos para seleção de serviços
+    serviceListContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-select-service')) {
+            const serviceCard = e.target.closest('.service-card');
+            const serviceKey = serviceCard.dataset.key;
+            const service = allServices.find(s => s.key === serviceKey);
+            
+            if (service) {
+                // Verifica se o serviço já foi selecionado
+                if (!servicosSelecionados.some(s => s.key === serviceKey)) {
+                    servicosSelecionados.push({ ...service, equipamentos: [] }); // Copia o serviço e inicializa equipamentos
+                    serviceCard.classList.add('selected');
+                    e.target.textContent = 'Adicionado';
+                    e.target.disabled = true;
+                }
+            }
+            updateSelectedServicesCount();
+        }
+    });
 
-    document.getElementById('nextStep2').addEventListener('click', () => {
+    // Navegação entre etapas
+    nextStep1.addEventListener('click', () => {
+        if (servicosSelecionados.length > 0) {
+            servicosSection.classList.add('hidden');
+            servicosFormSection.classList.remove('hidden');
+            renderServiceForms();
+            updateProgressBar(2);
+        } else {
+            alert('Por favor, selecione pelo menos um serviço para continuar.');
+        }
+    });
+
+    nextStep2.addEventListener('click', () => {
         if (validateServiceForms()) {
             servicosFormSection.classList.add('hidden');
             clienteFormSection.classList.remove('hidden');
             updateProgressBar(3);
         } else {
-            alert('Por favor, preencha todos os campos obrigatórios antes de continuar.');
+            alert('Por favor, preencha todos os campos obrigatórios corretamente nos serviços selecionados.');
         }
     });
 
-    document.getElementById('nextStep3').addEventListener('click', () => {
+    nextStep3.addEventListener('click', () => {
         if (validateClienteForm()) {
             clienteFormSection.classList.add('hidden');
             agendamentoSection.classList.remove('hidden');
             loadAvailableDates();
             updateProgressBar(4);
         } else {
-            alert('Por favor, preencha todos os campos obrigatórios antes de continuar.');
+            alert('Por favor, preencha todos os campos do cliente corretamente.');
         }
+    });
+
+    backButton1.addEventListener('click', () => {
+        servicosFormSection.classList.add('hidden');
+        servicosSection.classList.remove('hidden');
+        updateProgressBar(1);
+        // Reinicia a seleção de serviços para permitir reedição
+        servicosSelecionados = [];
+        document.querySelectorAll('.service-card.selected').forEach(card => {
+            card.classList.remove('selected');
+            const btn = card.querySelector('.btn-select-service');
+            btn.textContent = 'Adicionar';
+            btn.disabled = false;
+        });
+        updateSelectedServicesCount();
+    });
+    backButton2.addEventListener('click', () => {
+        clienteFormSection.classList.add('hidden');
+        servicosFormSection.classList.remove('hidden');
+        updateProgressBar(2);
+    });
+    backButton3.addEventListener('click', () => {
+        agendamentoSection.classList.add('hidden');
+        clienteFormSection.classList.remove('hidden');
+        updateProgressBar(3);
     });
 
     agendamentoForm.addEventListener('submit', (e) => {
         e.preventDefault();
         submitAgendamento();
     });
+
+    // Event Listener para o DatePicker
+    datePicker.addEventListener('change', (e) => {
+        loadTimeSlots(e.target.value);
+    });
 }
 
 function validateServiceForms() {
-    let isValid = true;
-    
-    // Valida campos required em select e input
-    document.querySelectorAll('.service-carousel .form-group [required]').forEach(field => {
-        if (!field.value.trim()) {
-            isValid = false;
-            field.classList.add('error');
-        } else {
-            field.classList.remove('error');
-        }
-    });
-
-     // Valida também se o total do serviço é maior que zero (para evitar serviços sem custo)
+    let allValid = true;
     document.querySelectorAll('.service-carousel').forEach(carousel => {
-        const serviceKey = carousel.dataset.key;
-        const service = servicosSelecionados.find(s => s.key === serviceKey);
-        if (service && service.equipamentos) {
-            const totalServico = service.equipamentos.reduce((sum, equip, index) => {
-                const slide = carousel.querySelector(`.carousel-slide[data-index="${index}"]`);
-                return sum + calculateEquipmentPrice(service, index, slide);
-            }, 0);
-            if (totalServico === 0) {
-                // Considerar como um erro se o serviço não tiver custo após preenchimento
-                // A menos que seja intencional para serviços gratuitos.
-                // Por segurança, vamos alertar se o total for 0 após preencher campos.
-                // isValid = false;
-                // carousel.querySelector('.service-total').classList.add('error');
+        const serviceIndex = parseInt(carousel.dataset.serviceIndex);
+        const service = servicosSelecionados[serviceIndex];
+        let serviceValid = true;
+
+        // Valida campos quantity
+        carousel.querySelectorAll('.equipment-quantity').forEach(input => {
+            if (!input.checkValidity()) {
+                input.classList.add('error');
+                serviceValid = false;
             } else {
-                // carousel.querySelector('.service-total').classList.remove('error');
+                input.classList.remove('error');
+                const equipmentIndex = parseInt(input.closest('.carousel-slide').dataset.index);
+                service.equipamentos[equipmentIndex].quantidade = parseInt(input.value);
             }
+        });
+
+        // Valida campos adicionais (select, input, textarea)
+        carousel.querySelectorAll('.carousel-slide select, .carousel-slide input, .carousel-slide textarea').forEach(field => {
+            if (!field.checkValidity()) {
+                field.classList.add('error');
+                serviceValid = false;
+            } else {
+                field.classList.remove('error');
+                const fieldName = field.dataset.fieldName;
+                const equipmentIndex = parseInt(field.closest('.carousel-slide').dataset.index);
+                if (service.equipamentos[equipmentIndex] && fieldName) {
+                    service.equipamentos[equipmentIndex].campos[fieldName] = field.value;
+                }
+            }
+        });
+
+        // Valida se o total do serviço é maior que zero (considerando que tudo deve ter algum custo)
+        const serviceTotal = calculateServiceTotal(service);
+        if (serviceTotal <= 0 && service.equipamentos.length > 0) {
+             // Se o total for zero, pode ser um problema, a menos que seja um serviço gratuito intencional.
+             // Para esta validação, vamos considerar como erro se o total for zero APÓS preencher os campos.
+             // Se for um serviço gratuito configurado, o precoBase pode ser 0 e os campos não adicionarem preço.
+             // Se todos os campos e o precoBase resultarem em 0, o total será 0.
+             // Podemos adicionar um flag para serviços gratuitos se necessário.
+        }
+
+        if (!serviceValid) {
+            allValid = false;
         }
     });
+    return allValid;
+}
+
+function validateClienteForm() {
+    let isValid = true;
+    const nome = document.getElementById('nome').value.trim();
+    const telefone = document.getElementById('telefone').value.trim();
+    const endereco = document.getElementById('endereco').value.trim(); // Campo adicionado no HTML
+
+    if (!nome) {
+        document.getElementById('nome').classList.add('error');
+        isValid = false;
+    } else {
+        document.getElementById('nome').classList.remove('error');
+    }
+
+    if (!telefone) {
+        document.getElementById('telefone').classList.add('error');
+        isValid = false;
+    } else {
+        document.getElementById('telefone').classList.remove('error');
+    }
+    
+    if (!endereco) {
+        document.getElementById('endereco').classList.add('error');
+        isValid = false;
+    } else {
+        document.getElementById('endereco').classList.remove('error');
+    }
 
     return isValid;
 }
 
-// ... (validateClienteForm, isValidEmail, setupPhoneMask permanecem as mesmas) ...
+function isValidEmail(email) {
+    // Validação básica de email
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+}
+
+function setupPhoneMask() {
+    const phoneInput = document.getElementById('telefone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) { // Limita a 11 dígitos (ex: 11 98765-4321)
+                value = value.substring(0, 11);
+            }
+            if (value.length > 6) {
+                value = value.replace(/^(\d\d)(\d{5})(\d{4})$/, '($1) $2-$3'); // Formato (11) 98765-4321
+            } else if (value.length > 2) {
+                value = value.replace(/^(\d\d)(\d{4})$/, '($1) $2'); // Formato (11) 87654
+            }
+            e.target.value = value;
+        });
+    }
+}
 
 // ==========================================================================
 // 6. FUNÇÕES DE AGENDAMENTO E DISPONIBILIDADE
@@ -547,9 +705,6 @@ function validateServiceForms() {
 
 async function loadAvailableDates() {
     try {
-        const agendamentosRef = ref(database, 'agendamentos');
-        const snapshot = await get(agendamentosRef);
-        
         const hoje = new Date();
         const datasDisponiveis = [];
         
@@ -558,13 +713,22 @@ async function loadAvailableDates() {
             const data = new Date(hoje);
             data.setDate(hoje.getDate() + i);
             
-            // Verificar se é dia de funcionamento (segunda a sábado)
-            if (data.getDay() !== 0) { // 0 = domingo
+            // Verificar se é dia de funcionamento e se está ativo na configuração
+            const dayOfWeek = data.getDay(); // 0 for Sunday, 1 for Monday, etc.
+            const diaNome = diasDaSemana[dayOfWeek]; // diasDaSemana array deve estar disponível aqui
+
+            if (globalConfig.horariosPorDia && globalConfig.horariosPorDia[diaNome] && globalConfig.horariosPorDia[diaNome].ativo) {
                 datasDisponiveis.push(data.toISOString().split('T')[0]);
             }
         }
         
         datePicker.innerHTML = '';
+        if (datasDisponiveis.length === 0) {
+            datePicker.innerHTML = '<option value="">Nenhuma data disponível</option>';
+            timeSlotsContainer.innerHTML = '<p>Não há datas disponíveis para agendamento.</p>';
+            return;
+        }
+
         datasDisponiveis.forEach(data => {
             const option = document.createElement('option');
             option.value = data;
@@ -572,97 +736,79 @@ async function loadAvailableDates() {
             datePicker.appendChild(option);
         });
         
-        if (datasDisponiveis.length > 0) {
-            datePicker.value = datasDisponiveis[0];
-            loadTimeSlots(datasDisponiveis[0]);
-        } else {
-             timeSlotsContainer.innerHTML = '<p>Não há datas disponíveis nos próximos 30 dias.</p>';
-        }
+        datePicker.value = datasDisponiveis[0]; // Seleciona a primeira data disponível
+        loadTimeSlots(datasDisponiveis[0]);
         
     } catch (error) {
         console.error('Erro ao carregar datas:', error);
+        timeSlotsContainer.innerHTML = '<p>Erro ao carregar horários.</p>';
     }
 }
 
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-async function loadTimeSlots(selectedDate) {
+    if (!dateString) return '';
     try {
-        const agendamentosRef = ref(database, 'agendamentos');
-        const snapshot = await get(agendamentosRef);
-        
-        timeSlotsContainer.innerHTML = '';
-        
-        // Obter configurações de horário do Firebase
-        const configSnapshot = await get(ref(database, 'configuracoes'));
-        const config = configSnapshot.val();
-        const dayOfWeek = new Date(selectedDate).getDay(); // 0 for Sunday, 1 for Monday, etc.
-        const diaNome = diasDaSemana[dayOfWeek]; // diasDaSemana array deve estar disponível aqui
-
-        let horariosDisponiveis = [];
-        if (config && config.horariosPorDia && config.horariosPorDia[diaNome] && config.horariosPorDia[diaNome].ativo) {
-            const diaConfig = config.horariosPorDia[diaNome];
-            horariosDisponiveis = generateTimeSlots(diaConfig.horarioInicio, diaConfig.horarioFim, diaConfig.duracaoServico);
-        } else {
-             // Caso a data selecionada seja domingo ou o dia não esteja ativo na config
-             timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para esta data.</p>';
-             return;
-        }
-        
-        const agendamentosDoDia = [];
-        if (snapshot.exists()) {
-            const agendamentos = snapshot.val();
-            for (const key in agendamentos) {
-                const agendamento = agendamentos[key];
-                if (agendamento.data === selectedDate) {
-                    agendamentosDoDia.push(agendamento.hora);
-                }
-            }
-        }
-        
-        // Filtrar horários disponíveis
-        const horariosLivres = horariosDisponiveis.filter(hora => 
-            !agendamentosDoDia.includes(hora)
-        );
-        
-        if (horariosLivres.length === 0) {
-            timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para esta data.</p>';
-            return;
-        }
-        
-        horariosLivres.forEach(hora => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'time-slot-btn';
-            button.textContent = hora;
-            button.addEventListener('click', () => selectTimeSlot(hora, button));
-            timeSlotsContainer.appendChild(button);
-        });
-        
-    } catch (error) {
-        console.error('Erro ao carregar horários:', error);
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        console.error("Erro ao formatar data:", dateString, e);
+        return dateString; // Retorna a string original se houver erro
     }
 }
 
-// Helper function to get the day name from the global scope
-const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+async function loadTimeSlots(selectedDate) {
+    timeSlotsContainer.innerHTML = ''; // Limpa horários anteriores
+    
+    if (!selectedDate) return;
 
+    const agendamentosRef = ref(database, 'agendamentos');
+    const snapshot = await get(agendamentosRef);
+    
+    const agendamentosDoDia = [];
+    if (snapshot.exists()) {
+        snapshot.forEach(childSnapshot => {
+            const agendamento = childSnapshot.val();
+            if (agendamento.data === selectedDate) {
+                agendamentosDoDia.push(agendamento.hora);
+            }
+        });
+    }
+    
+    const dayOfWeek = new Date(selectedDate).getDay();
+    const diaNome = diasDaSemana[dayOfWeek];
+    let horariosDisponiveis = [];
+
+    if (globalConfig.horariosPorDia && globalConfig.horariosPorDia[diaNome] && globalConfig.horariosPorDia[diaNome].ativo) {
+        const diaConfig = globalConfig.horariosPorDia[diaNome];
+        horariosDisponiveis = generateTimeSlots(diaConfig.horarioInicio, diaConfig.horarioFim, diaConfig.duracaoServico);
+    }
+    
+    const horariosLivres = horariosDisponiveis.filter(hora => 
+        !agendamentosDoDia.includes(hora)
+    );
+    
+    if (horariosLivres.length === 0) {
+        timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para esta data.</p>';
+        return;
+    }
+    
+    horariosLivres.forEach(hora => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'time-slot-btn';
+        button.textContent = hora;
+        button.addEventListener('click', () => selectTimeSlot(hora, button));
+        timeSlotsContainer.appendChild(button);
+    });
+}
 
 function generateTimeSlots(start, end, interval) {
     const slots = [];
     let currentMinutes = parseTime(start);
     const endMinutes = parseTime(end);
-    const intervalMinutes = parseInt(interval) || 60; // Usa a duração do serviço
+    const intervalMinutes = parseInt(interval) || 60; // Usa a duração do serviço, 60 minutos como padrão
 
-    while (currentMinutes <= endMinutes) {
+    while (currentMinutes < endMinutes) { // Usa '<' para evitar que o slot final seja gerado se for exatamente o fim
         slots.push(formatTime(currentMinutes));
         currentMinutes += intervalMinutes;
     }
@@ -683,16 +829,15 @@ function formatTime(minutes) {
 }
 
 function selectTimeSlot(hora, button) {
+    // Remove a classe 'selected' de todos os botões de horário
     document.querySelectorAll('.time-slot-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
+    // Adiciona a classe 'selected' ao botão clicado
     button.classList.add('selected');
-    selectedTimeInput.value = hora; // Atualiza o input escondido
+    // Atualiza o valor do input escondido para o horário selecionado
+    selectedTimeInput.value = hora; 
 }
-
-datePicker.addEventListener('change', (e) => {
-    loadTimeSlots(e.target.value);
-});
 
 // ==========================================================================
 // 7. ENVIO DO AGENDAMENTO
@@ -720,66 +865,48 @@ async function submitAgendamento() {
         return;
     }
     
-    formaPagamento = formaPagamentoSelecionada; // Atualiza a variável global se necessário
-    
+    const totalOrcamento = parseFloat(orcamentoTotalDisplay.textContent.replace('Total do Orçamento: R$ ', ''));
+
     try {
         const agendamentoData = {
             cliente: {
                 nome: document.getElementById('nome').value.trim(),
                 telefone: document.getElementById('telefone').value.trim(),
-                endereco: document.getElementById('endereco').value.trim(), // Campo adicionado no HTML
-                observacoes: observacoes // Observações do cliente
+                endereco: document.getElementById('endereco').value.trim(),
+                observacoes: observacoes 
             },
             servicos: servicosSelecionados.map(service => {
-                const carousel = document.querySelector(`.service-carousel[data-key="${service.key}"]`);
-                let serviceTotal = 0;
                 const equipamentosSelecionados = [];
+                let serviceTotalCalculated = 0;
 
-                if (carousel) {
-                    carousel.querySelectorAll('.carousel-slide').forEach((slide, index) => {
-                        const quantity = parseInt(slide.querySelector('.equipment-quantity').value) || 1;
-                        const precoIndividual = calculateEquipmentPrice(service, index, slide);
-                        serviceTotal += precoIndividual;
-                        
-                        const camposSelecionados = {};
-                        slide.querySelectorAll('[data-field-name]').forEach(field => {
-                            camposSelecionados[field.dataset.fieldName] = field.value;
-                        });
-
-                        equipamentosSelecionados.push({
-                            quantidade: quantity,
-                            precoCalculadoIndividual: precoIndividual, // Preço por unidade + extras
-                            precoTotalEquipamento: precoIndividual * quantity, // Preço total para X unidades
-                            campos: camposSelecionados
-                        });
+                service.equipamentos.forEach((equip, index) => {
+                    const price = calculateEquipmentPrice(service, index, equip.campos, service.precoBase, service.promocao);
+                    const equipmentTotal = price * equip.quantidade;
+                    serviceTotalCalculated += equipmentTotal;
+                    
+                    equipamentosSelecionados.push({
+                        quantidade: equip.quantidade,
+                        precoUnitarioCalculado: price,
+                        precoTotalEquipamento: equipmentTotal,
+                        campos: equip.campos // Salva os campos selecionados para este equipamento
                     });
-                }
+                });
                 
                 return {
                     nome: service.nome,
+                    precoBaseServico: service.precoBase, // Salva o preço base original
+                    promocaoServico: service.promocao, // Salva a promoção aplicada ao serviço
                     equipamentos: equipamentosSelecionados,
-                    precoCalculado: serviceTotal, // Total do serviço com todos os equipamentos e quantidades
-                    // Adicionar campos adicionais selecionados explicitamente se necessário
-                    // camposAdicionaisSelecionados: service.equipamentos[0] ? service.equipamentos[0].campos : {} 
+                    precoCalculado: serviceTotalCalculated // Total calculado para este serviço
                 };
             }),
             data: datePicker.value,
             hora: selectedTime,
-            formaPagamento: formaPagamento,
-            observacoes: observacoes, // Mantendo observações gerais também
+            formaPagamento: formaPagamentoSelecionada,
+            observacoesCliente: observacoes, // Mantendo campo separado para observações do cliente
             status: 'pendente',
             dataCriacao: new Date().toISOString(),
-            total: servicosSelecionados.reduce((total, service) => {
-                const carousel = document.querySelector(`.service-carousel[data-key="${service.key}"]`);
-                if (carousel) {
-                    let serviceTotal = 0;
-                    carousel.querySelectorAll('.carousel-slide').forEach((slide, index) => {
-                         serviceTotal += calculateEquipmentPrice(service, index, slide);
-                    });
-                    return total + serviceTotal;
-                }
-                return total;
-            }, 0)
+            total: totalOrcamento // Total final do orçamento
         };
         
         const agendamentosRef = ref(database, 'agendamentos');
@@ -797,30 +924,40 @@ function showConfirmation(agendamentoData, agendamentoId) {
     const total = agendamentoData.total.toFixed(2);
     const dataFormatada = formatDate(agendamentoData.data);
     
+    // Exibe os detalhes na tela de confirmação
+    confirmationPopup.classList.remove('hidden');
     document.getElementById('confirmationDetails').innerHTML = `
-        <p><strong>Cliente:</strong> ${agendamentoData.cliente.nome}</p>
-        <p><strong>Telefone:</strong> ${agendamentoData.cliente.telefone}</p>
+        <p><strong>Olá, ${agendamentoData.cliente.nome}!</strong></p>
+        <p>Seu agendamento foi confirmado com sucesso!</p>
+        <p><strong>Serviço(s):</strong> ${agendamentoData.servicos.map(s => s.nome).join(', ')}</p>
         <p><strong>Data:</strong> ${dataFormatada}</p>
         <p><strong>Horário:</strong> ${agendamentoData.hora}</p>
         <p><strong>Total:</strong> R$ ${total}</p>
         <p><strong>Forma de Pagamento:</strong> ${agendamentoData.formaPagamento}</p>
+        <p><strong>ID do Agendamento:</strong> ${agendamentoId}</p>
+        <p><small>Em breve, você receberá mais informações via WhatsApp.</small></p>
     `;
     
-    // Obter número do WhatsApp da configuração
+    // Tenta buscar o número do WhatsApp da configuração para gerar o link
     const configRef = ref(database, 'configuracoes/whatsappNumber');
     get(configRef).then(snapshot => {
         const adminWhatsapp = snapshot.val();
         if (adminWhatsapp) {
-            // Atualizar link do WhatsApp
-            const message = `Olá! Gostaria de confirmar meu agendamento:\n\n*Cliente:* ${agendamentoData.cliente.nome}\n*Data:* ${dataFormatada}\n*Horário:* ${agendamentoData.hora}\n*Serviços:* ${agendamentoData.servicos.length}\n*Total:* R$ ${total}\n*ID do Agendamento:* ${agendamentoId}`;
-            whatsappLink.href = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
-            document.getElementById('confirmationMessage').style.display = 'block'; // Mostrar link se houver número
+            // Monta a mensagem para o WhatsApp
+            const message = `Olá! Um novo agendamento foi realizado:\n\n*Cliente:* ${agendamentoData.cliente.nome}\n*Telefone:* ${agendamentoData.cliente.telefone}\n*Data:* ${dataFormatada}\n*Horário:* ${agendamentoData.hora}\n*Serviços:* ${agendamentoData.servicos.map(s => s.nome).join(', ')}\n*Total:* R$ ${total}\n*Forma de Pagamento:* ${agendamentoData.formaPagamento}\n*ID do Agendamento:* ${agendamentoId}\n\nPor favor, confirme o recebimento.`;
+            
+            // Atualiza o link do WhatsApp
+            const whatsappButton = document.getElementById('whatsappLink');
+            if (whatsappButton) {
+                whatsappButton.href = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
+                whatsappButton.classList.remove('hidden'); // Mostra o botão
+            } else {
+                confirmationMessageDiv.style.display = 'none';
+            }
         } else {
-            document.getElementById('confirmationMessage').style.display = 'none'; // Ocultar se não houver config
+            confirmationMessageDiv.style.display = 'none'; // Oculta se não houver número configurado
         }
     }).catch(error => console.error("Erro ao buscar número do WhatsApp:", error));
-    
-    confirmationPopup.classList.remove('hidden');
 }
 
 function closeConfirmation() {
@@ -829,44 +966,71 @@ function closeConfirmation() {
 }
 
 function resetForm() {
-    // Resetar todas as seções
+    // Reseta estado global
     servicosSelecionados = [];
-    servicosFormContainer.innerHTML = '';
+    
+    // Reseta UI
+    servicosSection.classList.remove('hidden');
+    servicosFormSection.classList.add('hidden');
+    clienteFormSection.classList.add('hidden');
+    agendamentoSection.classList.add('hidden');
+    confirmationPopup.classList.add('hidden');
+
+    // Limpa seleções e campos
+    document.getElementById('serviceList').innerHTML = ''; // Limpa a lista de serviços visível
+    document.getElementById('servicosFormContainer').innerHTML = ''; // Limpa os formulários de serviços
     document.getElementById('clienteForm').reset();
     agendamentoForm.reset();
-    selectedTimeInput.value = ''; // Limpar o input escondido do horário selecionado
+    selectedTimeInput.value = ''; // Limpa o horário selecionado
     
-    // Voltar para o início
-    confirmationPopup.classList.add('hidden');
-    agendamentoSection.classList.add('hidden');
-    clienteFormSection.classList.add('hidden');
-    servicosFormSection.classList.add('hidden');
-    servicosSection.classList.remove('hidden');
-    
-    // Resetar seleção de serviços
-    document.querySelectorAll('.service-card').forEach(card => {
-        card.classList.remove('selected');
-        card.querySelector('.btn-select-service').textContent = 'Adicionar';
-    });
-    
-    document.getElementById('nextStep1').style.display = 'none';
+    // Reseta botões de navegação e contadores
+    nextStep1.style.display = 'none';
     updateSelectedServicesCount();
     updateProgressBar(1);
+    
+    // Limpa seleção de serviço
+    document.querySelectorAll('.service-card').forEach(card => {
+        card.classList.remove('selected');
+        const btn = card.querySelector('.btn-select-service');
+        if (btn) {
+            btn.textContent = 'Adicionar';
+            btn.disabled = false;
+        }
+    });
+
+    loadServices(); // Recarrega os serviços para a próxima interação
 }
 
 // ==========================================================================
 // 8. BARRA DE PROGRESSO
 // ==========================================================================
 
-// ... (updateProgressBar permanece a mesma) ...
+function updateProgressBar(step) {
+    progressSteps.forEach((stepEl, index) => {
+        if (index < step) {
+            stepEl.classList.add('completed');
+        } else {
+            stepEl.classList.remove('completed');
+        }
+        if (index === step - 1) {
+            stepEl.classList.add('active');
+        } else {
+            stepEl.classList.remove('active');
+        }
+    });
+    progressBar.style.width = `${(step - 1) * (100 / progressSteps.length)}%`; // Ajusta a largura da barra
+}
+
 
 // ==========================================================================
-// 9. PROMOÇÕES (FUNÇÃO VAZIA - IMPLEMENTAR CONFORME NECESSÁRIO)
+// 9. PROMOÇÕES (Para exibição ao cliente, se aplicável)
 // ==========================================================================
 
 function loadPromocoes() {
-    // Implementar carregamento de promoções no cliente se necessário
-    // Por enquanto, apenas um placeholder.
+    // Esta função pode ser usada para buscar e exibir promoções ativas
+    // no banner principal ou em outra área da página do cliente.
+    // Por enquanto, as promoções são carregadas por serviço individualmente.
+    console.log("Função loadPromocoes chamada. Implemente a exibição de promoções gerais aqui, se necessário.");
 }
 
 // ==========================================================================
