@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.0 (Sistema de carrossel para múltiplos equipamentos por serviço)
+ * Versão: 12.0 (Sistema de carrossel completo e debugado)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -117,7 +117,7 @@ function createServiceCard(service, key) {
         const selectedService = { 
             ...servicosGlobais[key], 
             key,
-            equipamentos: [{}] // Array para armazenar múltiplos equipamentos
+            equipamentos: [{}]
         };
         const existingIndex = servicosSelecionados.findIndex(s => s.key === key);
         
@@ -133,11 +133,7 @@ function createServiceCard(service, key) {
         
         updateSelectedServicesCount();
         const nextButton = document.getElementById('nextStep1');
-        if (servicosSelecionados.length > 0) {
-            nextButton.style.display = 'block';
-        } else {
-            nextButton.style.display = 'none';
-        }
+        nextButton.style.display = servicosSelecionados.length > 0 ? 'block' : 'none';
     });
 
     servicosContainer.appendChild(card);
@@ -172,7 +168,7 @@ function renderServiceForms() {
         carouselDiv.innerHTML = `
             <h3>${service.nome}</h3>
             <div class="carousel-container">
-                <div class="carousel-slides">
+                <div class="carousel-slides" data-key="${service.key}">
                     <div class="carousel-slide" data-index="0">
                         ${generateEquipmentFields(service, 0)}
                         <div class="equipment-price">Valor: R$ 0,00</div>
@@ -309,6 +305,7 @@ function setupCarouselEvents() {
                 });
                 
                 // Adicionar equipamento ao array do serviço
+                if (!service.equipamentos) service.equipamentos = [{}];
                 service.equipamentos.push({});
             }
         });
@@ -334,7 +331,16 @@ function navigateCarousel(serviceKey, direction) {
     const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
     const slidesContainer = carousel.querySelector('.carousel-slides');
     const slides = carousel.querySelectorAll('.carousel-slide');
-    const currentIndex = Array.from(slides).findIndex(slide => slide.style.transform === 'translateX(0px)');
+    
+    // Encontrar slide atual
+    let currentIndex = 0;
+    slides.forEach((slide, index) => {
+        const transform = slide.style.transform || '';
+        if (transform === '' || transform.includes('translateX(0px)')) {
+            currentIndex = index;
+        }
+    });
+    
     const newIndex = currentIndex + direction;
     
     if (newIndex >= 0 && newIndex < slides.length) {
@@ -350,7 +356,15 @@ function updateCarouselNavigation(serviceKey) {
     const nextBtn = carousel.querySelector('.next-btn');
     const counter = carousel.querySelector('.carousel-counter');
     
-    const currentIndex = Array.from(slides).findIndex(slide => slide.style.transform === 'translateX(0px)');
+    // Encontrar slide atual
+    let currentIndex = 0;
+    slides.forEach((slide, index) => {
+        const transform = slide.style.transform || '';
+        if (transform === '' || transform.includes('translateX(0px)')) {
+            currentIndex = index;
+        }
+    });
+    
     const totalSlides = slides.length;
     
     counter.textContent = `Equipamento ${currentIndex + 1} de ${totalSlides}`;
@@ -364,6 +378,7 @@ function removeEquipment(serviceKey, index) {
     const slides = carousel.querySelectorAll('.carousel-slide');
     
     if (slides.length > 1) {
+        // Remover o slide
         slides[index].remove();
         
         // Reindexar slides restantes
@@ -374,11 +389,16 @@ function removeEquipment(serviceKey, index) {
             });
         });
         
+        // Reposicionar carrossel se necessário
+        if (index === 0 && slides.length > 0) {
+            slidesContainer.style.transform = 'translateX(0px)';
+        }
+        
         // Atualizar navegação
         updateCarouselNavigation(serviceKey);
         
         // Esconder botão remover se só tiver um slide
-        if (slides.length === 2) { // 2 porque um já foi removido
+        if (slides.length === 1) {
             carousel.querySelector('.remove-equipment-btn').style.display = 'none';
         }
         
@@ -449,10 +469,4 @@ function updatePriceForService(serviceKey) {
         totalServico += equipmentPrice;
     });
     
-    carousel.querySelector('.service-total').textContent = `Total do serviço: R$ ${totalServico.toFixed(2)}`;
-    
-    // Atualizar no array de serviços selecionados
-    service.precoCalculado = totalServico;
-}
-
-function
+    carousel.querySelector('.service-total').textContent = `Total do serviço
