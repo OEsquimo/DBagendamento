@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.3 (Mensagem Inteligente para WhatsApp)
+ * Versão: 11.0 (Sistema de carrossel para múltiplos equipamentos por serviço)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -25,6 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
+// Elementos do DOM
 const servicosContainer = document.getElementById('servicosContainer');
 const servicosSection = document.getElementById('servicos');
 const servicosFormSection = document.getElementById('servicosForm');
@@ -43,12 +44,12 @@ const datePicker = document.getElementById('datePicker');
 const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
-const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
 
+// Dados do Agendamento
 let servicosSelecionados = [];
 let servicosGlobais = {};
 let configGlobais = {};
-let formaPagamentoSelecionada = '';
+let formaPagamento = '';
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateProgressBar(1);
     setupPhoneMask();
-    setupPaymentOptions();
+    loadPromocoes();
 });
 
 async function loadAllData() {
@@ -113,9 +114,13 @@ function createServiceCard(service, key) {
     `;
 
     card.querySelector('.btn-select-service').addEventListener('click', () => {
-        const selectedService = { ...servicosGlobais[key], key };
+        const selectedService = { 
+            ...servicosGlobais[key], 
+            key,
+            equipamentos: [{}] // Array para armazenar múltiplos equipamentos
+        };
         const existingIndex = servicosSelecionados.findIndex(s => s.key === key);
-
+        
         if (existingIndex === -1) {
             servicosSelecionados.push(selectedService);
             card.classList.add('selected');
@@ -125,7 +130,7 @@ function createServiceCard(service, key) {
             card.classList.remove('selected');
             card.querySelector('.btn-select-service').textContent = 'Adicionar';
         }
-
+        
         updateSelectedServicesCount();
         const nextButton = document.getElementById('nextStep1');
         if (servicosSelecionados.length > 0) {
@@ -154,95 +159,264 @@ document.getElementById('nextStep1').addEventListener('click', () => {
 });
 
 // ==========================================================================
-// 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS
+// 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS (COM CARROSSEL)
 // ==========================================================================
 
 function renderServiceForms() {
     servicosFormContainer.innerHTML = '';
     servicosSelecionados.forEach(service => {
-        const formGroup = document.createElement('div');
-        formGroup.className = 'service-form-group';
-
-        let fieldsHtml = '';
-        if (service.camposAdicionais) {
-            fieldsHtml = service.camposAdicionais.map(field => {
-                if (field.tipo === 'select_com_preco' && field.opcoes) {
-                    return `
-                        <label>${field.nome}</label>
-                        <select class="form-control additional-field-select" data-field-name="${field.nome}" data-key="${service.key}" required>
-                            <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
-                        </select>
-                    `;
-                } else if (field.tipo === 'select_sem_preco' && field.opcoes) {
-                    return `
-                        <label>${field.nome}</label>
-                        <select class="form-control additional-field-select-no-price" data-field-name="${field.nome}" data-key="${service.key}" required>
-                            <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
-                        </select>
-                    `;
-                } else if (field.tipo === 'select_quantidade' && field.opcoes) {
-                    return `
-                        <label>${field.nome}</label>
-                        <select class="form-control additional-field-quantidade" data-field-name="${field.nome}" data-key="${service.key}" required>
-                            <option value="">Selecione...</option>
-                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
-                        </select>
-                    `;
-                } else if (field.tipo === 'text') {
-                    return `
-                        <label>${field.nome}</label>
-                        <input type="text" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" required>
-                    `;
-                } else if (field.tipo === 'number') {
-                    return `
-                        <label>${field.nome}</label>
-                        <input type="number" class="form-control additional-field-input" data-field-name="${field.nome}" data-key="${service.key}" step="0.01" required>
-                    `;
-                } else if (field.tipo === 'textarea') {
-                     return `
-                        <label>${field.nome}</label>
-                        <textarea class="form-control additional-field-textarea" data-field-name="${field.nome}" data-key="${service.key}" placeholder="Digite aqui..."></textarea>
-                    `;
-                }
-            }).join('');
-        }
-
-        formGroup.innerHTML = `
+        const carouselDiv = document.createElement('div');
+        carouselDiv.className = 'service-carousel';
+        carouselDiv.dataset.key = service.key;
+        
+        carouselDiv.innerHTML = `
             <h3>${service.nome}</h3>
-            ${fieldsHtml}
-            <div class="service-price">Valor: R$ 0.00</div>
+            <div class="carousel-container">
+                <div class="carousel-slides">
+                    <div class="carousel-slide" data-index="0">
+                        ${generateEquipmentFields(service, 0)}
+                        <div class="equipment-price">Valor: R$ 0,00</div>
+                        <button type="button" class="btn btn-danger remove-equipment-btn" style="display: none;">
+                            ❌ Remover Equipamento
+                        </button>
+                    </div>
+                </div>
+                <div class="carousel-navigation">
+                    <button type="button" class="carousel-btn prev-btn" disabled>← Anterior</button>
+                    <span class="carousel-counter">Equipamento 1 de 1</span>
+                    <button type="button" class="carousel-btn next-btn" disabled>Próximo →</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary add-equipment-btn" data-key="${service.key}">
+                ➕ Adicionar outro equipamento
+            </button>
+            <div class="service-total">Total do serviço: R$ 0,00</div>
         `;
-        servicosFormContainer.appendChild(formGroup);
+        
+        servicosFormContainer.appendChild(carouselDiv);
     });
 
-    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price, .additional-field-quantidade').forEach(field => {
-        field.addEventListener('change', updatePrice);
-        field.addEventListener('input', updatePrice);
-    });
-
+    setupCarouselEvents();
     updateOrcamentoTotal();
+}
+
+function generateEquipmentFields(service, index) {
+    let fieldsHtml = '';
+    if (service.camposAdicionais) {
+        fieldsHtml = service.camposAdicionais.map(field => {
+            if (field.tipo === 'select' && field.opcoes) {
+                return `
+                    <div class="form-group">
+                        <label>${field.nome}</label>
+                        <select class="form-control additional-field-select" 
+                                data-field-name="${field.nome}" 
+                                data-key="${service.key}" 
+                                data-index="${index}" 
+                                required>
+                            <option value="">Selecione...</option>
+                            ${field.opcoes.map(option => `<option value="${option}">${option}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (field.tipo === 'text') {
+                return `
+                    <div class="form-group">
+                        <label>${field.nome}</label>
+                        <input type="text" class="form-control additional-field-input" 
+                               data-field-name="${field.nome}" 
+                               data-key="${service.key}" 
+                               data-index="${index}" 
+                               required>
+                    </div>
+                `;
+            } else if (field.tipo === 'number') {
+                return `
+                    <div class="form-group">
+                        <label>${field.nome}</label>
+                        <input type="number" class="form-control additional-field-input" 
+                               data-field-name="${field.nome}" 
+                               data-key="${service.key}" 
+                               data-index="${index}" 
+                               step="0.01" 
+                               required>
+                    </div>
+                `;
+            } else if (field.tipo === 'textarea') {
+                return `
+                    <div class="form-group">
+                        <label>${field.nome}</label>
+                        <textarea class="form-control additional-field-textarea" 
+                                  data-field-name="${field.nome}" 
+                                  data-key="${service.key}" 
+                                  data-index="${index}" 
+                                  placeholder="Digite aqui..."></textarea>
+                    </div>
+                `;
+            }
+        }).join('');
+    }
+    return fieldsHtml;
+}
+
+function setupCarouselEvents() {
+    // Eventos para campos existentes
+    document.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-textarea')
+        .forEach(field => {
+            field.addEventListener('change', updatePrice);
+            field.addEventListener('input', updatePrice);
+        });
+
+    // Evento para adicionar equipamento
+    document.querySelectorAll('.add-equipment-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const serviceKey = e.target.dataset.key;
+            const service = servicosSelecionados.find(s => s.key === serviceKey);
+            const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+            const slidesContainer = carousel.querySelector('.carousel-slides');
+            
+            if (service) {
+                const newIndex = slidesContainer.children.length;
+                const newSlide = document.createElement('div');
+                newSlide.className = 'carousel-slide';
+                newSlide.dataset.index = newIndex;
+                newSlide.innerHTML = `
+                    ${generateEquipmentFields(service, newIndex)}
+                    <div class="equipment-price">Valor: R$ 0,00</div>
+                    <button type="button" class="btn btn-danger remove-equipment-btn">
+                        ❌ Remover Equipamento
+                    </button>
+                `;
+                
+                slidesContainer.appendChild(newSlide);
+                
+                // Adicionar eventos aos novos campos
+                newSlide.querySelectorAll('select, input, textarea').forEach(field => {
+                    field.addEventListener('change', updatePrice);
+                    field.addEventListener('input', updatePrice);
+                });
+                
+                // Adicionar evento ao botão remover
+                newSlide.querySelector('.remove-equipment-btn').addEventListener('click', () => {
+                    removeEquipment(serviceKey, newIndex);
+                });
+                
+                // Atualizar navegação
+                updateCarouselNavigation(serviceKey);
+                
+                // Mostrar botão remover em todos os slides
+                carousel.querySelectorAll('.remove-equipment-btn').forEach(btn => {
+                    btn.style.display = 'block';
+                });
+                
+                // Adicionar equipamento ao array do serviço
+                service.equipamentos.push({});
+            }
+        });
+    });
+    
+    // Eventos para navegação do carrossel
+    document.querySelectorAll('.prev-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const serviceKey = e.target.closest('.service-carousel').dataset.key;
+            navigateCarousel(serviceKey, -1);
+        });
+    });
+    
+    document.querySelectorAll('.next-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const serviceKey = e.target.closest('.service-carousel').dataset.key;
+            navigateCarousel(serviceKey, 1);
+        });
+    });
+}
+
+function navigateCarousel(serviceKey, direction) {
+    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+    const slidesContainer = carousel.querySelector('.carousel-slides');
+    const slides = carousel.querySelectorAll('.carousel-slide');
+    const currentIndex = Array.from(slides).findIndex(slide => slide.style.transform === 'translateX(0px)');
+    const newIndex = currentIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < slides.length) {
+        slidesContainer.style.transform = `translateX(-${newIndex * 100}%)`;
+        updateCarouselNavigation(serviceKey);
+    }
+}
+
+function updateCarouselNavigation(serviceKey) {
+    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+    const slides = carousel.querySelectorAll('.carousel-slide');
+    const prevBtn = carousel.querySelector('.prev-btn');
+    const nextBtn = carousel.querySelector('.next-btn');
+    const counter = carousel.querySelector('.carousel-counter');
+    
+    const currentIndex = Array.from(slides).findIndex(slide => slide.style.transform === 'translateX(0px)');
+    const totalSlides = slides.length;
+    
+    counter.textContent = `Equipamento ${currentIndex + 1} de ${totalSlides}`;
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === totalSlides - 1;
+}
+
+function removeEquipment(serviceKey, index) {
+    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+    const slidesContainer = carousel.querySelector('.carousel-slides');
+    const slides = carousel.querySelectorAll('.carousel-slide');
+    
+    if (slides.length > 1) {
+        slides[index].remove();
+        
+        // Reindexar slides restantes
+        carousel.querySelectorAll('.carousel-slide').forEach((slide, newIndex) => {
+            slide.dataset.index = newIndex;
+            slide.querySelectorAll('select, input, textarea').forEach(field => {
+                field.dataset.index = newIndex;
+            });
+        });
+        
+        // Atualizar navegação
+        updateCarouselNavigation(serviceKey);
+        
+        // Esconder botão remover se só tiver um slide
+        if (slides.length === 2) { // 2 porque um já foi removido
+            carousel.querySelector('.remove-equipment-btn').style.display = 'none';
+        }
+        
+        // Remover equipamento do array do serviço
+        const service = servicosSelecionados.find(s => s.key === serviceKey);
+        if (service && service.equipamentos) {
+            service.equipamentos.splice(index, 1);
+        }
+        
+        updatePriceForService(serviceKey);
+        updateOrcamentoTotal();
+    }
 }
 
 function updatePrice(e) {
     const key = e.target.dataset.key;
+    const index = e.target.dataset.index;
     const service = servicosSelecionados.find(s => s.key === key);
+    
     if (!service) return;
 
-    const formGroup = e.target.closest('.service-form-group');
-    const newPrice = calculatePrice(service, formGroup);
-    service.precoCalculado = newPrice;
-    formGroup.querySelector('.service-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
+    const carousel = document.querySelector(`.service-carousel[data-key="${key}"]`);
+    const slide = carousel.querySelector(`.carousel-slide[data-index="${index}"]`);
+    const newPrice = calculateEquipmentPrice(service, slide);
+    
+    // Atualizar preço do equipamento individual
+    slide.querySelector('.equipment-price').textContent = `Valor: R$ ${newPrice.toFixed(2)}`;
+    
+    // Atualizar preço total do serviço
+    updatePriceForService(key);
     updateOrcamentoTotal();
 }
 
-function calculatePrice(serviceData, container) {
+function calculateEquipmentPrice(serviceData, slide) {
     let preco = serviceData.precoBase || 0;
-    const selectElements = container.querySelectorAll('.additional-field-select');
-    const inputElements = container.querySelectorAll('.additional-field-input');
-    const quantidadeElement = container.querySelector('.additional-field-quantidade');
-
+    const selectElements = slide.querySelectorAll('.additional-field-select');
+    const inputElements = slide.querySelectorAll('.additional-field-input');
+    
     selectElements.forEach(select => {
         const selectedValue = select.value;
         if (selectedValue) {
@@ -262,506 +436,23 @@ function calculatePrice(serviceData, container) {
         }
     });
 
-    // Se houver um campo de quantidade, multiplica o valor total (preço base + adicionais)
-    if (quantidadeElement && quantidadeElement.value) {
-        const quantidade = parseInt(quantidadeElement.value);
-        return preco * quantidade;
-    }
-
-    // Se não houver campo de quantidade, ou se ele não foi selecionado, retorna o valor normal
     return preco;
 }
 
-document.getElementById('nextStep2').addEventListener('click', () => {
-    let allFieldsFilled = true;
-    servicosSelecionados.forEach(service => {
-        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
-        if (formGroup) {
-            formGroup.querySelectorAll('.additional-field-select, .additional-field-input, .additional-field-select-no-price, .additional-field-quantidade').forEach(field => {
-                if (field.required && field.value === "") {
-                    allFieldsFilled = false;
-                }
-            });
-        }
+function updatePriceForService(serviceKey) {
+    const carousel = document.querySelector(`.service-carousel[data-key="${serviceKey}"]`);
+    const service = servicosSelecionados.find(s => s.key === serviceKey);
+    let totalServico = 0;
+    
+    carousel.querySelectorAll('.carousel-slide').forEach(slide => {
+        const equipmentPrice = calculateEquipmentPrice(service, slide);
+        totalServico += equipmentPrice;
     });
-
-    if (!allFieldsFilled) {
-        alert("Por favor, preencha todos os campos obrigatórios para continuar.");
-        return;
-    }
-
-    servicosSelecionados.forEach(service => {
-        const formGroup = document.querySelector(`.service-form-group [data-key="${service.key}"]`)?.closest('.service-form-group');
-        if (formGroup) {
-            const selectedOptions = getSelectedOptions(formGroup, service);
-            service.camposAdicionaisSelecionados = selectedOptions;
-            service.precoCalculado = calculatePrice(service, formGroup);
-        }
-    });
-
-    servicosFormSection.classList.add('hidden');
-    clienteFormSection.classList.remove('hidden');
-    updateProgressBar(3);
-});
-
-function getSelectedOptions(container, serviceData) {
-    const selectedOptions = {};
-    const selectElementsWithPrice = container.querySelectorAll('.additional-field-select');
-    const selectElementsNoPrice = container.querySelectorAll('.additional-field-select-no-price');
-    const selectElementsQuantidade = container.querySelectorAll('.additional-field-quantidade');
-    const inputElements = container.querySelectorAll('.additional-field-input');
-    const textareaElements = container.querySelectorAll('.additional-field-textarea');
-
-    selectElementsWithPrice.forEach(select => {
-        const selectedValue = select.value;
-        const fieldName = select.dataset.fieldName;
-        if (selectedValue) {
-            selectedOptions[fieldName] = selectedValue;
-        }
-    });
-
-    selectElementsNoPrice.forEach(select => {
-        const selectedValue = select.value;
-        const fieldName = select.dataset.fieldName;
-        if (selectedValue) {
-            selectedOptions[fieldName] = selectedValue;
-        }
-    });
-
-    selectElementsQuantidade.forEach(select => {
-        const selectedValue = select.value;
-        const fieldName = select.dataset.fieldName;
-        if (selectedValue) {
-            selectedOptions[fieldName] = selectedValue;
-        }
-    });
-
-    inputElements.forEach(input => {
-        const inputValue = input.value;
-        const fieldName = input.dataset.fieldName;
-        if (inputValue) {
-            selectedOptions[fieldName] = input.type === 'number' ? parseFloat(inputValue) : inputValue;
-        }
-    });
-
-    textareaElements.forEach(textarea => {
-        const textareaValue = textarea.value;
-        const fieldName = textarea.dataset.fieldName;
-        if (textareaValue) {
-            selectedOptions[fieldName] = textareaValue;
-        }
-    });
-
-    return selectedOptions;
+    
+    carousel.querySelector('.service-total').textContent = `Total do serviço: R$ ${totalServico.toFixed(2)}`;
+    
+    // Atualizar no array de serviços selecionados
+    service.precoCalculado = totalServico;
 }
 
-// ==========================================================================
-// 5. ETAPA 3: INFORMAÇÕES DO CLIENTE
-// ==========================================================================
-
-function setupPhoneMask() {
-    telefoneInput.addEventListener('input', (e) => {
-        const value = e.target.value.replace(/\D/g, '');
-        let maskedValue = '';
-
-        if (value.length > 0) {
-            maskedValue += `(${value.substring(0, 2)}`;
-        }
-        if (value.length > 2) {
-            maskedValue += `) ${value.substring(2, 7)}`;
-        }
-        if (value.length > 7) {
-            maskedValue += `-${value.substring(7, 11)}`;
-        }
-
-        e.target.value = maskedValue;
-    });
-}
-
-document.getElementById('nextStep3').addEventListener('click', () => {
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const telefoneRegex = /^\(\d{2}\)\s\d{5}-\d{4}$/;
-
-    if (!nome || !telefone) {
-        alert("Por favor, preencha nome e telefone para continuar.");
-        return;
-    }
-
-    if (!telefoneRegex.test(telefone)) {
-        alert("Por favor, preencha um telefone válido no formato (xx) xxxxx-xxxx.");
-        return;
-    }
-
-    clienteFormSection.classList.add('hidden');
-    agendamentoSection.classList.remove('hidden');
-    updateProgressBar(4);
-});
-
-// ==========================================================================
-// 6. ETAPA 4: AGENDAMENTO E FINALIZAÇÃO
-// ==========================================================================
-
-function setupPaymentOptions() {
-    paymentOptionsContainer.querySelectorAll('.payment-option-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            formaPagamentoSelecionada = btn.dataset.method;
-            document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-        });
-    });
-}
-
-async function handleDateSelection() {
-    if (!configGlobais.horariosPorDia) {
-        timeSlotsContainer.innerHTML = '<p>Carregando configurações. Por favor, selecione a data novamente.</p>';
-        return;
-    }
-
-    const selectedDate = datePicker.value;
-    if (!selectedDate) {
-        timeSlotsContainer.innerHTML = '<p>Selecione uma data para ver os horários.</p>';
-        return;
-    }
-
-    timeSlotsContainer.innerHTML = '<p>Carregando horários...</p>';
-
-    const hoje = new Date();
-    const dataAtual = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const dataAgendamento = new Date(selectedDate + 'T00:00:00');
-
-    if (dataAgendamento < dataAtual) {
-        timeSlotsContainer.innerHTML = '<p>Não é possível agendar para uma data que já passou.</p>';
-        return;
-    }
-
-    if (dataAgendamento.getTime() === dataAtual.getTime()) {
-        if (hoje.getHours() >= 14) {
-            timeSlotsContainer.innerHTML = '<p>Agendamentos para o dia de hoje só são permitidos até as 14:00. Por favor, selecione uma data futura.</p>';
-            return;
-        }
-    }
-
-    const [year, month, day] = selectedDate.split('-');
-    const dayOfWeek = getDayOfWeek(selectedDate);
-
-    const diaConfig = configGlobais.horariosPorDia[dayOfWeek];
-    if (!diaConfig || !diaConfig.ativo) {
-        timeSlotsContainer.innerHTML = `<p>Não há agendamentos disponíveis para ${capitalize(dayOfWeek)}.</p>`;
-        return;
-    }
-
-    const { horarioInicio, horarioFim, duracaoServico } = diaConfig;
-    const agendamentosRef = ref(database, 'agendamentos');
-    const snapshot = await get(agendamentosRef);
-    const agendamentosDoDia = [];
-
-    if (snapshot.exists()) {
-        snapshot.forEach(childSnapshot => {
-            const agendamento = childSnapshot.val();
-            const firebaseDate = `${day}/${month}/${year}`;
-            if (agendamento.data === firebaseDate && agendamento.status !== 'Cancelado') {
-                agendamentosDoDia.push(agendamento.hora);
-            }
-        });
-    }
-
-    const horariosDisponiveis = generateTimeSlots(horarioInicio, horarioFim, duracaoServico, agendamentosDoDia, dataAgendamento.getTime() === dataAtual.getTime() ? hoje : null);
-    displayTimeSlots(horariosDisponiveis);
-}
-
-function generateTimeSlots(startTime, endTime, interval, existingAppointments, referenceTime) {
-    const slots = [];
-    let currentTime = new Date(`2000-01-01T${startTime}:00`);
-    const end = new Date(`2000-01-01T${endTime}:00`);
-
-    while (currentTime < end) {
-        const timeString = currentTime.toTimeString().slice(0, 5);
-
-        if (referenceTime) {
-             const [slotHour, slotMinute] = timeString.split(':').map(Number);
-             if (slotHour < referenceTime.getHours() || (slotHour === referenceTime.getHours() && slotMinute < referenceTime.getMinutes())) {
-                currentTime.setMinutes(currentTime.getMinutes() + interval);
-                continue;
-            }
-        }
-
-        if (!existingAppointments.includes(timeString)) {
-            slots.push(timeString);
-        }
-
-        currentTime.setMinutes(currentTime.getMinutes() + interval);
-    }
-    return slots;
-}
-
-function displayTimeSlots(horariosDisponiveis) {
-    if (horariosDisponiveis.length === 0) {
-        timeSlotsContainer.innerHTML = '<p>Não há horários disponíveis para a data selecionada. Por favor, escolha outro dia.</p>';
-        return;
-    }
-
-    timeSlotsContainer.innerHTML = '';
-    horariosDisponiveis.forEach(time => {
-        const slot = document.createElement('div');
-        slot.className = 'time-slot';
-        slot.textContent = time;
-        slot.addEventListener('click', () => selectTimeSlot(slot));
-        timeSlotsContainer.appendChild(slot);
-    });
-}
-
-function selectTimeSlot(selectedSlot) {
-    document.querySelectorAll('.time-slot').forEach(slot => {
-        slot.classList.remove('selected');
-    });
-    selectedSlot.classList.add('selected');
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-
-    if (!navigator.onLine) {
-        alert("Parece que você está sem conexão com a internet. Verifique sua conexão e tente novamente.");
-        return;
-    }
-
-    const selectedTimeSlot = document.querySelector('.time-slot.selected');
-    if (!selectedTimeSlot) {
-        alert("Por favor, selecione um horário para o agendamento.");
-        return;
-    }
-
-    if (!formaPagamentoSelecionada) {
-        alert("Por favor, selecione uma forma de pagamento.");
-        return;
-    }
-
-    const clienteData = {
-        nome: document.getElementById('nome').value,
-        telefone: document.getElementById('telefone').value,
-        endereco: document.getElementById('endereco').value,
-    };
-
-    const agendamentoData = {
-        cliente: clienteData,
-        servicos: servicosSelecionados.map(({ key, nome, precoCalculado, camposAdicionaisSelecionados }) => ({
-            key,
-            nome,
-            precoCalculado,
-            camposAdicionaisSelecionados
-        })),
-        data: formatDate(datePicker.value),
-        hora: selectedTimeSlot.textContent,
-        observacoes: document.getElementById('observacoes').value,
-        orcamentoTotal: servicosSelecionados.reduce((sum, s) => sum + s.precoCalculado, 0),
-        formaPagamento: formaPagamentoSelecionada,
-        status: 'Pendente'
-    };
-
-    try {
-        const agendamentosRef = ref(database, 'agendamentos');
-        await push(agendamentosRef, agendamentoData);
-        showConfirmation();
-    } catch (error) {
-        console.error("Erro ao salvar agendamento:", error);
-        alert("Ocorreu um erro ao salvar o agendamento. Por favor, tente novamente.");
-    }
-}
-
-function showConfirmation() {
-    agendamentoSection.classList.add('hidden');
-    confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5);
-
-    const whatsappMsg = createWhatsAppMessage();
-    whatsappLink.href = `https://wa.me/${configGlobais.whatsappNumber}?text=${encodeURIComponent(whatsappMsg)}`;
-
-    whatsappLink.addEventListener('click', () => {
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 500);
-    });
-}
-
-// --- MODIFICAÇÃO INICIADA AQUI ---
-function createWhatsAppMessage() {
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const endereco = document.getElementById('endereco').value;
-    const data = formatDate(datePicker.value);
-    const hora = document.querySelector('.time-slot.selected')?.textContent || ''; // Adicionado optional chaining
-    const observacoes = document.getElementById('observacoes').value;
-    const total = orcamentoTotalDisplay.textContent; // Já está formatado como R$ X.XX
-
-    let mensagemFinal = `Olá, gostaria de confirmar seu agendamento. 👋\n\n`;
-
-    mensagemFinal += `*👤 Dados do Cliente:*\n`;
-    mensagemFinal += `Nome: ${nome}\n`;
-    mensagemFinal += `Telefone: ${telefone}\n`;
-    mensagemFinal += `Endereço: ${endereco}\n\n`;
-
-    mensagemFinal += `*📅 Detalhes do Agendamento:*\n`;
-    mensagemFinal += `Data: ${data}\n`;
-    mensagemFinal += `Hora: ${hora}\n`;
-    if (observacoes) {
-        mensagemFinal += `*📝 Observações:* ${observacoes}\n`;
-    }
-    mensagemFinal += '\n'; // Linha em branco após detalhes do agendamento
-
-    // --- Lógica Inteligente para Serviços ---
-    if (servicosSelecionados.length === 1) {
-        // Cenário: Apenas um serviço agendado
-        const servico = servicosSelecionados[0];
-        mensagemFinal += `*Serviço Agendado:*\n\n`; // Título mais direto
-        mensagemFinal += `*${servico.nome}.*\n`; // Nome do serviço em negrito
-
-        // Detalhes do ÚNICO serviço
-        const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
-        const quantidade = campoQuantidade ? parseInt(servico.camposAdicionaisSelecionados[campoQuantidade.nome]) || 1 : 1;
-
-        if (quantidade > 1) {
-            mensagemFinal += `Quantidade: ${quantidade}.\n`;
-        }
-
-        // Listar os campos adicionais para este único serviço
-        Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
-            // Ignora campo de quantidade, valores vazios ou "Não" para listagem detalhada
-            if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não") {
-                const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
-                let valorFormatado = valor;
-                let precoCampo = 0;
-
-                if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
-                    const parts = valor.split(', R$ ');
-                    valorFormatado = parts[0]; // Apenas o nome da opção
-                    precoCampo = parseFloat(parts[1]);
-                    mensagemFinal += `${campoNome}:\n  ${valorFormatado}.\n`;
-                    mensagemFinal += `  Valor: R$ ${formatPrice(precoCampo)}.\n`;
-                } else if (typeof valor === 'number') {
-                     // Se for um número (e não campo de quantidade que já foi listado)
-                     mensagemFinal += `${campoNome}:\n  R$ ${formatPrice(valor)}.\n`;
-                } else {
-                    mensagemFinal += `${campoNome}:\n  ${valor}.\n`;
-                }
-            }
-        });
-
-        // Valor total do único serviço
-        const valorTotalServico = servico.precoCalculado || 0;
-        mensagemFinal += `\n*Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`;
-
-    } else {
-        // Cenário: Múltiplos serviços agendados
-        mensagemFinal += '🛠️ Serviços:\n\n'; // Título padrão para múltiplos serviços
-
-        servicosSelecionados.forEach((servico, index) => {
-            mensagemFinal += `  - *${servico.nome}.*\n\n`; // Nome do serviço principal em negrito
-
-            const campoQuantidade = servico.camposAdicionais?.find(field => field.tipo === 'select_quantidade');
-            const quantidade = campoQuantidade ? parseInt(servico.camposAdicionaisSelecionados[campoQuantidade.nome]) || 1 : 1;
-
-            if (quantidade > 1) {
-                mensagemFinal += `  Quantidade: ${quantidade}.\n`;
-            }
-
-            // Listar os campos adicionais para este serviço
-            Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
-                // Ignora campo de quantidade e valores vazios ou "Não"
-                if (campoNome !== campoQuantidade?.nome && valor !== "" && valor !== "Não") {
-                    const fieldConfig = servico.camposAdicionais?.find(f => f.nome === campoNome);
-                    let valorFormatado = valor;
-                    let precoCampo = 0;
-
-                    if (fieldConfig?.tipo === 'select_com_preco' && typeof valor === 'string' && valor.includes(', R$ ')) {
-                        const parts = valor.split(', R$ ');
-                        valorFormatado = parts[0];
-                        precoCampo = parseFloat(parts[1]);
-                        mensagemFinal += `  ${campoNome}:\n    ${valorFormatado}.\n`; // Identado
-                        mensagemFinal += `    Valor: R$ ${formatPrice(precoCampo)}.\n`; // Identado
-                    } else if (typeof valor === 'number') {
-                        mensagemFinal += `  ${campoNome}:\n    R$ ${formatPrice(valor)}.\n`; // Identado
-                    } else {
-                        mensagemFinal += `  ${campoNome}:\n    ${valor}.\n`; // Identado
-                    }
-                }
-            });
-
-            // Valor total do serviço
-            const valorTotalServico = servico.precoCalculado || 0;
-            mensagemFinal += `\n  *Valor Total do Serviço:* R$ ${formatPrice(valorTotalServico)}.\n\n`; // Adiciona linha em branco para separar os serviços
-        });
-    }
-    // --- FIM da Lógica Inteligente ---
-
-    mensagemFinal += `\n*💰 Orçamento Total:* ${total}\n`; // O total já vem formatado de orcamentoTotalDisplay
-    mensagemFinal += `*💳 Forma de Pagamento:* ${formaPagamentoSelecionada}\n\n`;
-    mensagemFinal += `Obrigado! 😊`;
-
-    return mensagemFinal;
-}
-
-// Função auxiliar para formatar preços com vírgula nos centavos
-function formatPrice(price) {
-    if (typeof price !== 'number') return '0,00';
-    return price.toFixed(2).replace('.', ',');
-}
-// --- MODIFICAÇÃO TERMINADA AQUI ---
-
-// ==========================================================================
-// 7. NAVEGAÇÃO E FUNÇÕES AUXILIARES
-// ==========================================================================
-
-function setupEventListeners() {
-    datePicker.addEventListener('change', handleDateSelection);
-    agendamentoForm.addEventListener('submit', handleFormSubmit);
-
-    backButton1.addEventListener('click', () => {
-        servicosFormSection.classList.add('hidden');
-        servicosSection.classList.remove('hidden');
-        updateProgressBar(1);
-    });
-
-    backButton2.addEventListener('click', () => {
-        clienteFormSection.classList.add('hidden');
-        servicosFormSection.classList.remove('hidden');
-        updateProgressBar(2);
-    });
-
-    backButton3.addEventListener('click', () => {
-        agendamentoSection.classList.add('hidden');
-        clienteFormSection.classList.remove('hidden');
-        updateProgressBar(3);
-    });
-}
-
-function updateProgressBar(step) {
-    progressSteps.forEach((s, index) => {
-        if (index + 1 === step) {
-            s.classList.add('active');
-        } else {
-            s.classList.remove('active');
-        }
-    });
-}
-
-function updateOrcamentoTotal() {
-    const total = servicosSelecionados.reduce((sum, service) => sum + (service.precoCalculado || 0), 0);
-    orcamentoTotalDisplay.textContent = `R$ ${total.toFixed(2)}`;
-}
-
-function formatDate(dateString) {
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
-}
-
-function getDayOfWeek(dateString) {
-    const days = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const date = new Date(dateString + 'T00:00:00');
-    return days[date.getDay()];
-}
-
-function capitalize(s) {
-    if (typeof s !== 'string') return '';
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
+function
