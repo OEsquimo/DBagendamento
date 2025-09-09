@@ -1,13 +1,16 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 10.1 (Ajustes finais para manipulação de campos e eventos)
+ * Versão: 8.0 (Campo de Quantidade)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push, set, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Configuração do Firebase (mantida a mesma)
+// ==========================================================================
+// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+// ==========================================================================
+
 const firebaseConfig = {
     apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
     authDomain: "agendamento-esquimo.firebaseapp.com",
@@ -22,12 +25,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Seletores de elementos DOM
 const servicoForm = document.getElementById('servicoForm');
 const servicoNomeInput = document.getElementById('servicoNome');
 const servicoDescricaoInput = document.getElementById('servicoDescricao');
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosListElement = document.getElementById('listaServicosTab'); // ID correto
+const servicosList = document.getElementById('listaServicosTab');
 const agendamentosList = document.getElementById('agendamentosList');
 const configForm = document.getElementById('configForm');
 const whatsappNumberInput = document.getElementById('whatsappNumber');
@@ -93,10 +95,6 @@ function setupConfigForm() {
                 <label for="${dia}Duracao">Duração (minutos):</label>
                 <input type="number" class="form-control horario-duracao" id="${dia}Duracao" value="60" min="15" step="15">
             </div>
-            <div class="form-group">
-                <label for="${dia}Limite">Limite de Agendamentos (por dia):</label>
-                <input type="number" class="form-control horario-limite" id="${dia}Limite" value="0" min="0">
-            </div>
         `;
         horariosContainer.appendChild(div);
     });
@@ -123,7 +121,6 @@ function addAdditionalFieldForm(fieldData = {}) {
                     <option value="select_quantidade" ${fieldData.tipo === 'select_quantidade' ? 'selected' : ''}>Campo de Quantidade</option>
                     <option value="text" ${fieldData.tipo === 'text' ? 'selected' : ''}>Campo de Texto</option>
                     <option value="textarea" ${fieldData.tipo === 'textarea' ? 'selected' : ''}>Campo de Texto Longo</option>
-                    <option value="number" ${fieldData.tipo === 'number' ? 'selected' : ''}>Campo Numérico</option>
                 </select>
             </div>
             <div class="options-container">
@@ -156,22 +153,21 @@ function addAdditionalFieldForm(fieldData = {}) {
             optionsContainer.innerHTML = '';
         }
 
-        // Re-attach event listeners for newly generated option buttons
         if (selectedType.startsWith('select')) {
-            optionsContainer.querySelector('.add-option-btn')?.addEventListener('click', addOptionForm);
+            optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
             optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
         }
     });
 
-    // Attach listeners for option buttons if they exist on initial render
     if (fieldElement.dataset.type.startsWith('select')) {
-        optionsContainer.querySelector('.add-option-btn')?.addEventListener('click', addOptionForm);
+        optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
         optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
     }
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
 function generateOptionsHTML(opcoes = [''], type = 'com_preco') {
+    const isQuantity = type === 'quantidade';
     const hasPrice = type === 'com_preco';
     return `
         <p>Opções:</p>
@@ -198,10 +194,9 @@ function generateOptionsHTML(opcoes = [''], type = 'com_preco') {
 }
 
 function addOptionForm(e) {
-    const optionsContainer = e.target.closest('.options-container');
-    const optionList = optionsContainer.querySelector('.option-list');
-    const fieldElement = e.target.closest('.additional-field');
-    const fieldType = fieldElement.dataset.type;
+    const optionList = e.target.closest('.options-container').querySelector('.option-list');
+    const fieldType = e.target.closest('.additional-field').dataset.type;
+    const isQuantity = fieldType === 'select_quantidade';
     const hasPrice = fieldType === 'select_com_preco';
 
     const optionHtml = `
@@ -232,7 +227,7 @@ function handleServicoFormSubmit(e) {
     const nome = servicoNomeInput.value;
     const descricao = servicoDescricaoInput.value;
     const precoBase = parseFloat(servicoPrecoInput.value) || 0;
-    const servicoKey = servicoForm.dataset.key; // Key para edição
+    const servicoKey = servicoForm.dataset.key;
 
     const camposAdicionais = [];
     document.querySelectorAll('.additional-field').forEach(fieldElement => {
@@ -257,6 +252,7 @@ function handleServicoFormSubmit(e) {
             });
             campoData.opcoes = opcoes;
         }
+
         camposAdicionais.push(campoData);
     });
 
@@ -267,7 +263,7 @@ function handleServicoFormSubmit(e) {
         camposAdicionais
     };
 
-    const servicosRef = ref(database, `servicos/${servicoKey ? servicoKey : ''}`); // Usa a chave se estiver editando, senao deixa o Firebase gerar
+    const servicosRef = ref(database, `servicos/${servicoKey || ''}`);
 
     if (servicoKey) {
         set(servicosRef, servico)
@@ -294,7 +290,7 @@ function handleServicoFormSubmit(e) {
 
 function resetServicoForm() {
     servicoForm.reset();
-    servicoForm.removeAttribute('data-key'); // Remove a chave de edição
+    servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
     servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
 }
@@ -302,8 +298,9 @@ function resetServicoForm() {
 function loadServices() {
     const servicosRef = ref(database, 'servicos');
     onValue(servicosRef, (snapshot) => {
+        const servicosListElement = document.getElementById('servicosList');
         if (servicosListElement) {
-            servicosListElement.innerHTML = ''; // Limpa a lista antes de popular
+            servicosListElement.innerHTML = '';
             if (snapshot.exists()) {
                 const servicos = snapshot.val();
                 for (const key in servicos) {
@@ -322,18 +319,16 @@ function createServicoCard(servico, key) {
     card.className = 'card mb-3';
 
     let camposAdicionaisHtml = '';
-    if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
+    if (servico.camposAdicionais) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
-            if (campo.opcoes && campo.opcoes.length > 0) {
+            if (campo.opcoes) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
             } else {
                 opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
             }
-            return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
+            return `<li><strong>${campo.nome</strong>: ${opcoesHtml}</li>`;
         }).join('');
-    } else {
-        camposAdicionaisHtml = '<p>Nenhum campo adicional.</p>';
     }
 
     card.innerHTML = `
@@ -342,11 +337,12 @@ function createServicoCard(servico, key) {
             <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
             <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
             <h6>Campos Adicionais:</h6>
-            ${camposAdicionaisHtml}
+            <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
             <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
     `;
+    const servicosListElement = document.getElementById('servicosList');
     if (servicosListElement) {
         servicosListElement.appendChild(card);
     }
@@ -359,31 +355,23 @@ function editService(e) {
     const servicoRef = ref(database, `servicos/${key}`);
     get(servicoRef).then(snapshot => {
         const servicoData = snapshot.val();
-        if (servicoData) {
-            servicoNomeInput.value = servicoData.nome;
-            servicoDescricaoInput.value = servicoData.descricao;
-            servicoPrecoInput.value = servicoData.precoBase || 0;
-            servicoForm.dataset.key = key; // Define a chave para edição
+        servicoNomeInput.value = servicoData.nome;
+        servicoDescricaoInput.value = servicoData.descricao;
+        servicoPrecoInput.value = servicoData.precoBase || 0;
+        servicoForm.dataset.key = key;
 
-            additionalFieldsContainer.innerHTML = ''; // Limpa campos existentes
-            if (servicoData.camposAdicionais) {
-                servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
-            }
-            servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
-            // Clica na aba de adicionar serviço para mostrar o formulário
-            document.querySelector('[data-tab="addServicoTab"]').click();
-        } else {
-            alert("Serviço não encontrado. Por favor, recarregue a página.");
+        additionalFieldsContainer.innerHTML = '';
+        if (servicoData.camposAdicionais) {
+            servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
-    }).catch(error => {
-        console.error("Erro ao buscar serviço para editar:", error);
-        alert("Ocorreu um erro ao carregar os dados do serviço.");
+        servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
+        document.querySelector('[data-tab="addServicoTab"]').click();
     });
 }
 
 function deleteService(e) {
     const key = e.target.dataset.key;
-    if (confirm('Tem certeza que deseja excluir este serviço? Esta ação é irreversível.')) {
+    if (confirm('Tem certeza que deseja excluir este serviço?')) {
         const servicoRef = ref(database, `servicos/${key}`);
         remove(servicoRef)
             .then(() => alert('Serviço excluído com sucesso!'))
@@ -404,7 +392,7 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
-            const agendamentosArray = Object.entries(agendamentos).reverse(); // Ordena por data de criação
+            const agendamentosArray = Object.entries(agendamentos).reverse();
             agendamentosArray.forEach(([key, agendamento]) => {
                 createAgendamentoCard(agendamento, key);
             });
@@ -416,28 +404,17 @@ function loadBookings() {
 
 function createAgendamentoCard(agendamento, key) {
     const card = document.createElement('div');
-    const statusClass = `booking-${agendamento.status ? agendamento.status.toLowerCase() : 'pendente'}`;
-    card.className = `card mb-3 ${statusClass}`;
+    card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
 
     let servicosHtml = '<ul>';
     if (agendamento.servicos) {
         agendamento.servicos.forEach(servico => {
-            let camposDetalhados = '';
-            if (servico.camposAdicionaisSelecionados) {
-                Object.entries(servico.camposAdicionaisSelecionados).forEach(([campoNome, valor]) => {
-                    if (valor !== "" && valor !== "Não" && valor !== null && valor !== undefined) { // Evita mostrar campos vazios ou "Não"
-                        let valorFormatado = valor;
-                        if (typeof valor === 'number') {
-                            valorFormatado = `R$ ${formatPrice(valor)}`;
-                        } else if (typeof valor === 'string' && valor.includes(', R$ ')) {
-                            valorFormatado = valor.split(', R$ ')[0]; // Nome da opção
-                        }
-                        camposDetalhados += `<li>${campoNome}: ${valorFormatado}</li>`;
-                    }
-                });
-            }
-            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado ? formatPrice(servico.precoCalculado) : '0,00'}
-                ${camposDetalhados ? `<ul>${camposDetalhados}</ul>` : ''}
+            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}
+                <ul>
+                    ${servico.camposAdicionaisSelecionados ? Object.entries(servico.camposAdicionaisSelecionados).map(([campo, valor]) => `
+                        <li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>
+                    `).join('') : ''}
+                </ul>
             </li>`;
         });
     }
@@ -445,18 +422,18 @@ function createAgendamentoCard(agendamento, key) {
 
     card.innerHTML = `
         <div class="card-body">
-            <h5 class="card-title">Agendamento de ${agendamento.cliente?.nome || 'Não informado'}</h5>
-            <p><strong>Data:</strong> ${agendamento.data || 'N/A'} às ${agendamento.hora || 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="badge badge-${agendamento.status ? agendamento.status.toLowerCase() : 'pendente'}">${agendamento.status || 'Pendente'}</span></p>
+            <h5 class="card-title">Agendamento de ${agendamento.cliente.nome}</h5>
+            <p><strong>Data:</strong> ${agendamento.data} às ${agendamento.hora}</p>
+            <p><strong>Status:</strong> <span class="badge badge-${agendamento.status.toLowerCase()}">${agendamento.status}</span></p>
             <hr>
             <h6>Detalhes do Cliente:</h6>
-            <p><strong>Telefone:</strong> ${agendamento.cliente?.telefone || 'N/A'}</p>
-            <p><strong>Endereço:</strong> ${agendamento.cliente?.endereco || 'N/A'}</p>
+            <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
+            <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
-            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal ? formatPrice(agendamento.orcamentoTotal) : '0,00'}</p>
-            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento || 'N/A'}</p>
+            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
+            <p><strong>Forma de Pagamento:</strong> ${agendamento.formaPagamento}</p>
             ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
             <div class="mt-3">
                 <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
@@ -475,14 +452,12 @@ function updateBookingStatus(key, newStatus) {
     const agendamentoRef = ref(database, `agendamentos/${key}`);
     get(agendamentoRef).then(snapshot => {
         const agendamentoData = snapshot.val();
-        if (agendamentoData) {
-            set(agendamentoRef, { ...agendamentoData, status: newStatus })
-                .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
-                .catch(error => {
-                    console.error("Erro ao atualizar status:", error);
-                    alert("Ocorreu um erro. Verifique o console.");
-                });
-        }
+        set(agendamentoRef, { ...agendamentoData, status: newStatus })
+            .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
+            .catch(error => {
+                console.error("Erro ao atualizar status:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
     });
 }
 
@@ -512,9 +487,8 @@ function handleConfigFormSubmit(e) {
         const horarioInicio = document.getElementById(`${dia}Inicio`).value;
         const horarioFim = document.getElementById(`${dia}Fim`).value;
         const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
-        const limiteServico = parseInt(document.getElementById(`${dia}Limite`).value) || 0; // Captura o limite diário
 
-        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico, limiteServico };
+        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
     });
 
     const configRef = ref(database, 'configuracoes');
@@ -531,38 +505,15 @@ function loadConfig() {
     onValue(configRef, (snapshot) => {
         if (snapshot.exists()) {
             const config = snapshot.val();
-            whatsappNumberInput.value = config.whatsappNumber || '';
+            whatsappNumberInput.value = config.whatsappNumber;
             diasDaSemana.forEach(dia => {
-                const diaConfig = config.horariosPorDia && config.horariosPorDia[dia];
-                const diaAtivoInput = document.getElementById(`${dia}Ativo`);
-                const inicioInput = document.getElementById(`${dia}Inicio`);
-                const fimInput = document.getElementById(`${dia}Fim`);
-                const duracaoInput = document.getElementById(`${dia}Duracao`);
-                const limiteInput = document.getElementById(`${dia}Limite`); // Referência ao novo campo
-
+                const diaConfig = config.horariosPorDia[dia];
                 if (diaConfig) {
-                    diaAtivoInput.checked = diaConfig.ativo !== undefined ? diaConfig.ativo : false;
-                    inicioInput.value = diaConfig.horarioInicio || '08:00';
-                    fimInput.value = diaConfig.horarioFim || '18:00';
-                    duracaoInput.value = diaConfig.duracaoServico || 60;
-                    limiteInput.value = diaConfig.limiteServico !== undefined ? diaConfig.limiteServico : 0; // Define o valor do limite
-                } else {
-                     // Define valores padrão se a configuração para o dia não existir
-                     diaAtivoInput.checked = false;
-                     inicioInput.value = '08:00';
-                     fimInput.value = '18:00';
-                     duracaoInput.value = 60;
-                     limiteInput.value = 0;
+                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
+                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
+                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
+                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
                 }
-            });
-        } else {
-             // Se não houver configurações salvas, preenche com valores padrão
-             diasDaSemana.forEach(dia => {
-                document.getElementById(`${dia}Ativo`).checked = false;
-                document.getElementById(`${dia}Inicio`).value = '08:00';
-                document.getElementById(`${dia}Fim`).value = '18:00';
-                document.getElementById(`${dia}Duracao`).value = 60;
-                document.getElementById(`${dia}Limite`).value = 0;
             });
         }
     });
@@ -575,9 +526,4 @@ function loadConfig() {
 function capitalize(s) {
     if (typeof s !== 'string') return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function formatPrice(price) {
-    if (typeof price !== 'number') return '0,00';
-    return price.toFixed(2).replace('.', ',');
 }
