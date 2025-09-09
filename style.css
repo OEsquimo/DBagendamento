@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 19.0 (Remoção de estilos do SwiperJS e ajuste na aparência dos blocos de equipamento)
+ * Versão: 9.2 (Pagamento no Passo 4)
  */
 
 body {
@@ -23,8 +23,6 @@ body {
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     min-height: calc(100vh - 120px);
-    padding-bottom: 100px;
-    box-sizing: border-box;
 }
 
 .header-container {
@@ -191,6 +189,7 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
+    width: 48%;
 }
 
 .btn-primary {
@@ -226,79 +225,6 @@ h2 {
 
 .btn-success:hover {
     background-color: #218838;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: #fff;
-}
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-/* Estilos para múltiplos equipamentos por serviço */
-.service-wrapper {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    background-color: #fdfdfd;
-    transition: box-shadow 0.3s;
-}
-
-.service-wrapper:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.service-wrapper h3 {
-    margin-top: 0;
-    color: #007bff;
-    text-align: left;
-}
-
-.equipment-fields {
-    border: 1px dashed #ccc;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    background-color: #fafafa;
-    position: relative;
-}
-
-.equipment-fields .remove-equipment-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 5px 10px;
-    font-size: 14px;
-    background-color: #dc3545;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.equipment-fields .remove-equipment-btn:hover {
-    background-color: #c82333;
-}
-
-.add-equipment-btn {
-    display: block;
-    width: 100%;
-    margin-top: 15px;
-    background-color: #6c757d;
-    color: #fff;
-}
-
-.add-equipment-btn:hover {
-    background-color: #5a6268;
-}
-
-.service-price {
-    font-weight: bold;
-    color: #28a745;
-    margin-top: 15px;
-    text-align: right;
-    font-size: 1.1em;
 }
 
 .time-slots-container {
