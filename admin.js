@@ -60,14 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupTabNavigation() {
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove a classe 'active' de todos os botões e 'tab-pane'
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabPanes.forEach(pane => pane.classList.add('hidden'));
 
-            // Adiciona a classe 'active' ao botão clicado
             button.classList.add('active');
-
-            // Exibe o painel de conteúdo correspondente
             const targetId = button.dataset.tab;
             document.getElementById(targetId).classList.remove('hidden');
         });
@@ -148,25 +144,24 @@ function addAdditionalFieldForm(fieldData = {}) {
         fieldElement.dataset.type = selectedType;
         if (selectedType === 'select') {
             optionsContainer.innerHTML = generateOptionsHTML();
-            optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
-            optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
+            setupOptionEvents(optionsContainer);
         } else {
             optionsContainer.innerHTML = '';
         }
     });
 
     if (fieldElement.dataset.type === 'select') {
-        optionsContainer.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
-        optionsContainer.querySelectorAll('.remove-option-btn').forEach(btn => btn.addEventListener('click', removeOptionForm));
+        setupOptionEvents(optionsContainer);
     }
     fieldElement.querySelector('.remove-field-btn').addEventListener('click', removeAdditionalFieldForm);
 }
 
-function generateOptionsHTML(opcoes = ['']) {
+function generateOptionsHTML(opcoes = []) {
+    const options = opcoes.length > 0 ? opcoes : [''];
     return `
         <p>Opções:</p>
         <div class="option-list">
-            ${opcoes.map(option => {
+            ${options.map(option => {
                 const parts = option.split(', R$ ');
                 const optionValue = parts[0] || '';
                 const optionPrice = parts[1] || '0.00';
@@ -181,6 +176,13 @@ function generateOptionsHTML(opcoes = ['']) {
         </div>
         <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
     `;
+}
+
+function setupOptionEvents(container) {
+    container.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
+    container.querySelectorAll('.remove-option-btn').forEach(btn => {
+        btn.addEventListener('click', removeOptionForm);
+    });
 }
 
 function addOptionForm(e) {
@@ -245,7 +247,7 @@ function handleServicoFormSubmit(e) {
         camposAdicionais
     };
 
-    // Adicionar informações de promoção se existirem
+    // Adicionar promoção se existir
     const promocaoPorcentagem = parseFloat(document.getElementById('promotionDiscount').value);
     const promocaoDescricao = document.getElementById('promotionDescription').value;
     const promocaoDataInicio = document.getElementById('promotionStartDate').value;
@@ -259,7 +261,6 @@ function handleServicoFormSubmit(e) {
             dataFim: promocaoDataFim
         };
 
-        // Salvar a promoção em um nó separado para fácil consulta
         const promocaoRef = ref(database, `promocoes/${servicoKey || ''}`);
         set(promocaoRef, {
             servicoKey: servicoKey,
@@ -366,12 +367,11 @@ function createServicoCard(servico, key) {
         </div>
     `;
     servicosList.appendChild(card);
-    card.querySelector('.edit-service-btn').addEventListener('click', editService);
-    card.querySelector('.delete-service-btn').addEventListener('click', deleteService);
+    card.querySelector('.edit-service-btn').addEventListener('click', () => editService(key));
+    card.querySelector('.delete-service-btn').addEventListener('click', () => deleteService(key));
 }
 
-function editService(e) {
-    const key = e.target.dataset.key;
+function editService(key) {
     const servicoRef = ref(database, `servicos/${key}`);
     get(servicoRef).then(snapshot => {
         const servicoData = snapshot.val();
@@ -385,7 +385,6 @@ function editService(e) {
             servicoData.camposAdicionais.forEach(field => addAdditionalFieldForm(field));
         }
 
-        // Preencher campos de promoção se existirem
         if (servicoData.promocao) {
             document.getElementById('promotionDiscount').value = servicoData.promocao.porcentagem;
             document.getElementById('promotionDescription').value = servicoData.promocao.descricao;
@@ -393,3 +392,302 @@ function editService(e) {
             document.getElementById('promotionEndDate').value = servicoData.promocao.dataFim;
             document.getElementById('promotionFields').classList.remove('hidden');
             document.getElementById('togglePromotionBtn').textContent = 'Cancelar';
+        }
+
+        servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
+        document.querySelector('[data-tab="addServicoTab"]').click();
+    });
+}
+
+function deleteService(key) {
+    if (confirm('Tem certeza que deseja excluir este serviço?')) {
+        const servicoRef = ref(database, `servicos/${key}`);
+        remove(servicoRef)
+            .then(() => alert('Serviço excluído com sucesso!'))
+            .catch(error => {
+                console.error("Erro ao excluir serviço:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
+// ==========================================================================
+// 4. GERENCIAMENTO DE AGENDAMENTOS
+// ==========================================================================
+
+function loadBookings() {
+    const agendamentosRef = ref(database, 'agendamentos');
+    onValue(agendamentosRef, (snapshot) => {
+        agendamentosList.innerHTML = '';
+        if (snapshot.exists()) {
+            const agendamentos = snapshot.val();
+            const agendamentosArray = Object.entries(agendamentos).reverse();
+            agendamentosArray.forEach(([key, agendamento]) => {
+                createAgendamentoCard(agendamento, key);
+            });
+        } else {
+            agendamentosList.innerHTML = '<p>Nenhum agendamento pendente.</p>';
+        }
+    });
+}
+
+function createAgendamentoCard(agendamento, key) {
+    const card = document.createElement('div');
+    card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
+    
+    let servicosHtml = '<ul>';
+    if (agendamento.servicos) {
+        agendamento.servicos.forEach(servico => {
+            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}`;
+            
+            if (servico.camposAdicionaisSelecionados) {
+                servicosHtml += `<ul>`;
+                Object.entries(servico.camposAdicionaisSelecionados).forEach(([campo, valor]) => {
+                    servicosHtml += `<li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>`;
+                });
+                servicosHtml += `</ul>`;
+            }
+            
+            servicosHtml += `</li>`;
+        });
+    }
+    servicosHtml += '</ul>';
+
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">Agendamento de ${agendamento.cliente.nome}</h5>
+            <p><strong>Data:</strong> ${agendamento.data} às ${agendamento.hora}</p>
+            <p><strong>Status:</strong> <span class="badge badge-${agendamento.status.toLowerCase()}">${agendamento.status}</span></p>
+            <hr>
+            <h6>Detalhes do Cliente:</h6>
+            <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
+            <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
+            <hr>
+            <h6>Serviços:</h6>
+            ${servicosHtml}
+            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
+            ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
+            <div class="mt-3">
+                <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
+                <button class="btn btn-danger btn-sm cancel-booking" data-key="${key}" ${agendamento.status === 'Cancelado' ? 'disabled' : ''}>Cancelar</button>
+                <button class="btn btn-danger btn-sm delete-booking" data-key="${key}">Excluir</button>
+            </div>
+        </div>
+    `;
+    agendamentosList.appendChild(card);
+    
+    card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
+    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
+}
+
+function updateBookingStatus(key, newStatus) {
+    const agendamentoRef = ref(database, `agendamentos/${key}`);
+    get(agendamentoRef).then(snapshot => {
+        const agendamentoData = snapshot.val();
+        set(agendamentoRef, { ...agendamentoData, status: newStatus })
+            .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
+            .catch(error => {
+                console.error("Erro ao atualizar status:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    });
+}
+
+function deleteBooking(key) {
+    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível.')) {
+        const agendamentoRef = ref(database, `agendamentos/${key}`);
+        remove(agendamentoRef)
+            .then(() => alert('Agendamento excluído com sucesso!'))
+            .catch(error => {
+                console.error("Erro ao excluir agendamento:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
+// ==========================================================================
+// 5. GERENCIAMENTO DE CONFIGURAÇÕES
+// ==========================================================================
+
+function handleConfigFormSubmit(e) {
+    e.preventDefault();
+    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, '');
+    const horariosPorDia = {};
+
+    diasDaSemana.forEach(dia => {
+        const ativo = document.getElementById(`${dia}Ativo`).checked;
+        const horarioInicio = document.getElementById(`${dia}Inicio`).value;
+        const horarioFim = document.getElementById(`${dia}Fim`).value;
+        const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
+
+        horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
+    });
+
+    const configRef = ref(database, 'configuracoes');
+    set(configRef, { whatsappNumber, horariosPorDia })
+        .then(() => alert('Configurações salvas com sucesso!'))
+        .catch(error => {
+            console.error("Erro ao salvar configurações:", error);
+            alert("Ocorreu um erro. Verifique o console.");
+        });
+}
+
+function loadConfig() {
+    const configRef = ref(database, 'configuracoes');
+    onValue(configRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const config = snapshot.val();
+            whatsappNumberInput.value = config.whatsappNumber;
+            diasDaSemana.forEach(dia => {
+                const diaConfig = config.horariosPorDia[dia];
+                if (diaConfig) {
+                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
+                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
+                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
+                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
+                }
+            });
+        }
+    });
+}
+
+// ==========================================================================
+// 6. MENSAGENS PERSONALIZADAS
+// ==========================================================================
+
+function setupMensagensTab() {
+    const mensagemForm = document.getElementById('mensagemForm');
+    loadMensagens();
+    
+    mensagemForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const titulo = document.getElementById('mensagemTitulo').value;
+        const texto = document.getElementById('mensagemTexto').value;
+        const key = e.target.dataset.key;
+
+        const mensagem = { titulo, texto };
+
+        const mensagemRef = ref(database, `mensagensWhatsApp/${key || ''}`);
+        if (key) {
+            set(mensagemRef, mensagem)
+                .then(() => {
+                    alert('Mensagem atualizada com sucesso!');
+                    e.target.reset();
+                    delete e.target.dataset.key;
+                })
+                .catch(error => {
+                    console.error("Erro ao atualizar mensagem:", error);
+                    alert("Ocorreu um erro. Verifique o console.");
+                });
+        } else {
+            push(mensagemRef, mensagem)
+                .then(() => {
+                    alert('Mensagem salva com sucesso!');
+                    e.target.reset();
+                })
+                .catch(error => {
+                    console.error("Erro ao salvar mensagem:", error);
+                    alert("Ocorreu um erro. Verifique o console.");
+                });
+        }
+    });
+}
+
+function loadMensagens() {
+    const mensagensRef = ref(database, 'mensagensWhatsApp');
+    onValue(mensagensRef, (snapshot) => {
+        const listaMensagens = document.getElementById('listaMensagens');
+        listaMensagens.innerHTML = '';
+        
+        if (snapshot.exists()) {
+            const mensagens = snapshot.val();
+            for (const key in mensagens) {
+                createMensagemCard(mensagens[key], key);
+            }
+        } else {
+            listaMensagens.innerHTML = '<p>Nenhuma mensagem cadastrada.</p>';
+        }
+    });
+}
+
+function createMensagemCard(mensagem, key) {
+    const card = document.createElement('div');
+    card.className = 'card mb-3';
+    card.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">${mensagem.titulo}</h5>
+            <p class="card-text">${mensagem.texto}</p>
+            <button class="btn btn-warning btn-sm edit-mensagem-btn" data-key="${key}">Editar</button>
+            <button class="btn btn-danger btn-sm delete-mensagem-btn" data-key="${key}">Excluir</button>
+        </div>
+    `;
+    
+    document.getElementById('listaMensagens').appendChild(card);
+    
+    card.querySelector('.edit-mensagem-btn').addEventListener('click', () => editMensagem(key));
+    card.querySelector('.delete-mensagem-btn').addEventListener('click', () => deleteMensagem(key));
+}
+
+function editMensagem(key) {
+    const mensagemRef = ref(database, `mensagensWhatsApp/${key}`);
+    get(mensagemRef).then(snapshot => {
+        const mensagemData = snapshot.val();
+        document.getElementById('mensagemTitulo').value = mensagemData.titulo;
+        document.getElementById('mensagemTexto').value = mensagemData.texto;
+        document.getElementById('mensagemForm').dataset.key = key;
+    });
+}
+
+function deleteMensagem(key) {
+    if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
+        const mensagemRef = ref(database, `mensagensWhatsApp/${key}`);
+        remove(mensagemRef)
+            .then(() => alert('Mensagem excluída com sucesso!'))
+            .catch(error => {
+                console.error("Erro ao excluir mensagem:", error);
+                alert("Ocorreu um erro. Verifique o console.");
+            });
+    }
+}
+
+// ==========================================================================
+// 7. PROMOÇÕES
+// ==========================================================================
+
+function setupPromocoes() {
+    const togglePromotionBtn = document.getElementById('togglePromotionBtn');
+    const promotionFields = document.getElementById('promotionFields');
+    const removePromotionBtn = document.getElementById('removePromotionBtn');
+    
+    togglePromotionBtn.addEventListener('click', () => {
+        promotionFields.classList.toggle('hidden');
+        togglePromotionBtn.textContent = promotionFields.classList.contains('hidden') 
+            ? 'Criar Promoção' 
+            : 'Cancelar';
+    });
+    
+    removePromotionBtn.addEventListener('click', () => {
+        document.getElementById('promotionDiscount').value = '';
+        document.getElementById('promotionDescription').value = '';
+        document.getElementById('promotionStartDate').value = '';
+        document.getElementById('promotionEndDate').value = '';
+        promotionFields.classList.add('hidden');
+        togglePromotionBtn.textContent = 'Criar Promoção';
+    });
+}
+
+// ==========================================================================
+// 8. FUNÇÕES AUXILIARES
+// ==========================================================================
+
+function capitalize(s) {
+    if (typeof s !== 'string') return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
