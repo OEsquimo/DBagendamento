@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 9.1 (Barra de progresso e botões fixos)
+ * Versão: 10.0 (Com carrossel para múltiplos equipamentos)
  */
 
 body {
@@ -9,7 +9,7 @@ body {
     background-color: #f4f4f9;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent; /* Remove o fundo azul no clique */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .hidden {
@@ -22,7 +22,7 @@ body {
     margin: 0 auto;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    min-height: calc(100vh - 120px); /* Ajusta para os cabeçalhos e rodapés fixos */
+    min-height: calc(100vh - 120px);
 }
 
 /* ========================================================================== */
@@ -132,8 +132,8 @@ body {
 /* ========================================================================== */
 
 section {
-    padding-top: 80px; /* Para não ficar atrás do header fixo */
-    padding-bottom: 70px; /* Para não ficar atrás do footer fixo */
+    padding-top: 80px;
+    padding-bottom: 70px;
 }
 
 h2 {
@@ -205,7 +205,7 @@ h2 {
     cursor: pointer;
     font-size: 16px;
     transition: background-color 0.3s;
-    width: 48%; /* Para alinhar os botões lado a lado */
+    width: 48%;
 }
 
 .btn-primary {
@@ -290,10 +290,9 @@ h2 {
 }
 
 /* ========================================================================== */
-/* 7. NOVOS ESTILOS PARA CARROSSEL E PROMOÇÕES */
+/* 7. NOVOS ESTILOS PARA CARROSSEL */
 /* ========================================================================== */
 
-/* Banner de promoção */
 .promotion-banner {
     background-color: #ffeb3b;
     padding: 15px;
@@ -323,7 +322,6 @@ h2 {
     margin-left: 15px;
 }
 
-/* Opções de pagamento */
 .payment-options {
     display: flex;
     flex-direction: column;
@@ -349,7 +347,7 @@ h2 {
     margin-right: 10px;
 }
 
-/* Carrossel de equipamentos */
+/* CARROSSEL */
 .service-carousel {
     margin-bottom: 25px;
     border: 1px solid #eee;
@@ -368,21 +366,22 @@ h2 {
 .carousel-container {
     position: relative;
     margin: 15px 0;
+    overflow: hidden;
 }
 
 .carousel-slides {
     display: flex;
-    overflow: hidden;
-    border-radius: 8px;
-    background-color: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    width: 100%;
 }
 
 .carousel-slide {
     min-width: 100%;
     padding: 20px;
     box-sizing: border-box;
-    transition: transform 0.3s ease;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .carousel-navigation {
@@ -390,11 +389,13 @@ h2 {
     justify-content: space-between;
     align-items: center;
     margin: 10px 0;
+    padding: 0 10px;
 }
 
 .carousel-counter {
     font-weight: bold;
     color: #666;
+    font-size: 14px;
 }
 
 .carousel-btn {
@@ -405,6 +406,7 @@ h2 {
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
+    min-width: 80px;
 }
 
 .carousel-btn:disabled {
@@ -435,30 +437,38 @@ h2 {
     background-color: #f0f8ff;
     border-radius: 6px;
     border-left: 4px solid #007bff;
+    text-align: center;
 }
 
 .add-equipment-btn {
     margin: 10px 0;
+    width: 100%;
 }
 
 .remove-equipment-btn {
     background-color: #dc3545;
     color: white;
     margin-top: 10px;
+    width: 100%;
 }
 
 .remove-equipment-btn:hover {
     background-color: #c82333;
 }
 
-/* Responsividade para o carrossel */
+/* Responsividade */
 @media (max-width: 480px) {
     .carousel-btn {
         padding: 6px 10px;
         font-size: 12px;
+        min-width: 70px;
     }
     
     .carousel-slide {
         padding: 15px;
+    }
+    
+    .carousel-counter {
+        font-size: 12px;
     }
 }
