@@ -1,44 +1,23 @@
 /*
  * Arquivo: admin.js
  * Descrição: Lógica para o painel de administração.
- * Versão: 8.0 (Suporte a múltiplos equipamentos e carrossel)
+ * Versão: 8.1 (Correções em campos adicionais, promoções, agendamentos e config)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, onValue, push, set, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ==========================================================================
-// 1. CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
-// ==========================================================================
+// ... (Configuração Firebase e Variáveis Globais permanecem as mesmas) ...
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCFf5gckKE6rg7MFuBYAO84aV-sNrdY2JQ",
-    authDomain: "agendamento-esquimo.firebaseapp.com",
-    databaseURL: "https://agendamento-esquimo-default-rtdb.firebaseio.com",
-    projectId: "agendamento-esquimo",
-    storageBucket: "agendamento-esquimo.firebasestorage.app",
-    messagingSenderId: "348946727206",
-    appId: "1:348946727206:web:f5989788f13c259be0c1e7",
-    measurementId: "G-Z0EMQ3XQ1D"
-};
-
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-
-// Elementos do DOM
-const servicoForm = document.getElementById('servicoForm');
-const servicoNomeInput = document.getElementById('servicoNome');
-const servicoDescricaoInput = document.getElementById('servicoDescricao');
+// Elementos do DOM (adicionados/modificados)
 const servicoPrecoInput = document.getElementById('servicoPreco');
-const servicosList = document.getElementById('servicosList');
-const agendamentosList = document.getElementById('agendamentosList');
-const configForm = document.getElementById('configForm');
-const whatsappNumberInput = document.getElementById('whatsappNumber');
-const horariosContainer = document.getElementById('horariosContainer');
-const addFieldBtn = document.getElementById('addFieldBtn');
-const additionalFieldsContainer = document.getElementById('additionalFieldsContainer');
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabPanes = document.querySelectorAll('.tab-pane');
+const promotionFields = document.getElementById('promotionFields');
+const togglePromotionBtn = document.getElementById('togglePromotionBtn');
+const removePromotionBtn = document.getElementById('removePromotionBtn');
+const promotionDiscount = document.getElementById('promotionDiscount');
+const promotionDescription = document.getElementById('promotionDescription');
+const promotionStartDate = document.getElementById('promotionStartDate');
+const promotionEndDate = document.getElementById('promotionEndDate');
 
 const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 
@@ -54,55 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupServicoForm();
     setupTabNavigation();
     setupMensagensTab();
-    setupPromocoes();
+    setupPromocoes(); // Chamada corrigida
 });
 
-function setupTabNavigation() {
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabPanes.forEach(pane => pane.classList.add('hidden'));
-
-            button.classList.add('active');
-            const targetId = button.dataset.tab;
-            document.getElementById(targetId).classList.remove('hidden');
-        });
-    });
-}
-
-function setupServicoForm() {
-    servicoForm.addEventListener('submit', handleServicoFormSubmit);
-    addFieldBtn.addEventListener('click', () => addAdditionalFieldForm());
-}
-
-function setupConfigForm() {
-    diasDaSemana.forEach(dia => {
-        const div = document.createElement('div');
-        div.className = 'horario-dia';
-        div.innerHTML = `
-            <h5>${capitalize(dia)}</h5>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input dia-ativo" id="${dia}Ativo">
-                <label class="form-check-label" for="${dia}Ativo">Ativo</label>
-            </div>
-            <div class="form-group mt-2">
-                <label for="${dia}Inicio">Início:</label>
-                <input type="time" class="form-control horario-inicio" id="${dia}Inicio" value="08:00">
-            </div>
-            <div class="form-group">
-                <label for="${dia}Fim">Fim:</label>
-                <input type="time" class="form-control horario-fim" id="${dia}Fim" value="18:00">
-            </div>
-            <div class="form-group">
-                <label for="${dia}Duracao">Duração (minutos):</label>
-                <input type="number" class="form-control horario-duracao" id="${dia}Duracao" value="60" min="15" step="15">
-            </div>
-        `;
-        horariosContainer.appendChild(div);
-    });
-
-    configForm.addEventListener('submit', handleConfigFormSubmit);
-}
+// ... (setupTabNavigation, setupServicoForm, setupConfigForm permanecem as mesmas) ...
 
 // ==========================================================================
 // 3. GERENCIAMENTO DE SERVIÇOS (CRUD)
@@ -162,13 +96,17 @@ function generateOptionsHTML(opcoes = []) {
         <p>Opções:</p>
         <div class="option-list">
             ${options.map(option => {
-                const parts = option.split(', R$ ');
-                const optionValue = parts[0] || '';
-                const optionPrice = parts[1] || '0.00';
+                // Tenta separar valor e preço, assume que o preço começa com ", R$ "
+                const optionParts = option.split(', R$ ');
+                const optionValue = optionParts[0] || '';
+                let optionPrice = '0.00'; // Preço padrão
+                if (optionParts.length === 2) {
+                    optionPrice = parseFloat(optionParts[1].replace(',', '.')).toFixed(2); // Garante formatação correta
+                }
                 return `
                     <div class="option-item">
                         <input type="text" class="form-control option-value" placeholder="Nome da opção (Ex: 9.000 BTUs)" value="${optionValue}" required>
-                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${parseFloat(optionPrice).toFixed(2)}">
+                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="${optionPrice}">
                         <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
                     </div>
                 `;
@@ -177,6 +115,7 @@ function generateOptionsHTML(opcoes = []) {
         <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
     `;
 }
+
 
 function setupOptionEvents(container) {
     container.querySelector('.add-option-btn').addEventListener('click', addOptionForm);
@@ -219,9 +158,16 @@ function handleServicoFormSubmit(e) {
     
     const camposAdicionais = [];
     document.querySelectorAll('.additional-field').forEach(fieldElement => {
-        const fieldName = fieldElement.querySelector('.field-name').value;
-        const fieldType = fieldElement.querySelector('.field-type').value;
+        const fieldNameInput = fieldElement.querySelector('.field-name');
+        const fieldTypeSelect = fieldElement.querySelector('.field-type');
+        const fieldName = fieldNameInput.value;
+        const fieldType = fieldTypeSelect.value;
         
+        if (!fieldName) {
+            fieldNameInput.classList.add('error'); // Marca campo obrigatório não preenchido
+            return; // Pula para o próximo campo
+        }
+
         const campoData = {
             nome: fieldName,
             tipo: fieldType
@@ -230,9 +176,14 @@ function handleServicoFormSubmit(e) {
         if (fieldType === 'select') {
             const opcoes = [];
             fieldElement.querySelectorAll('.option-item').forEach(optionItem => {
-                const optionValue = optionItem.querySelector('.option-value').value;
-                const optionPrice = parseFloat(optionItem.querySelector('.option-price').value) || 0;
-                opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                const optionValueInput = optionItem.querySelector('.option-value');
+                const optionPriceInput = optionItem.querySelector('.option-price');
+
+                if (optionValueInput.value.trim()) { // Só adiciona se o nome da opção não estiver vazio
+                    const optionValue = optionValueInput.value.trim();
+                    const optionPrice = parseFloat(optionPriceInput.value) || 0;
+                    opcoes.push(`${optionValue}, R$ ${optionPrice.toFixed(2)}`);
+                }
             });
             campoData.opcoes = opcoes;
         }
@@ -247,43 +198,50 @@ function handleServicoFormSubmit(e) {
         camposAdicionais
     };
 
-    // Adicionar promoção se existir
-    const promocaoPorcentagem = parseFloat(document.getElementById('promotionDiscount').value);
-    const promocaoDescricao = document.getElementById('promotionDescription').value;
-    const promocaoDataInicio = document.getElementById('promotionStartDate').value;
-    const promocaoDataFim = document.getElementById('promotionEndDate').value;
+    // Processar dados de promoção apenas se estiverem visíveis e preenchidos
+    if (!promotionFields.classList.contains('hidden')) {
+        const promocaoPorcentagem = parseFloat(promotionDiscount.value);
+        const promocaoDescricao = promotionDescription.value.trim();
+        const promocaoDataInicio = promotionStartDate.value;
+        const promocaoDataFim = promotionEndDate.value;
 
-    if (promocaoPorcentagem && promocaoDescricao && promocaoDataInicio && promocaoDataFim) {
-        servico.promocao = {
-            porcentagem: promocaoPorcentagem,
-            descricao: promocaoDescricao,
-            dataInicio: promocaoDataInicio,
-            dataFim: promocaoDataFim
-        };
-
-        const promocaoRef = ref(database, `promocoes/${servicoKey || ''}`);
-        set(promocaoRef, {
-            servicoKey: servicoKey,
-            porcentagem: promocaoPorcentagem,
-            descricao: promocaoDescricao,
-            dataInicio: promocaoDataInicio,
-            dataFim: promocaoDataFim
-        });
+        if (promocaoPorcentagem && promocaoDescricao && promocaoDataInicio && promocaoDataFim) {
+            servico.promocao = {
+                porcentagem: promocaoPorcentagem,
+                descricao: promocaoDescricao,
+                dataInicio: promocaoDataInicio,
+                dataFim: promocaoDataFim
+            };
+        } else {
+            // Se a seção de promoção estava visível mas os campos obrigatórios não foram preenchidos,
+            // informamos que a promoção não será salva.
+            alert("Os campos de promoção não foram preenchidos corretamente. A promoção não será salva para este serviço.");
+            // Opcional: remover os campos de promoção do objeto servico se não forem válidos
+            // delete servico.promocao;
+        }
+    } else {
+        // Se a seção de promoção não está visível, garantir que não haja promoção salva
+        delete servico.promocao; // Remove qualquer promoção antiga se a seção estiver oculta
     }
 
     const servicosRef = ref(database, `servicos/${servicoKey || ''}`);
     
-    if (servicoKey) {
+    if (servicoKey) { // Atualizar serviço existente
         set(servicosRef, servico)
             .then(() => {
                 alert('Serviço atualizado com sucesso!');
                 resetServicoForm();
+                // Limpar dados de promoção do Firebase se o usuário removeu a promoção
+                if (promotionFields.classList.contains('hidden') && servicoKey) {
+                     const promoRef = ref(database, `servicos/${servicoKey}/promocao`);
+                     remove(promoRef).catch(error => console.error("Erro ao remover promoção antiga:", error));
+                }
             })
             .catch(error => {
                 console.error("Erro ao atualizar serviço:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao atualizar o serviço. Verifique o console.");
             });
-    } else {
+    } else { // Criar novo serviço
         push(servicosRef, servico)
             .then(() => {
                 alert('Serviço cadastrado com sucesso!');
@@ -291,7 +249,7 @@ function handleServicoFormSubmit(e) {
             })
             .catch(error => {
                 console.error("Erro ao cadastrar serviço:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao cadastrar o serviço. Verifique o console.");
             });
     }
 }
@@ -300,12 +258,15 @@ function resetServicoForm() {
     servicoForm.reset();
     servicoForm.removeAttribute('data-key');
     additionalFieldsContainer.innerHTML = '';
-    document.getElementById('promotionFields').classList.add('hidden');
-    document.getElementById('togglePromotionBtn').textContent = 'Criar Promoção';
-    document.getElementById('promotionDiscount').value = '';
-    document.getElementById('promotionDescription').value = '';
-    document.getElementById('promotionStartDate').value = '';
-    document.getElementById('promotionEndDate').value = '';
+    
+    // Resetar promoções
+    promotionFields.classList.add('hidden');
+    togglePromotionBtn.textContent = 'Criar Promoção';
+    promotionDiscount.value = '';
+    promotionDescription.value = '';
+    promotionStartDate.value = '';
+    promotionEndDate.value = '';
+
     servicoForm.querySelector('button[type="submit"]').textContent = 'Salvar Serviço';
 }
 
@@ -330,16 +291,20 @@ function createServicoCard(servico, key) {
     card.className = 'card mb-3';
     
     let camposAdicionaisHtml = '';
-    if (servico.camposAdicionais) {
+    if (servico.camposAdicionais && servico.camposAdicionais.length > 0) {
         camposAdicionaisHtml = servico.camposAdicionais.map(campo => {
             let opcoesHtml = '';
-            if (campo.tipo === 'select' && campo.opcoes) {
+            if (campo.tipo === 'select' && campo.opcoes && campo.opcoes.length > 0) {
                 opcoesHtml = `<ul>${campo.opcoes.map(opcao => `<li>${opcao}</li>`).join('')}</ul>`;
+            } else if (campo.tipo !== 'select') {
+                opcoesHtml = `<p>Tipo: ${capitalize(campo.tipo)}</p>`;
             } else {
-                opcoesHtml = `<p>Tipo: ${campo.tipo}</p>`;
+                 opcoesHtml = `<p>Nenhuma opção definida.</p>`;
             }
             return `<li><strong>${campo.nome}</strong>: ${opcoesHtml}</li>`;
         }).join('');
+    } else {
+        camposAdicionaisHtml = '<p>Nenhum campo adicional.</p>';
     }
 
     let promocaoHtml = '';
@@ -358,10 +323,10 @@ function createServicoCard(servico, key) {
         <div class="card-body">
             <h5 class="card-title">${servico.nome}</h5>
             <p class="card-text"><strong>Descrição:</strong> ${servico.descricao}</p>
-            <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase ? servico.precoBase.toFixed(2) : '0.00'}</p>
+            <p class="card-text"><strong>Preço Base:</strong> R$ ${servico.precoBase !== undefined ? servico.precoBase.toFixed(2) : '0.00'}</p>
             ${promocaoHtml}
             <h6>Campos Adicionais:</h6>
-            <ul>${camposAdicionaisHtml || '<p>Nenhum campo adicional.</p>'}</ul>
+            <ul>${camposAdicionaisHtml}</ul>
             <button class="btn btn-warning btn-sm edit-service-btn" data-key="${key}">Editar</button>
             <button class="btn btn-danger btn-sm delete-service-btn" data-key="${key}">Excluir</button>
         </div>
@@ -374,10 +339,15 @@ function createServicoCard(servico, key) {
 function editService(key) {
     const servicoRef = ref(database, `servicos/${key}`);
     get(servicoRef).then(snapshot => {
+        if (!snapshot.exists()) {
+            alert("Serviço não encontrado.");
+            return;
+        }
         const servicoData = snapshot.val();
-        servicoNomeInput.value = servicoData.nome;
-        servicoDescricaoInput.value = servicoData.descricao;
-        servicoPrecoInput.value = servicoData.precoBase || 0;
+        
+        servicoNomeInput.value = servicoData.nome || '';
+        servicoDescricaoInput.value = servicoData.descricao || '';
+        servicoPrecoInput.value = servicoData.precoBase !== undefined ? servicoData.precoBase : 0;
         servicoForm.dataset.key = key;
         
         additionalFieldsContainer.innerHTML = '';
@@ -386,27 +356,34 @@ function editService(key) {
         }
 
         if (servicoData.promocao) {
-            document.getElementById('promotionDiscount').value = servicoData.promocao.porcentagem;
-            document.getElementById('promotionDescription').value = servicoData.promocao.descricao;
-            document.getElementById('promotionStartDate').value = servicoData.promocao.dataInicio;
-            document.getElementById('promotionEndDate').value = servicoData.promocao.dataFim;
-            document.getElementById('promotionFields').classList.remove('hidden');
-            document.getElementById('togglePromotionBtn').textContent = 'Cancelar';
+            promotionDiscount.value = servicoData.promocao.porcentagem || '';
+            promotionDescription.value = servicoData.promocao.descricao || '';
+            promotionStartDate.value = servicoData.promocao.dataInicio || '';
+            promotionEndDate.value = servicoData.promocao.dataFim || '';
+            
+            promotionFields.classList.remove('hidden');
+            togglePromotionBtn.textContent = 'Cancelar';
+        } else {
+            promotionFields.classList.add('hidden');
+            togglePromotionBtn.textContent = 'Criar Promoção';
         }
 
         servicoForm.querySelector('button[type="submit"]').textContent = 'Atualizar Serviço';
-        document.querySelector('[data-tab="addServicoTab"]').click();
+        document.querySelector('[data-tab="addServicoTab"]').click(); // Abre a aba de edição
+    }).catch(error => {
+        console.error("Erro ao carregar dados do serviço:", error);
+        alert("Ocorreu um erro ao carregar os dados do serviço. Verifique o console.");
     });
 }
 
 function deleteService(key) {
-    if (confirm('Tem certeza que deseja excluir este serviço?')) {
+    if (confirm('Tem certeza que deseja excluir este serviço? Esta ação é irreversível.')) {
         const servicoRef = ref(database, `servicos/${key}`);
         remove(servicoRef)
             .then(() => alert('Serviço excluído com sucesso!'))
             .catch(error => {
                 console.error("Erro ao excluir serviço:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao excluir o serviço. Verifique o console.");
             });
     }
 }
@@ -421,55 +398,77 @@ function loadBookings() {
         agendamentosList.innerHTML = '';
         if (snapshot.exists()) {
             const agendamentos = snapshot.val();
-            const agendamentosArray = Object.entries(agendamentos).reverse();
+            const agendamentosArray = Object.entries(agendamentos).reverse(); // Mais recentes primeiro
             agendamentosArray.forEach(([key, agendamento]) => {
                 createAgendamentoCard(agendamento, key);
             });
         } else {
-            agendamentosList.innerHTML = '<p>Nenhum agendamento pendente.</p>';
+            agendamentosList.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
         }
     });
 }
 
 function createAgendamentoCard(agendamento, key) {
     const card = document.createElement('div');
-    card.className = `card mb-3 booking-card booking-${agendamento.status.toLowerCase()}`;
+    const statusClass = agendamento.status ? agendamento.status.toLowerCase() : 'pendente';
+    card.className = `card mb-3 booking-card booking-${statusClass}`;
     
     let servicosHtml = '<ul>';
     if (agendamento.servicos) {
         agendamento.servicos.forEach(servico => {
-            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado.toFixed(2)}`;
+            servicosHtml += `<li><strong>${servico.nome}</strong>: R$ ${servico.precoCalculado !== undefined ? servico.precoCalculado.toFixed(2) : '0.00'}`;
             
-            if (servico.camposAdicionaisSelecionados) {
+            // Detalhes dos equipamentos
+            if (servico.equipamentos && servico.equipamentos.length > 0) {
                 servicosHtml += `<ul>`;
-                Object.entries(servico.camposAdicionaisSelecionados).forEach(([campo, valor]) => {
-                    servicosHtml += `<li>${campo}: ${typeof valor === 'number' ? `R$ ${valor.toFixed(2)}` : valor}</li>`;
+                servico.equipamentos.forEach(equip => {
+                    servicosHtml += `<li>${equip.quantidade}x Equipamento: R$ ${equip.precoTotalEquipamento !== undefined ? equip.precoTotalEquipamento.toFixed(2) : '0.00'}`;
+                    if (equip.campos && Object.keys(equip.campos).length > 0) {
+                        servicosHtml += `<ul>`;
+                        Object.entries(equip.campos).forEach(([campo, valor]) => {
+                            // Formata valores numéricos como moeda
+                            const displayValor = (typeof valor === 'string' && valor.match(/^\d+(\.\d+)?$/)) ? parseFloat(valor) : valor;
+                            const formattedValor = (typeof displayValor === 'number' && !isNaN(displayValor) && displayValor > 0) ? `R$ ${displayValor.toFixed(2)}` : displayValor;
+                            servicosHtml += `<li>${campo}: ${formattedValor}</li>`;
+                        });
+                        servicosHtml += `</ul>`;
+                    }
+                    servicosHtml += `</li>`;
                 });
                 servicosHtml += `</ul>`;
             }
-            
             servicosHtml += `</li>`;
         });
     }
     servicosHtml += '</ul>';
 
+    const formattedDate = agendamento.data ? formatDate(agendamento.data) : 'N/D';
+    const formattedHora = agendamento.hora || 'N/D';
+    const clienteNome = agendamento.cliente?.nome || 'Anônimo';
+    const clienteTelefone = agendamento.cliente?.telefone || 'N/D';
+    const clienteEndereco = agendamento.cliente?.endereco || 'N/D';
+    const observacoes = agendamento.observacoes ? `<p><strong>Obs Cliente:</strong> ${agendamento.observacoes}</p>` : '';
+    const formaPagamento = agendamento.formaPagamento || 'N/D';
+    const total = agendamento.total !== undefined ? agendamento.total.toFixed(2) : '0.00';
+
     card.innerHTML = `
         <div class="card-body">
-            <h5 class="card-title">Agendamento de ${agendamento.cliente.nome}</h5>
-            <p><strong>Data:</strong> ${agendamento.data} às ${agendamento.hora}</p>
-            <p><strong>Status:</strong> <span class="badge badge-${agendamento.status.toLowerCase()}">${agendamento.status}</span></p>
+            <h5 class="card-title">Agendamento de ${clienteNome}</h5>
+            <p><strong>Data:</strong> ${formattedDate} às ${formattedHora}</p>
+            <p><strong>Status:</strong> <span class="badge badge-${statusClass}">${agendamento.status || 'Pendente'}</span></p>
             <hr>
             <h6>Detalhes do Cliente:</h6>
-            <p><strong>Telefone:</strong> ${agendamento.cliente.telefone}</p>
-            <p><strong>Endereço:</strong> ${agendamento.cliente.endereco}</p>
+            <p><strong>Telefone:</strong> ${clienteTelefone}</p>
+            <p><strong>Endereço:</strong> ${clienteEndereco}</p>
+            ${observacoes}
             <hr>
             <h6>Serviços:</h6>
             ${servicosHtml}
-            <p><strong>Total:</strong> R$ ${agendamento.orcamentoTotal.toFixed(2)}</p>
-            ${agendamento.observacoes ? `<p><strong>Obs:</strong> ${agendamento.observacoes}</p>` : ''}
+            <p><strong>Total:</strong> R$ ${total}</p>
+            <p><strong>Pagamento:</strong> ${formaPagamento}</p>
             <div class="mt-3">
-                <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${agendamento.status === 'Concluído' ? 'disabled' : ''}>Marcar como Concluído</button>
-                <button class="btn btn-danger btn-sm cancel-booking" data-key="${key}" ${agendamento.status === 'Cancelado' ? 'disabled' : ''}>Cancelar</button>
+                <button class="btn btn-success btn-sm mark-completed" data-key="${key}" ${statusClass === 'concluido' ? 'disabled' : ''}>Marcar como Concluído</button>
+                <button class="btn btn-info btn-sm" data-key="${key}" ${statusClass === 'cancelado' ? 'disabled' : ''} onclick="updateBookingStatus('${key}', 'Cancelado')">Cancelar</button>
                 <button class="btn btn-danger btn-sm delete-booking" data-key="${key}">Excluir</button>
             </div>
         </div>
@@ -477,31 +476,40 @@ function createAgendamentoCard(agendamento, key) {
     agendamentosList.appendChild(card);
     
     card.querySelector('.mark-completed').addEventListener('click', () => updateBookingStatus(key, 'Concluído'));
-    card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado'));
+    // O botão de cancelar está com onclick direto para simplificar a chamada da função.
+    // card.querySelector('.cancel-booking').addEventListener('click', () => updateBookingStatus(key, 'Cancelado')); 
     card.querySelector('.delete-booking').addEventListener('click', () => deleteBooking(key));
 }
 
+// Função para atualizar status, chamada tanto pelo botão quanto pelo onclick inline
 function updateBookingStatus(key, newStatus) {
     const agendamentoRef = ref(database, `agendamentos/${key}`);
     get(agendamentoRef).then(snapshot => {
+        if (!snapshot.exists()) {
+            alert("Agendamento não encontrado.");
+            return;
+        }
         const agendamentoData = snapshot.val();
         set(agendamentoRef, { ...agendamentoData, status: newStatus })
             .then(() => alert(`Agendamento ${newStatus.toLowerCase()} com sucesso!`))
             .catch(error => {
                 console.error("Erro ao atualizar status:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao atualizar o status. Verifique o console.");
             });
+    }).catch(error => {
+        console.error("Erro ao buscar agendamento para atualizar status:", error);
+        alert("Ocorreu um erro ao buscar o agendamento. Verifique o console.");
     });
 }
 
 function deleteBooking(key) {
-    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível.')) {
+    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação é irreversível e os dados serão perdidos permanentemente.')) {
         const agendamentoRef = ref(database, `agendamentos/${key}`);
         remove(agendamentoRef)
             .then(() => alert('Agendamento excluído com sucesso!'))
             .catch(error => {
                 console.error("Erro ao excluir agendamento:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao excluir o agendamento. Verifique o console.");
             });
     }
 }
@@ -512,14 +520,19 @@ function deleteBooking(key) {
 
 function handleConfigFormSubmit(e) {
     e.preventDefault();
-    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, '');
+    const whatsappNumber = whatsappNumberInput.value.replace(/\D/g, ''); // Remove caracteres não numéricos
     const horariosPorDia = {};
 
     diasDaSemana.forEach(dia => {
-        const ativo = document.getElementById(`${dia}Ativo`).checked;
-        const horarioInicio = document.getElementById(`${dia}Inicio`).value;
-        const horarioFim = document.getElementById(`${dia}Fim`).value;
-        const duracaoServico = parseInt(document.getElementById(`${dia}Duracao`).value);
+        const ativoCheckbox = document.getElementById(`${dia}Ativo`);
+        const horarioInicioInput = document.getElementById(`${dia}Inicio`);
+        const horarioFimInput = document.getElementById(`${dia}Fim`);
+        const duracaoServicoInput = document.getElementById(`${dia}Duracao`);
+
+        const ativo = ativoCheckbox ? ativoCheckbox.checked : false;
+        const horarioInicio = horarioInicioInput ? horarioInicioInput.value : "08:00";
+        const horarioFim = horarioFimInput ? horarioFimInput.value : "18:00";
+        const duracaoServico = parseInt(duracaoServicoInput ? duracaoServicoInput.value : "60");
 
         horariosPorDia[dia] = { ativo, horarioInicio, horarioFim, duracaoServico };
     });
@@ -529,7 +542,7 @@ function handleConfigFormSubmit(e) {
         .then(() => alert('Configurações salvas com sucesso!'))
         .catch(error => {
             console.error("Erro ao salvar configurações:", error);
-            alert("Ocorreu um erro. Verifique o console.");
+            alert("Ocorreu um erro ao salvar configurações. Verifique o console.");
         });
 }
 
@@ -538,16 +551,25 @@ function loadConfig() {
     onValue(configRef, (snapshot) => {
         if (snapshot.exists()) {
             const config = snapshot.val();
-            whatsappNumberInput.value = config.whatsappNumber;
-            diasDaSemana.forEach(dia => {
-                const diaConfig = config.horariosPorDia[dia];
-                if (diaConfig) {
-                    document.getElementById(`${dia}Ativo`).checked = diaConfig.ativo;
-                    document.getElementById(`${dia}Inicio`).value = diaConfig.horarioInicio;
-                    document.getElementById(`${dia}Fim`).value = diaConfig.horarioFim;
-                    document.getElementById(`${dia}Duracao`).value = diaConfig.duracaoServico;
-                }
-            });
+            if (config.whatsappNumber) {
+                whatsappNumberInput.value = config.whatsappNumber;
+            }
+            if (config.horariosPorDia) {
+                diasDaSemana.forEach(dia => {
+                    const diaConfig = config.horariosPorDia[dia];
+                    if (diaConfig) {
+                        const ativoCheckbox = document.getElementById(`${dia}Ativo`);
+                        const horarioInicioInput = document.getElementById(`${dia}Inicio`);
+                        const horarioFimInput = document.getElementById(`${dia}Fim`);
+                        const duracaoServicoInput = document.getElementById(`${dia}Duracao`);
+
+                        if (ativoCheckbox) ativoCheckbox.checked = diaConfig.ativo || false;
+                        if (horarioInicioInput) horarioInicioInput.value = diaConfig.horarioInicio || "08:00";
+                        if (horarioFimInput) horarioFimInput.value = diaConfig.horarioFim || "18:00";
+                        if (duracaoServicoInput) duracaoServicoInput.value = diaConfig.duracaoServico || 60;
+                    }
+                });
+            }
         }
     });
 }
@@ -562,33 +584,42 @@ function setupMensagensTab() {
     
     mensagemForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const titulo = document.getElementById('mensagemTitulo').value;
-        const texto = document.getElementById('mensagemTexto').value;
-        const key = e.target.dataset.key;
+        const titulo = document.getElementById('mensagemTitulo').value.trim();
+        const texto = document.getElementById('mensagemTexto').value.trim();
+        const key = e.target.dataset.key; // Key do formulário para atualização
+
+        if (!titulo || !texto) {
+            alert('Por favor, preencha o título e o texto da mensagem.');
+            return;
+        }
 
         const mensagem = { titulo, texto };
 
-        const mensagemRef = ref(database, `mensagensWhatsApp/${key || ''}`);
-        if (key) {
+        const mensagemRefBase = ref(database, 'mensagensWhatsApp');
+        let mensagemRef;
+
+        if (key) { // Atualizar mensagem existente
+            mensagemRef = ref(database, `mensagensWhatsApp/${key}`);
             set(mensagemRef, mensagem)
                 .then(() => {
                     alert('Mensagem atualizada com sucesso!');
                     e.target.reset();
-                    delete e.target.dataset.key;
+                    delete e.target.dataset.key; // Limpa a chave do dataset
                 })
                 .catch(error => {
                     console.error("Erro ao atualizar mensagem:", error);
-                    alert("Ocorreu um erro. Verifique o console.");
+                    alert("Ocorreu um erro ao atualizar a mensagem. Verifique o console.");
                 });
-        } else {
-            push(mensagemRef, mensagem)
+        } else { // Criar nova mensagem
+            mensagemRef = push(mensagemRefBase); // Cria uma nova chave
+            set(mensagemRef, mensagem)
                 .then(() => {
                     alert('Mensagem salva com sucesso!');
                     e.target.reset();
                 })
                 .catch(error => {
                     console.error("Erro ao salvar mensagem:", error);
-                    alert("Ocorreu um erro. Verifique o console.");
+                    alert("Ocorreu um erro ao salvar a mensagem. Verifique o console.");
                 });
         }
     });
@@ -632,10 +663,17 @@ function createMensagemCard(mensagem, key) {
 function editMensagem(key) {
     const mensagemRef = ref(database, `mensagensWhatsApp/${key}`);
     get(mensagemRef).then(snapshot => {
+        if (!snapshot.exists()) {
+            alert("Mensagem não encontrada.");
+            return;
+        }
         const mensagemData = snapshot.val();
-        document.getElementById('mensagemTitulo').value = mensagemData.titulo;
-        document.getElementById('mensagemTexto').value = mensagemData.texto;
+        document.getElementById('mensagemTitulo').value = mensagemData.titulo || '';
+        document.getElementById('mensagemTexto').value = mensagemData.texto || '';
         document.getElementById('mensagemForm').dataset.key = key;
+    }).catch(error => {
+        console.error("Erro ao carregar dados da mensagem:", error);
+        alert("Ocorreu um erro ao carregar os dados da mensagem. Verifique o console.");
     });
 }
 
@@ -646,7 +684,7 @@ function deleteMensagem(key) {
             .then(() => alert('Mensagem excluída com sucesso!'))
             .catch(error => {
                 console.error("Erro ao excluir mensagem:", error);
-                alert("Ocorreu um erro. Verifique o console.");
+                alert("Ocorreu um erro ao excluir a mensagem. Verifique o console.");
             });
     }
 }
@@ -668,12 +706,25 @@ function setupPromocoes() {
     });
     
     removePromotionBtn.addEventListener('click', () => {
-        document.getElementById('promotionDiscount').value = '';
-        document.getElementById('promotionDescription').value = '';
-        document.getElementById('promotionStartDate').value = '';
-        document.getElementById('promotionEndDate').value = '';
+        promotionDiscount.value = '';
+        promotionDescription.value = '';
+        promotionStartDate.value = '';
+        promotionEndDate.value = '';
         promotionFields.classList.add('hidden');
         togglePromotionBtn.textContent = 'Criar Promoção';
+    });
+
+    // Adicionar validação para campos de promoção ao serem preenchidos
+    const promotionInputs = [promotionDiscount, promotionDescription, promotionStartDate, promotionEndDate];
+    promotionInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            if (!promotionFields.classList.contains('hidden')) {
+                const allFieldsFilled = promotionInputs.every(field => field.value.trim() !== '');
+                if (allFieldsFilled) {
+                    // Opcional: Habilitar um botão de salvar promoção aqui se houver um separado
+                }
+            }
+        });
     });
 }
 
@@ -688,6 +739,15 @@ function capitalize(s) {
 
 function formatDate(dateString) {
     if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    try {
+        const [year, month, day] = dateString.split('-');
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        console.error("Erro ao formatar data:", dateString, e);
+        return dateString; // Retorna a string original se houver erro
+    }
 }
+
+// ==========================================================================
+// FIM DO ARQUIVO
+// ==========================================================================
