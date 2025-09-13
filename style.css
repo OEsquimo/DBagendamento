@@ -1,7 +1,7 @@
 /*
  * Arquivo: style.css
  * Descrição: Estilos para o sistema de agendamento do cliente.
- * Versão: 10.0 (Com carrossel para múltiplos equipamentos)
+ * Versão: 9.2 (Pagamento no Passo 4)
  */
 
 body {
@@ -24,10 +24,6 @@ body {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     min-height: calc(100vh - 120px);
 }
-
-/* ========================================================================== */
-/* 1. LAYOUT FIXO */
-/* ========================================================================== */
 
 .header-container {
     position: fixed;
@@ -69,10 +65,6 @@ body {
         padding: 10px;
     }
 }
-
-/* ========================================================================== */
-/* 2. BARRA DE PROGRESSO */
-/* ========================================================================== */
 
 .progress-step {
     display: flex;
@@ -127,10 +119,6 @@ body {
     background: #007bff;
 }
 
-/* ========================================================================== */
-/* 3. SEÇÕES E CARDS */
-/* ========================================================================== */
-
 section {
     padding-top: 80px;
     padding-bottom: 70px;
@@ -174,10 +162,6 @@ h2 {
     font-weight: bold;
     color: #333;
 }
-
-/* ========================================================================== */
-/* 4. FORMULÁRIOS E BOTÕES */
-/* ========================================================================== */
 
 .form-group {
     margin-bottom: 20px;
@@ -243,10 +227,6 @@ h2 {
     background-color: #218838;
 }
 
-/* ========================================================================== */
-/* 5. SELEÇÃO DE HORÁRIOS */
-/* ========================================================================== */
-
 .time-slots-container {
     display: flex;
     flex-wrap: wrap;
@@ -272,9 +252,27 @@ h2 {
     border-color: #007bff;
 }
 
-/* ========================================================================== */
-/* 6. MENSAGEM DE CONFIRMAÇÃO */
-/* ========================================================================== */
+.payment-options-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.payment-option-btn {
+    flex: 1 1 calc(50% - 5px);
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ccc;
+    text-align: center;
+    box-sizing: border-box;
+    font-weight: bold;
+}
+
+.payment-option-btn.selected {
+    background-color: #28a745;
+    color: #fff;
+    border-color: #28a745;
+}
 
 #confirmation {
     text-align: center;
@@ -287,188 +285,4 @@ h2 {
 
 #whatsappLink {
     margin-top: 20px;
-}
-
-/* ========================================================================== */
-/* 7. NOVOS ESTILOS PARA CARROSSEL */
-/* ========================================================================== */
-
-.promotion-banner {
-    background-color: #ffeb3b;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.promotion-banner.hidden {
-    display: none;
-}
-
-.promotion-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-}
-
-.btn-promotion {
-    background-color: #ff9800;
-    color: white;
-    white-space: nowrap;
-    margin-left: 15px;
-}
-
-.payment-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.payment-option {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.payment-option:hover {
-    background-color: #f9f9f9;
-}
-
-.payment-option input {
-    margin-right: 10px;
-}
-
-/* CARROSSEL */
-.service-carousel {
-    margin-bottom: 25px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 15px;
-    background-color: #f9f9f9;
-}
-
-.service-carousel h3 {
-    margin-top: 0;
-    color: #007bff;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 10px;
-}
-
-.carousel-container {
-    position: relative;
-    margin: 15px 0;
-    overflow: hidden;
-}
-
-.carousel-slides {
-    display: flex;
-    transition: transform 0.3s ease;
-    width: 100%;
-}
-
-.carousel-slide {
-    min-width: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.carousel-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 10px 0;
-    padding: 0 10px;
-}
-
-.carousel-counter {
-    font-weight: bold;
-    color: #666;
-    font-size: 14px;
-}
-
-.carousel-btn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    min-width: 80px;
-}
-
-.carousel-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-.carousel-btn:hover:not(:disabled) {
-    background-color: #0056b3;
-}
-
-.equipment-price {
-    font-weight: bold;
-    color: #28a745;
-    margin: 15px 0;
-    padding: 10px;
-    background-color: #f8fff9;
-    border-radius: 4px;
-    border-left: 4px solid #28a745;
-}
-
-.service-total {
-    font-weight: bold;
-    font-size: 1.1em;
-    color: #007bff;
-    margin-top: 15px;
-    padding: 12px;
-    background-color: #f0f8ff;
-    border-radius: 6px;
-    border-left: 4px solid #007bff;
-    text-align: center;
-}
-
-.add-equipment-btn {
-    margin: 10px 0;
-    width: 100%;
-}
-
-.remove-equipment-btn {
-    background-color: #dc3545;
-    color: white;
-    margin-top: 10px;
-    width: 100%;
-}
-
-.remove-equipment-btn:hover {
-    background-color: #c82333;
-}
-
-/* Responsividade */
-@media (max-width: 480px) {
-    .carousel-btn {
-        padding: 6px 10px;
-        font-size: 12px;
-        min-width: 70px;
-    }
-    
-    .carousel-slide {
-        padding: 15px;
-    }
-    
-    .carousel-counter {
-        font-size: 12px;
-    }
 }
