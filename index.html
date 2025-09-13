@@ -1,43 +1,65 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Agendamento</title>
+    <title>O Esquimó - Agendamento</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="carousel.css">
-    </head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
+</head>
 <body>
 
-    <header class="site-header">
-        <div class="container">
-            <h1>Sistema de Agendamento</h1>
+    <div class="header-container">
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <span class="step-number">1</span>
+                <span class="step-text">Serviços</span>
+            </div>
+            <div class="progress-step" data-step="2">
+                <span class="step-number">2</span>
+                <span class="step-text">Detalhes</span>
+            </div>
+            <div class="progress-step" data-step="3">
+                <span class="step-number">3</span>
+                <span class="step-text">Cliente</span>
+            </div>
+            <div class="progress-step" data-step="4">
+                <span class="step-number">4</span>
+                <span class="step-text">Agendar</span>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <main class="container">
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="progressBar"></div>
-            <div class="step active" data-step="1">1. Serviços</div>
-            <div class="step" data-step="2">2. Detalhes</div>
-            <div class="step" data-step="3">3. Cliente</div>
-            <div class="step" data-step="4">4. Pagamento</div>
-        </div>
+    <div class="container">
 
-        <section id="servicosSection">
-            <h2>Escolha um ou mais serviços:</h2>
-            <div class="services-grid">
+        <section id="servicos" class="active-section">
+            <h2>Escolha um ou mais serviços</h2>
+            <div id="servicosContainer">
                 </div>
-            <div class="form-navigation">
-                <button class="btn btn-primary" id="nextStep1">Próximo</button>
+            <div class="total-summary-container">
+                <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
+            </div>
+            <div class="form-navigation-bottom">
+                <button class="btn btn-primary" id="nextStep1" style="display:none;">Próximo</button>
             </div>
         </section>
 
-        <section id="servicosFormSection" class="hidden">
+        <section id="servicosForm" class="hidden">
             <h2>Detalhes do Serviço</h2>
-            
-            <div id="servicesCarouselContainer">
+            <div id="servicosCarousel" class="splide" aria-label="Carrossel de serviços">
+                <div class="splide__track">
+                    <ul id="servicosFormContainer" class="splide__list">
+                        </ul>
                 </div>
+                <div class="splide__arrows">
+                    <button class="splide__arrow splide__arrow--prev">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="24" height="24"><path d="M30.78 20.833a1.458 1.458 0 00-1.042.417L19.583 31.583a1.458 1.458 0 000 2.083 1.458 1.458 0 002.083 0l9.667-9.667a1.458 1.458 0 000-2.083L21.667 11.25a1.458 1.458 0 00-2.083 0 1.458 1.458 0 000 2.083l9.667 9.667a1.458 1.458 0 001.042.417z"></path></svg>
+                    </button>
+                    <button class="splide__arrow splide__arrow--next">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="24" height="24"><path d="M30.78 20.833a1.458 1.458 0 00-1.042.417L19.583 31.583a1.458 1.458 0 000 2.083 1.458 1.458 0 002.083 0l9.667-9.667a1.458 1.458 0 000-2.083L21.667 11.25a1.458 1.458 0 00-2.083 0 1.458 1.458 0 000 2.083l9.667 9.667a1.458 1.458 0 001.042.417z"></path></svg>
+                    </button>
+                </div>
+            </div>
 
             <div class="total-summary-container">
                 <span class="total-label">Orçamento Total:</span>
@@ -49,66 +71,73 @@
             </div>
         </section>
 
-        <section id="clienteFormSection" class="hidden">
-            <h2>Dados do Cliente</h2>
-            <div class="form-group">
-                <label for="nomeCliente">Nome Completo:</label>
-                <input type="text" id="nomeCliente" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="telefoneCliente">Telefone:</label>
-                <input type="tel" id="telefoneCliente" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label for="emailCliente">Email:</label>
-                <input type="email" id="emailCliente" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="enderecoCliente">Endereço:</label>
-                <textarea id="enderecoCliente" class="form-control" rows="3"></textarea>
-            </div>
-            <div class="form-navigation-bottom">
-                <button class="btn btn-secondary" id="backButton2">Voltar</button>
-                <button class="btn btn-primary" id="nextStep3">Próximo</button>
-            </div>
-        </section>
-
-        <section id="pagamentoSection" class="hidden">
-            <h2>Forma de Pagamento</h2>
-            <div class="form-group">
-                <label>Selecione a forma de pagamento:</label>
-                <div class="payment-options">
-                    <button class="btn btn-payment" data-payment="pix">PIX</button>
-                    <button class="btn btn-payment" data-payment="cartao">Cartão de Crédito/Débito</button>
-                    <button class="btn btn-payment" data-payment="dinheiro">Dinheiro</button>
+        <section id="clienteForm" class="hidden">
+            <h2>Suas Informações</h2>
+            <form id="clienteInfoForm">
+                <div class="form-group">
+                    <label for="nome">Nome Completo</label>
+                    <input type="text" id="nome" class="form-control" required placeholder="Digite seu nome completo">
                 </div>
-            </div>
-            <div id="paymentDetails" class="mt-20">
+                <div class="form-group">
+                    <label for="telefone">Telefone</label>
+                    <input type="tel" id="telefone" class="form-control" required pattern="^\(\d{2}\)\s\d{5}-\d{4}$" placeholder="(xx) xxxxx-xxxx">
                 </div>
+                <div class="form-group">
+                    <label for="endereco">Endereço</label>
+                    <input type="text" id="endereco" class="form-control" placeholder="Ex: Rua A, 123, Bairro B">
+                </div>
+                <div class="form-group">
+                    <label for="observacoes">Observações (opcional)</label>
+                    <textarea id="observacoes" class="form-control" placeholder="Ex: Preferência de horário, detalhes do local."></textarea>
+                </div>
+            </form>
             <div class="form-navigation-bottom">
-                <button class="btn btn-secondary" id="backButton3">Voltar</button>
-                <button class="btn btn-primary" id="finalizarOrcamento">Finalizar</button>
+                <button type="button" class="btn btn-secondary" id="backButton2">Voltar</button>
+                <button type="button" class="btn btn-primary" id="nextStep3">Próximo</button>
             </div>
         </section>
 
-        <section id="confirmacaoSection" class="hidden">
-            <h2>Orçamento Finalizado!</h2>
-            <p>Seu agendamento foi concluído com sucesso. Em breve entraremos em contato.</p>
-            <p><strong>Resumo:</strong></p>
-            <pre id="orcamentoResumo"></pre>
+        <section id="agendamento" class="hidden">
+            <h2>Agendar</h2>
+            <form id="agendamentoForm">
+                <div class="form-group">
+                    <label for="datePicker">Escolha uma data</label>
+                    <input type="date" id="datePicker" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Horários disponíveis</label>
+                    <div id="timeSlotsContainer" class="time-slots-container">
+                        <p>Selecione uma data para ver os horários.</p>
+                    </div>
+                </div>
+
+                <div class="payment-section">
+                    <h3>Forma de Pagamento</h3>
+                    <div id="paymentOptionsContainer" class="payment-options-container">
+                        <button type="button" class="btn payment-option-btn" data-method="Pix">Pix</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Dinheiro">Dinheiro</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Cartão de Crédito">Cartão de Crédito</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Cartão de Débito">Cartão de Débito</button>
+                    </div>
+                </div>
+            </form>
             <div class="form-navigation-bottom">
-                <button class="btn btn-secondary" id="voltarInicio">Novo Agendamento</button>
+                <button type="button" class="btn btn-secondary" id="backButton3">Voltar</button>
+                <button type="submit" class="btn btn-primary" form="agendamentoForm">Confirmar Agendamento</button>
             </div>
         </section>
 
-        </main>
+        <section id="confirmation" class="hidden">
+            <h2>Agendamento Concluído!</h2>
+            <p>Seu agendamento foi enviado com sucesso.</p>
+            <p>Em breve entraremos em contato para confirmar os detalhes.</p>
+            <p>Enviar confirmação do agendamento para o whatsapp:</p>
+            <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">Enviar mensagem</a>
+        </section>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2023 Sua Empresa. Todos os direitos reservados.</p>
-        </div>
-    </footer>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
     <script type="module" src="script.js"></script>
-    </body>
+</body>
 </html>
