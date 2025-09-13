@@ -1,183 +1,121 @@
 /*
  * Arquivo: admin-style.css
- * Descrição: Estilos para o Painel Administrativo do sistema.
+ * Descrição: Estilos para o painel de administração.
  */
 
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
+/* Estilos básicos */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fonte mais moderna */
-    background-color: #f8f9fa; /* Cinza claro */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent;
+}
+
+.header-container {
+    background-color: #004d99;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.header-container h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.container {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Estilos de navegação em abas */
+.tab-navigation {
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    color: #343a40; /* Cor de texto padrão */
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab-btn {
+    flex: 1 1 auto;
+    padding: 10px 15px;
+    background-color: #e9ecef;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    color: #495057;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    margin-right: 2px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.tab-btn:hover {
+    background-color: #dee2e6;
+}
+
+.tab-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Estilos de seções (abas) */
+.tab-pane {
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 
 .hidden {
     display: none;
 }
 
-.container {
-    padding: 25px;
-    max-width: 700px; /* Um pouco mais largo para acomodar mais campos */
-    width: 100%;
-    margin: 40px auto;
-    background-color: #fff;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Sombra mais suave */
-    border-radius: 10px; /* Cantos mais arredondados */
-}
-
-h2 {
-    color: #007bff; /* Azul primário */
-    text-align: center;
-    margin-bottom: 30px;
-    text-transform: uppercase;
-    font-size: 1.8em;
-    letter-spacing: 0.5px;
-}
-
-h3 {
-    color: #343a40;
-    margin-bottom: 20px;
-    font-size: 1.4em;
-    border-bottom: 2px solid #dee2e6; /* Linha sutil abaixo do título */
-    padding-bottom: 10px;
-}
-
-h4 {
-    color: #495057; /* Cor de título secundário */
-    margin-top: 30px;
-    margin-bottom: 15px;
-    font-size: 1.2em;
-}
-
-/* ========================================================================== */
-/* 1. NAVEGAÇÃO POR ABAS */
-/* ========================================================================== */
-
-.tab-navigation {
-    display: flex;
-    justify-content: center; /* Centraliza as abas */
-    margin-bottom: 30px;
-    gap: 8px; /* Espaço entre as abas */
-    flex-wrap: wrap;
-}
-
-.tab-btn {
-    flex: 1 1 auto;
-    min-width: fit-content;
-    padding: 12px 15px; /* Padding maior */
-    border: 1px solid #ced4da; /* Borda sutil */
-    border-bottom: none;
-    background-color: #e9ecef; /* Cor de fundo mais clara */
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 600; /* Peso da fonte */
-    color: #495057;
-    transition: all 0.3s ease; /* Transição suave */
-    border-radius: 8px 8px 0 0; /* Cantos arredondados no topo */
-    text-transform: capitalize;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra sutil */
-}
-
-.tab-btn:hover {
-    background-color: #d3d9e0;
-    color: #343a40;
-}
-
-.tab-btn.active {
-    background-color: #007bff; /* Azul primário */
-    color: #fff;
-    border-color: #007bff;
-    box-shadow: 0 3px 10px rgba(0,123,255,0.3); /* Sombra mais acentuada */
-}
-
-.tab-content {
-    padding-top: 25px; /* Espaço maior acima do conteúdo */
-    border-top: 1px solid #dee2e6;
-    margin-top: -1px; /* Ajusta para cobrir a borda */
-}
-
-/* ========================================================================== */
-/* 2. FORMULÁRIOS E BOTÕES */
-/* ========================================================================== */
-
+/* Estilos de formulário e botões */
 .form-group {
-    margin-bottom: 25px; /* Espaçamento maior entre grupos */
+    margin-bottom: 15px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px; /* Espaçamento maior entre label e input */
-    font-weight: 600;
-    color: #495057;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .form-control {
     width: 100%;
-    padding: 12px 15px; /* Padding maior */
-    border: 1px solid #ced4da; /* Borda mais suave */
-    border-radius: 6px; /* Cantos mais arredondados */
-    box-sizing: border-box;
+    padding: 10px;
     font-size: 16px;
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.form-control:focus {
-    border-color: #80bdff;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
 }
 
 .btn {
-    padding: 12px 25px; /* Padding maior nos botões */
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    display: inline-block;
+    padding: 10px 20px;
     font-size: 16px;
-    font-weight: 600;
-    transition: background-color 0.3s, transform 0.2s;
-    text-transform: capitalize;
-    display: inline-block; /* Para que transform funcione */
-}
-
-.btn:active {
-    transform: translateY(1px); /* Efeito sutil de pressionar */
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
 }
 
 .btn-primary {
     background-color: #007bff;
-    color: #fff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
+    color: white;
 }
 
 .btn-secondary {
     background-color: #6c757d;
-    color: #fff;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: #fff;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
+    color: white;
 }
 
 .btn-warning {
@@ -185,431 +123,132 @@ h4 {
     color: #212529;
 }
 
-.btn-warning:hover {
-    background-color: #e0a800;
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
 }
 
-.btn-info { /* Adicionado para botão de cancelar */
-    background-color: #17a2b8;
-    color: #fff;
-}
-
-.btn-info:hover {
-    background-color: #117a8b;
-}
-
-.btn-light {
-    background-color: #f8f9fa;
-    color: #212529;
-}
-
-.btn-light:hover {
-    background-color: #e2e6ea;
-}
-
-.btn-success {
-    background-color: #28a745;
-    color: #fff;
-}
-
-.btn-success:hover {
-    background-color: #218838;
+.btn:hover {
+    filter: brightness(1.1);
 }
 
 .btn-sm {
-    padding: 8px 12px; /* Padding menor para botões pequenos */
-    font-size: 0.85em;
+    padding: 5px 10px;
+    font-size: 14px;
 }
 
-/* Botões em formulários */
-#servicoForm button[type="submit"],
-#mensagemForm button[type="submit"],
-#configForm button[type="submit"] {
-    width: 100%; /* Botões de submit ocupam toda a largura */
-    margin-top: 25px;
-}
-
-/* ========================================================================== */
-/* 3. LISTAS E CARDS */
-/* ========================================================================== */
-
-.card {
-    border: 1px solid #e0e0e0; /* Borda mais suave */
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px; /* Espaçamento maior entre cards */
-    background-color: #fff; /* Fundo branco */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06); /* Sombra mais pronunciada */
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-
-.card-title {
-    margin-top: 0;
-    font-size: 1.3em;
-    color: #0056b3; /* Azul mais escuro para títulos */
-    margin-bottom: 10px;
-}
-
-.card-text {
-    margin-bottom: 8px;
-    line-height: 1.6; /* Melhor legibilidade */
-}
-
-.badge {
-    padding: 6px 12px;
-    border-radius: 20px; /* Cantos mais arredondados */
-    font-size: 0.8em;
-    font-weight: 600;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.badge-pendente { background-color: #ffc107; } /* Amarelo */
-.badge-concluido { background-color: #28a745; } /* Verde */
-.badge-cancelado { background-color: #dc3545; } /* Vermelho */
-
-/* ========================================================================== */
-/* 4. CAMPOS ADICIONAIS */
-/* ========================================================================== */
-
+/* Estilos para campos adicionais */
 .additional-field {
-    border: 1px dashed #ccc; /* Borda tracejada para campos adicionais */
+    border: 1px solid #ddd;
     padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    background-color: #fdfdfd; /* Fundo levemente diferente */
-    position: relative; /* Para posicionar botão de remover */
+    margin-bottom: 15px;
+    border-radius: 5px;
+    background-color: #f1f1f1;
+    position: relative;
 }
 
 .additional-field .remove-field-btn {
     position: absolute;
     top: 10px;
     right: 10px;
-    margin-top: 0; /* Remove margin-top */
 }
 
-.option-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
-}
-
-.option-item .form-control {
-    flex: 1; /* Ocupa espaço disponível */
-    min-width: 120px; /* Largura mínima para evitar que o input encolha demais */
-}
-
-.option-item .remove-option-btn {
-    flex-shrink: 0; /* Evita que o botão encolha */
+.options-container {
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
 }
 
 .option-list {
     margin-bottom: 10px;
-    padding-left: 10px; /* Recuo para a lista de opções */
 }
 
-.add-option-btn {
-    margin-top: 10px;
-}
-
-
-/* ========================================================================== */
-/* 5. CONFIGURAÇÕES */
-/* ========================================================================== */
-
-.horario-dia {
-    border: 1px solid #e0e0e0;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    background-color: #fcfcfc; /* Fundo sutilmente diferente */
-}
-
-.horario-dia h5 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #007bff;
-    font-size: 1.1em;
-}
-
-.form-check {
+.option-item {
     display: flex;
+    gap: 10px;
     align-items: center;
-    margin-bottom: 15px; /* Espaçamento maior */
+    margin-bottom: 5px;
 }
 
-.form-check-input {
-    margin-right: 10px;
-    width: 20px; /* Tamanho maior para checkboxes */
-    height: 20px;
-    cursor: pointer;
+.option-item input {
+    flex: 1;
 }
 
-.form-check-label {
-    margin-bottom: 0;
-    cursor: pointer; /* Indica que o label é clicável */
-    color: #495057;
-}
-
-/* ========================================================================== */
-/* 6. NOVOS ESTILOS PARA MENSAGENS E PROMOÇÕES */
-/* ========================================================================== */
-
-#listaMensagens .card {
+/* Estilos para a lista de serviços cadastrados */
+.card {
+    border: 1px solid #ddd;
+    border-radius: 5px;
     margin-bottom: 15px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.promotion-section {
-    border-top: 1px solid #dee2e6; /* Linha de separação */
-    padding-top: 25px;
-    margin-top: 30px;
-}
-
-#promotionFields {
-    border: 1px dashed #ccc; /* Borda tracejada */
+.card-body {
     padding: 20px;
-    border-radius: 8px;
-    margin-top: 15px;
-    background-color: #fdfdfd;
 }
 
-#promotionFields .form-group {
-    margin-bottom: 15px; /* Menos espaço dentro da seção de promoção */
+.card-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 5px;
 }
 
-#removePromotionBtn {
-    margin-top: 15px;
-    width: auto; /* Ajusta tamanho */
-    background-color: #6c757d; /* Cor secundária */
+.card-text {
+    margin-bottom: 5px;
 }
 
-#removePromotionBtn:hover {
-    background-color: #5a6268;
+/* Estilos para agendamentos */
+.booking-card {
+    border-left: 5px solid;
 }
 
-code {
-    background-color: #e9ecef; /* Cor de fundo para códigos */
-    padding: 3px 6px;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', monospace; /* Fonte monoespaçada */
-    color: #d63384; /* Cor vibrante para código */
-    font-size: 0.9em;
+.booking-pendente {
+    border-color: #ffc107;
 }
 
-.mt-2 { margin-top: 1rem !important; }
-.mt-3 { margin-top: 1rem !important; }
-.mt-4 { margin-top: 1.5rem !important; }
+.booking-concluído {
+    border-color: #28a745;
+}
 
+.booking-cancelado {
+    border-color: #dc3545;
+}
 
-/* ========================================================================== */
-/* ESTILOS ADICIONAIS PARA O CARROSSEL (em script.js) */
-/* ========================================================================== */
+.badge {
+    padding: 5px 10px;
+    border-radius: 10px;
+    color: white;
+}
 
-.service-carousel {
-    margin-bottom: 30px;
-    padding: 20px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+.badge-pendente {
+    background-color: #ffc107;
+}
+
+.badge-concluído {
+    background-color: #28a745;
+}
+
+.badge-cancelado {
+    background-color: #dc3545;
+}
+
+/* Estilos de horário */
+.horario-dia {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
     background-color: #f9f9f9;
 }
 
-.service-carousel h3 {
-    text-align: center;
-    color: #007bff;
-    margin-bottom: 20px;
-    border-bottom: none; /* Remove borda extra */
-}
-
-.carousel-container {
-    width: 100%;
-    overflow: hidden; /* Esconde o que está fora */
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.carousel-slides {
-    display: flex;
-    transition: transform 0.5s ease-in-out; /* Transição suave */
-    width: 100%; /* Garante que os slides se organizem corretamente */
-}
-
-.carousel-slide {
-    min-width: 100%; /* Cada slide ocupa toda a largura do container */
-    flex-shrink: 0; /* Evita que os slides encolham */
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 6px;
-    background-color: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Espaçamento entre os elementos internos do slide */
-}
-
-.carousel-slide .form-group {
-    margin-bottom: 15px; /* Ajusta margem dentro do slide */
-}
-
-.carousel-slide .equipment-price {
-    font-weight: bold;
-    color: #28a745; /* Verde para preço */
-    margin-top: 10px;
-    font-size: 1.1em;
-}
-
-.carousel-slide .remove-equipment-btn {
-    margin-top: 10px;
-    width: auto;
-    background-color: #dc3545; /* Vermelho */
-}
-
-.carousel-navigation {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-radius: 4px;
-}
-
-.carousel-btn {
-    background-color: #007bff;
-    color: white;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.carousel-btn:hover {
-    background-color: #0056b3;
-}
-
-.carousel-btn:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.carousel-counter {
-    font-weight: bold;
-    color: #555;
-}
-
-.add-equipment-btn {
-    width: 100%;
-    margin-top: 20px;
-    background-color: #6c757d; /* Cinza */
-}
-
-.add-equipment-btn:hover {
-    background-color: #5a6268;
-}
-
-.service-total {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #333;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-    text-align: right;
-}
-
-/* Estilos para campos com erro */
-.form-control.error, .additional-field .error, .option-item .error {
-    border-color: #dc3545 !important; /* Borda vermelha */
-}
-
-/* Estilos para o seletor de quantidade */
-.equipment-quantity {
-    max-width: 80px; /* Limita largura */
-    text-align: center;
-}
-
-/* ========================================================================== */
-/* Responsividade */
-/* ========================================================================== */
-@media (max-width: 768px) { /* Tablets e telas menores */
+/* Responsividade básica */
+@media (max-width: 768px) {
     .container {
-        margin: 20px auto;
-        padding: 20px;
+        padding: 10px;
     }
-    
-    h2 {
-        font-size: 1.6em;
-    }
-
-    .tab-navigation {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
     .tab-btn {
-        flex-basis: calc(50% - 4px); /* Duas colunas */
-    }
-
-    .carousel-navigation {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .carousel-btn {
-        width: 100%;
-    }
-}
-
-@media (max-width: 480px) { /* Celulares */
-    .tab-btn {
-        flex-basis: 100%; /* Uma coluna */
-        border-radius: 4px; /* Cantos totalmente arredondados */
-        margin-bottom: 5px;
-    }
-    
-    .container {
-        padding: 15px;
-        margin: 20px auto;
-    }
-    
-    .option-item {
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    .option-item .form-control, .option-item .remove-option-btn {
-        width: 100%;
-    }
-
-    .additional-field .remove-field-btn {
-        position: static; /* Remove posicionamento absoluto */
-        display: block; /* Ocupa linha inteira */
-        width: auto;
-        margin: 10px auto 0; /* Centraliza */
-    }
-
-    .service-carousel h3 {
-        font-size: 1.2em;
-    }
-    
-    .carousel-container {
-        margin-bottom: 15px;
-    }
-
-    .carousel-slide {
-        gap: 10px;
-    }
-    
-    .carousel-navigation {
-        padding: 8px;
+        font-size: 12px;
+        padding: 8px 10px;
     }
 }
