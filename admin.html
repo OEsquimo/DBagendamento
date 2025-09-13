@@ -8,162 +8,68 @@
 </head>
 <body>
 
+    <div class="header-container">
+        <h1>PAINEL ADMINISTRATIVO</h1>
+    </div>
+    
     <div class="container">
-        <h2>Painel Administrativo</h2>
-
         <div class="tab-navigation">
             <button class="tab-btn active" data-tab="addServicoTab">Cadastrar Serviço</button>
             <button class="tab-btn" data-tab="listaServicosTab">Serviços Cadastrados</button>
             <button class="tab-btn" data-tab="agendamentosTab">Agendamentos</button>
-            <button class="tab-btn" data-tab="mensagensTab">Mensagens WhatsApp</button>
             <button class="tab-btn" data-tab="configuracoesTab">Configurações</button>
         </div>
-        
-        <div class="tab-content">
-            <section id="addServicoTab" class="tab-pane active">
-                <h3>Cadastrar Novo Serviço</h3>
-                <form id="servicoForm">
-                    <div class="form-group">
-                        <label for="servicoNome">Nome do Serviço</label>
-                        <input type="text" id="servicoNome" class="form-control" required placeholder="Instalação de ar condicionado">
-                    </div>
-                    <div class="form-group">
-                        <label for="servicoDescricao">Descrição do Serviço</label>
-                        <textarea id="servicoDescricao" class="form-control" required placeholder="Serviço com a qualidade que você precisa, com preço e qualidade que você merece"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="servicoPreco">Preço Base (se houver)</label>
-                        <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00" placeholder="0.00">
-                    </div>
 
-                    <h4>Campos Adicionais</h4>
-                    <div id="additionalFieldsContainer">
-                        <div class="additional-field" data-type="select">
-                            <div class="form-group">
-                                <label>Nome do Campo</label>
-                                <input type="text" class="form-control field-name" placeholder="Ex: Capacidade de BTUs" value="Capacidade de BTUs" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Tipo do Campo</label>
-                                <select class="form-control field-type">
-                                    <option value="select" selected>Lista de opções (select)</option>
-                                    <option value="text">Campo de Texto</option>
-                                    <option value="number">Campo Numérico</option>
-                                    <option value="textarea">Campo de Texto Longo</option>
-                                </select>
-                            </div>
-                            <div class="options-container">
-                                <p>Opções:</p>
-                                <div class="option-list">
-                                    <div class="option-item">
-                                        <input type="text" class="form-control option-value" placeholder="Nome da opção (ex: 9.000 BTUs)" value="9000 BTUs" required>
-                                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="480.00">
-                                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-                                    </div>
-                                    <div class="option-item">
-                                        <input type="text" class="form-control option-value" placeholder="Nome da opção (ex: 12.000 BTUs)" value="12000 BTUs" required>
-                                        <input type="number" class="form-control option-price" placeholder="Preço adicional" step="0.01" value="600.00">
-                                        <button type="button" class="btn btn-danger btn-sm remove-option-btn">Remover</button>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-light add-option-btn">Adicionar Opção</button>
-                            </div>
-                            <button type="button" class="btn btn-danger btn-sm remove-field-btn">Remover Campo</button>
-                        </div>
-                    </div>
-                    <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
-
-                    <!-- Seção de Promoção -->
-                    <div class="promotion-section">
-                        <h4>Promoção</h4>
-                        <button type="button" id="togglePromotionBtn" class="btn btn-secondary">Criar Promoção</button>
-                        <div id="promotionFields" class="hidden">
-                            <div class="form-group">
-                                <label for="promotionDiscount">Porcentagem de Desconto</label>
-                                <input type="number" id="promotionDiscount" class="form-control" step="1" min="1" max="100" placeholder="Ex: 10 para 10%">
-                            </div>
-                            <div class="form-group">
-                                <label for="promotionDescription">Descrição da Promoção</label>
-                                <input type="text" id="promotionDescription" class="form-control" placeholder="Ex: Promoção de Verão!">
-                            </div>
-                            <div class="form-group">
-                                <label for="promotionStartDate">Data de Início</label>
-                                <input type="date" id="promotionStartDate" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="promotionEndDate">Data de Término</label>
-                                <input type="date" id="promotionEndDate" class="form-control">
-                            </div>
-                            <button type="button" id="removePromotionBtn" class="btn btn-danger">Remover Promoção</button>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
-                </form>
-            </section>
-            
-            <section id="listaServicosTab" class="tab-pane hidden">
-                <h3>Serviços Cadastrados</h3>
-                <div id="servicosList">
-                    <p>Carregando serviços...</p>
+        <section id="addServicoTab" class="tab-pane active">
+            <h3>Cadastrar Novo Serviço</h3>
+            <form id="servicoForm">
+                <div class="form-group">
+                    <label for="servicoNome">Nome do Serviço</label>
+                    <input type="text" id="servicoNome" class="form-control" required placeholder="Instalação de ar condicionado">
                 </div>
-            </section>
-            
-            <section id="agendamentosTab" class="tab-pane hidden">
-                <h3>Agendamentos</h3>
-                <div id="agendamentosList">
-                    <p>Carregando agendamentos...</p>
+                <div class="form-group">
+                    <label for="servicoDescricao">Descrição do Serviço</label>
+                    <textarea id="servicoDescricao" class="form-control" required placeholder="Serviço com a qualidade que você precisa, com preço e qualidade que você merece"></textarea>
                 </div>
-            </section>
-
-            <section id="mensagensTab" class="tab-pane hidden">
-                <h3>Mensagens Personalizadas para WhatsApp</h3>
-                <form id="mensagemForm">
-                    <div class="form-group">
-                        <label for="mensagemTitulo">Título da Mensagem</label>
-                        <input type="text" id="mensagemTitulo" class="form-control" placeholder="Ex: Confirmação de Agendamento" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="mensagemTexto">Texto da Mensagem</label>
-                        <textarea id="mensagemTexto" class="form-control" rows="6" placeholder="Use {{...}} para variáveis. Ex: {{cliente.nome}}, {{data}}, {{hora}}, {{servicos}}, {{total}}" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Variáveis disponíveis:</label>
-                        <ul>
-                            <li><code>{{cliente.nome}}</code> - Nome do cliente</li>
-                            <li><code>{{cliente.telefone}}</code> - Telefone do cliente</li>
-                            <li><code>{{cliente.endereco}}</code> - Endereço do cliente</li>
-                            <li><code>{{data}}</code> - Data do agendamento</li>
-                            <li><code>{{hora}}</code> - Hora do agendamento</li>
-                            <li><code>{{servicos}}</code> - Lista de serviços</li>
-                            <li><code>{{total}}</code> - Valor total</li>
-                            <li><code>{{observacoes}}</code> - Observações do cliente</li>
-                            <li><code>{{formaPagamento}}</code> - Forma de pagamento selecionada</li>
-                            <li><code>{{equipamentos}}</code> - Lista de equipamentos por serviço</li>
-                        </ul>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Salvar Mensagem</button>
-                </form>
-                <div id="listaMensagens" class="mt-4">
-                    <p>Nenhuma mensagem cadastrada.</p>
+                <div class="form-group">
+                    <label for="servicoPreco">Preço Base (se houver)</label>
+                    <input type="number" id="servicoPreco" class="form-control" step="0.01" value="0.00" placeholder="0.00">
                 </div>
-            </section>
 
-            <section id="configuracoesTab" class="tab-pane hidden">
-                <h3>Configurações Gerais</h3>
-                <form id="configForm">
-                    <div class="form-group">
-                        <label for="whatsappNumber">Número do WhatsApp do Administrador</label>
-                        <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
+                <h4>Campos Adicionais</h4>
+                <div id="additionalFieldsContainer">
                     </div>
-                    <h4>Horários de Atendimento por Dia</h4>
-                    <div id="horariosContainer">
-                        <!-- Horários serão gerados dinamicamente -->
+                <button type="button" id="addFieldBtn" class="btn btn-secondary">Adicionar Campo</button>
+
+                <button type="submit" class="btn btn-primary mt-3">Salvar Serviço</button>
+            </form>
+        </section>
+
+        <section id="listaServicosTab" class="tab-pane hidden">
+            <h3>Serviços Cadastrados</h3>
+            <div id="servicosList">
+                </div>
+        </section>
+
+        <section id="agendamentosTab" class="tab-pane hidden">
+            <h3>Agendamentos</h3>
+            <div id="agendamentosList">
+                </div>
+        </section>
+
+        <section id="configuracoesTab" class="tab-pane hidden">
+            <h3>Configurações Gerais</h3>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="whatsappNumber">Número do WhatsApp do Administrador</label>
+                    <input type="tel" id="whatsappNumber" class="form-control" required placeholder="Ex: 5521987654321">
+                </div>
+                <h4>Horários de Atendimento por Dia</h4>
+                <div id="horariosContainer">
                     </div>
-                    <button type="submit" class="btn btn-primary">Salvar Configurações</button>
-                </form>
-            </section>
-        </div>
+                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+            </form>
+        </section>
     </div>
 
     <script type="module" src="admin.js"></script>
