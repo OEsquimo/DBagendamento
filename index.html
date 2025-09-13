@@ -30,18 +30,11 @@
     </div>
 
     <div class="container">
-        
-        <!-- Banner de Promoções -->
-        <div id="promotionBanner" class="promotion-banner hidden">
-            <div class="promotion-content">
-                <span id="promotionText"></span>
-                <button id="applyPromotion" class="btn btn-promotion">Aproveitar Promoção</button>
-            </div>
-        </div>
-        
+
         <section id="servicos" class="active-section">
             <h2>Escolha um ou mais serviços</h2>
-            <div id="servicosContainer"></div>
+            <div id="servicosContainer">
+                </div>
             <div class="total-summary-container">
                 <div class="total-label">Serviços Selecionados: <span id="selectedServicesCount">0</span></div>
             </div>
@@ -52,7 +45,8 @@
 
         <section id="servicosForm" class="hidden">
             <h2>Detalhes do Serviço</h2>
-            <div id="servicosFormContainer"></div>
+            <div id="servicosFormContainer">
+                </div>
             <div class="total-summary-container">
                 <span class="total-label">Orçamento Total:</span>
                 <span id="orcamentoTotal">R$ 0,00</span>
@@ -102,25 +96,14 @@
                         <p>Selecione uma data para ver os horários.</p>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Forma de Pagamento</label>
-                    <div class="payment-options">
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="Pix" required>
-                            <span>Pix</span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="Dinheiro">
-                            <span>Dinheiro</span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="Cartão de Crédito">
-                            <span>Cartão de Crédito</span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="Cartão de Débito">
-                            <span>Cartão de Débito</span>
-                        </label>
+
+                <div class="payment-section">
+                    <h3>Forma de Pagamento</h3>
+                    <div id="paymentOptionsContainer" class="payment-options-container">
+                        <button type="button" class="btn payment-option-btn" data-method="Pix">Pix</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Dinheiro">Dinheiro</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Cartão de Crédito">Cartão de Crédito</button>
+                        <button type="button" class="btn payment-option-btn" data-method="Cartão de Débito">Cartão de Débito</button>
                     </div>
                 </div>
             </form>
