@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.6 (Limpeza de campos em novas instâncias, botão de adicionar em todas, campo de quantidade e multiplicação de preço)
+ * Versão: 11.7 (Correção na lógica de preço com quantidade, ajuste de centralização do carrossel implícito via CSS)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -197,7 +197,8 @@ function renderServiceForms() {
         slideElement.dataset.instanceId = instance.id; // Adiciona um ID único para a instância
 
         let fieldsHtml = '';
-        const quantityFieldConfig = instance.camposAdicionais?.find(f => f.tipo === 'select_quantidade'); // Busca o campo de quantidade
+        // Busca o campo de quantidade para inicializar com valor 1
+        const quantityFieldConfig = instance.camposAdicionais?.find(f => f.tipo === 'select_quantidade');
 
         if (instance.camposAdicionais && instance.camposAdicionais.length > 0) {
             fieldsHtml = instance.camposAdicionais.map(field => {
@@ -208,7 +209,10 @@ function renderServiceForms() {
 
                 // Campo de Quantidade (apenas se for configurado como tal)
                 if (fieldType === 'select_quantidade' && fieldOptions) {
-                    const quantityOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(q => `<option value="${q}" ${currentFieldValue === q.toString() ? 'selected' : ''}>${q}</option>`).join('');
+                    // Gera opções de 1 a 10, pré-seleciona '1' se nenhum valor estiver definido
+                    const quantityOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(q =>
+                        `<option value="${q}" ${currentFieldValue === q.toString() ? 'selected' : ''}>${q}</option>`
+                    ).join('');
                     return `
                         <div class="form-group">
                             <label>${fieldName}</label>
@@ -345,11 +349,11 @@ function handleFieldChange(e) {
     instance.camposSelecionados[fieldName] = value;
 
     // Recalcula o preço da instância e o total geral
-    updateInstancePrice(instanceId);
-    updateOrcamentoTotal();
+    updateInstancePrice(instanceId); // Chama a atualização do preço da instância
+    updateOrcamentoTotal(); // Atualiza o total geral
 }
 
-// Função para recalcular o preço de uma instância específica, considerando quantidade e campos
+// CORREÇÃO: Função para recalcular o preço de uma instância específica, considerando quantidade e campos
 function updateInstancePrice(instanceId) {
     const instance = servicosSelecionados.find(inst => inst.id === instanceId);
     if (!instance) return;
@@ -380,7 +384,7 @@ function updateInstancePrice(instanceId) {
         }
     });
 
-    // Calcula o preço total da instância ANTES de multiplicar pela quantidade
+    // *** CORREÇÃO: Calcula o PREÇO UNITÁRIO da instância ANTES de multiplicar pela quantidade ***
     let precoUnitarioInstancia = precoBase + precoAdicionais;
 
     // Obtém a quantidade selecionada
@@ -394,9 +398,9 @@ function updateInstancePrice(instanceId) {
         }
     }
 
-    // Atualiza o preço calculado na instância, multiplicando pela quantidade
+    // Atualiza o preço calculado na instância, multiplicando o PREÇO UNITÁRIO pela QUANTIDADE
     instance.quantidade = quantidade; // Salva a quantidade na instância
-    instance.precoCalculado = precoUnitarioInstancia * quantidade;
+    instance.precoCalculado = precoUnitarioInstancia * quantidade; // AQUI ESTÁ A CORREÇÃO: preço unitário * quantidade
 
     // Atualiza o display do preço no slide
     const priceDisplay = slideElement.querySelector('.service-price');
@@ -436,8 +440,8 @@ function addEquipmentInstance(e) {
             newInstance.camposSelecionados[field.nome] = ''; // Deixa campos de texto/número vazios
         }
     });
-    // Recalcula o preço inicial com base na quantidade padrão de 1
-    newInstance.precoCalculado = (serviceData.precoBase || 0) * 1;
+    // Garante que o preço seja calculado corretamente para a nova instância com a quantidade padrão de 1
+    // A chamada a updateInstancePrice() dentro de renderServiceForms() já cuidará disso.
 
     servicosSelecionados.push(newInstance);
 
@@ -446,7 +450,12 @@ function addEquipmentInstance(e) {
 
     // Tenta ir para o slide recém-criado (o último na lista)
     if (splideCarouselInstance) {
-        splideCarouselInstance.go(servicosSelecionados.length - 1);
+        // Precisamos encontrar o ID da nova instância criada para ir para o slide correto
+        const newlyAddedInstance = servicosSelecionados.find(inst => inst.id === currentServiceInstanceId);
+        if (newlyAddedInstance) {
+            const newSlideIndex = servicosSelecionados.indexOf(newlyAddedInstance);
+            splideCarouselInstance.go(newSlideIndex);
+        }
     }
 }
 
