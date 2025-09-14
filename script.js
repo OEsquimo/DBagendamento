@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.10 (Foco em estabilidade, múltiplos carrosséis, topo/botões fixos, multiplicação de quantidade e remoção de serviço base)
+ * Versão: 11.11 (Foco em múltiplos carrosséis corretos, elementos fixos e adicionar slide correto)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,7 +44,6 @@ const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
-// const addEquipmentBtnContainer = document.querySelector('.add-equipment-container'); // Não usado diretamente
 
 let servicosSelecionados = [];
 let servicosGlobais = {};
@@ -342,7 +341,7 @@ function renderServiceForms() {
 
 function attachEventListenersToForms() {
     document.querySelectorAll('.additional-field-select-price, .additional-field-select-no-price, .additional-field-input, .additional-field-quantidade, .additional-field-textarea').forEach(field => {
-        field.removeEventListener('change', handleFieldChange); // Remove antes para evitar duplicidade
+        field.removeEventListener('change', handleFieldChange);
         field.removeEventListener('input', handleFieldChange);
         field.addEventListener('change', handleFieldChange);
         field.addEventListener('input', handleFieldChange);
@@ -400,10 +399,10 @@ function updateInstancePrice(instanceId) {
 
     // Calcula o preço dos selects com preço associado
     slideElement.querySelectorAll('.additional-field-select-price').forEach(select => {
-        const selectedOptionText = select.options[select.selectedIndex]?.text; // Pega o texto da opção
+        const selectedOptionText = select.options[select.selectedIndex]?.text;
         if (selectedOptionText && selectedOptionText.includes(', R$ ')) {
             const parts = selectedOptionText.split(', R$ ');
-            const optionPrice = parseFloat(parts[1].replace(',', '.')); // Garante que o decimal esteja correto
+            const optionPrice = parseFloat(parts[1].replace(',', '.'));
             if (!isNaN(optionPrice)) {
                 precoAdicionais += optionPrice;
             }
@@ -418,7 +417,6 @@ function updateInstancePrice(instanceId) {
         }
     });
 
-    // *** CORREÇÃO: Calcula o PREÇO UNITÁRIO da instância ANTES de multiplicar pela quantidade ***
     let precoUnitarioInstancia = precoBase + precoAdicionais;
 
     // Obtém a quantidade selecionada
@@ -429,17 +427,13 @@ function updateInstancePrice(instanceId) {
         const parsedQuantity = parseInt(quantityField.value);
         if (!isNaN(parsedQuantity) && parsedQuantity > 0) {
             quantidade = parsedQuantity;
-        } else if (parsedQuantity === 0) { // Se a quantidade for explicitamente 0, o item não deve ter custo
-            quantidade = 0;
+        } else if (parsedQuantity === 0) {
+            quantidade = 0; // Zero quantidade = zero custo
         }
-    } else { // Se o campo quantidade não existe ou está vazio, assume 1 (comportamento padrão)
-        quantidade = 1;
     }
 
-
-    // Atualiza o preço calculado na instância, multiplicando o PREÇO UNITÁRIO pela QUANTIDADE
-    instance.quantidade = quantidade; // Salva a quantidade na instância
-    instance.precoCalculado = precoUnitarioInstancia * quantidade; // AQUI ESTÁ A CORREÇÃO: preço unitário * quantidade
+    instance.quantidade = quantidade;
+    instance.precoCalculado = precoUnitarioInstancia * quantidade;
 
     // Atualiza o display do preço no slide
     const priceDisplay = slideElement.querySelector('.service-item-price .item-price-value');
@@ -458,40 +452,52 @@ function updateServiceBlockTotal(instanceId) {
     }
 }
 
+// **CORREÇÃO AQUI**: Esta função agora adiciona um NOVO SLIDE ao carrossel existente
 function addEquipmentInstance(e) {
     const serviceKey = e.target.dataset.serviceKey;
-    const baseInstanceId = parseInt(e.target.dataset.baseInstanceId); // ID da instância base do serviço
+    const baseInstanceId = parseInt(e.target.dataset.baseInstanceId);
     const serviceData = servicosGlobais[serviceKey];
 
     if (!serviceData) return;
+
+    // Encontra o carrossel associado a esta instância base
+    const baseServiceBlock = document.querySelector(`.service-edit-block[data-instance-id="${baseInstanceId}"]`);
+    if (!baseServiceBlock) return;
+
+    const splideContainer = baseServiceBlock.querySelector('.service-carousel-individual .splide__list');
+    if (!splideContainer) return;
 
     currentServiceInstanceId++;
     const newInstance = {
         id: currentServiceInstanceId,
         serviceKey: serviceKey,
-        nome: serviceData.nome, // Nome do serviço base
+        nome: serviceData.nome,
         precoBase: serviceData.precoBase || 0,
         camposAdicionais: serviceData.camposAdicionais || [],
         camposSelecionados: {},
         quantidade: 1,
         precoCalculado: serviceData.precoBase || 0,
-        isBaseInstance: false // Indica que é uma instância adicional (equipamento/detalhe)
+        isBaseInstance: false // Indica que é uma instância adicional
     };
 
-    // Inicializa campos obrigatórios para a nova instância
+    // Inicializa campos para a nova instância
     newInstance.camposAdicionais.forEach(field => {
         if (field.tipo === 'select_quantidade' && field.opcoes && field.opcoes.length > 0) {
-            newInstance.camposSelecionados[field.nome] = '1'; // Quantidade padrão 1
+            newInstance.camposSelecionados[field.nome] = '1';
         } else if (field.tipo === 'select_com_preco' || field.tipo === 'select_sem_preco') {
-            newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+            newInstance.camposSelecionados[field.nome] = '';
         } else if (field.tipo === 'text' || field.tipo === 'number' || field.tipo === 'textarea') {
-            newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+            newInstance.camposSelecionados[field.nome] = '';
         }
     });
 
     servicosSelecionados.push(newInstance);
-    renderServiceForms(); // Re-renderiza tudo, o que adicionará o novo slide
+    renderServiceForms(); // Re-renderiza tudo para adicionar o novo slide corretamente
+
+    // Opcional: Tentar focar no slide recém-adicionado (pode precisar de ajustes dependendo do Splide)
+    // A lógica de renderizar tudo novamente já garante que o novo slide esteja presente.
 }
+
 
 function deleteService(e) {
     const instanceIdToDelete = parseInt(e.target.dataset.instanceId);
@@ -506,7 +512,7 @@ function deleteService(e) {
 
     renderServiceForms(); // Re-renderiza a lista de blocos de serviço
     updateOrcamentoTotal();
-    updateSelectedServicesCount(); // Atualiza a contagem na primeira etapa
+    updateSelectedServicesCount();
 
     const nextButton = document.getElementById('nextStep1');
     if (servicosSelecionados.filter(s => s.isBaseInstance).length === 0) {
@@ -516,14 +522,9 @@ function deleteService(e) {
 
 function removeInstance(e) {
     const instanceIdToRemove = parseInt(e.target.dataset.instanceId);
-    // Encontra a instância para recalcular o total do serviço antes de remover
-    const instanceToRemove = servicosSelecionados.find(inst => inst.id === instanceIdToRemove);
-    if (instanceToRemove) {
-        const serviceKey = instanceToRemove.serviceKey;
-        servicosSelecionados = servicosSelecionados.filter(inst => inst.id !== instanceIdToRemove);
-        renderServiceForms(); // Re-renderiza para remover o slide
-        updateOrcamentoTotal(); // Atualiza o total geral
-    }
+    servicosSelecionados = servicosSelecionados.filter(inst => inst.id !== instanceIdToRemove);
+    renderServiceForms();
+    updateOrcamentoTotal();
 }
 
 function updateOrcamentoTotal() {
@@ -645,7 +646,6 @@ async function handleDateSelection() {
     if (snapshot.exists()) {
         snapshot.forEach(childSnapshot => {
             const agendamento = childSnapshot.val();
-            // Compara a data no formato DD/MM/YYYY
             const firebaseDate = `${day}/${month}/${year}`;
             if (agendamento.data === firebaseDate && agendamento.status !== 'Cancelado') {
                 agendamentosDoDia.push(agendamento.hora);
@@ -748,7 +748,7 @@ async function handleFormSubmit(e) {
         hora: selectedTimeSlot.textContent,
         orcamentoTotal: parseFloat(orcamentoTotalDisplay.textContent.replace('R$ ', '').replace(',', '.')),
         formaPagamento: formaPagamentoSelecionada,
-        status: 'Pendente' // Status inicial do agendamento
+        status: 'Pendente'
     };
 
     try {
@@ -767,12 +767,8 @@ function showConfirmation() {
     updateProgressBar(5); // Assumindo 5 passos para fins de UI (1-4 + Confirmação)
 
     const whatsappMsg = createWhatsAppMessage();
-    const whatsappNumber = configGlobais.whatsappNumber || '5511999999999'; // Número padrão caso não esteja configurado
+    const whatsappNumber = configGlobais.whatsappNumber || '5511999999999';
     whatsappLink.href = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMsg)}`;
-
-    // O link do WhatsApp já está configurado. O usuário clicará nele para enviar.
-    // O redirecionamento para index.html após o clique pode ser adicionado se desejado.
-    // Por enquanto, deixamos a confirmação visível.
 }
 
 function createWhatsAppMessage() {
@@ -808,17 +804,15 @@ function createWhatsAppMessage() {
     servicosSelecionados.forEach((instance, index) => {
         mensagemFinal += `${index + 1}. *${instance.nome}*\n`;
 
-        // Exibe os campos selecionados para esta instância
         instance.camposAdicionais.forEach(field => {
             const fieldName = field.nome;
             const selectedValue = instance.camposSelecionados[fieldName];
 
-            // Verifica se o valor está presente, não é vazio, e não é um "Não" explícito ou quantidade zero.
             if (selectedValue !== undefined && selectedValue !== "" && selectedValue !== "Não" && (field.tipo !== 'select_quantidade' || selectedValue !== '0')) {
                 let displayValue = selectedValue;
 
                 if (field.tipo === 'select_com_preco' && typeof selectedValue === 'string' && selectedValue.includes(', R$ ')) {
-                    displayValue = selectedValue.split(', R$ ')[0]; // Pega apenas o nome da opção
+                    displayValue = selectedValue.split(', R$ ')[0];
                 } else if (field.tipo === 'number') {
                     displayValue = `R$ ${formatPrice(parseFloat(selectedValue))}`;
                 }
@@ -826,8 +820,7 @@ function createWhatsAppMessage() {
             }
         });
 
-        // Mostra a quantidade se for diferente de 1 e se o campo quantidade foi explicitamente renderizado
-        if (field.tipo === 'select_quantidade' && instance.quantidade !== 1 && instance.camposAdicionais?.some(f => f.nome === fieldName)) {
+        if (instance.quantidade !== 1 && instance.camposAdicionais?.some(f => f.tipo === 'select_quantidade')) {
              mensagemFinal += `  *Quantidade*: ${instance.quantidade}\n`;
         }
 
