@@ -286,3 +286,119 @@ h2 {
 #whatsappLink {
     margin-top: 20px;
 }
+
+/* --- Estilos para os novos elementos do carrossel (Etapa 2) --- */
+
+/* Contêiner do cabeçalho do slide, para alinhar título e botões */
+.slide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Permite quebrar linha em telas pequenas */
+    gap: 10px; /* Espaçamento entre os itens */
+}
+
+.slide-header h3 {
+    margin: 0; /* Remove margem padrão do h3 no cabeçalho */
+    color: #333; /* Cor do texto do título do serviço */
+    flex-grow: 1; /* Permite que o título ocupe o espaço disponível */
+}
+
+/* Botão "Remover Serviço" (para a instância base) */
+.btn-remove-service {
+    background-color: #dc3545; /* Cor vermelha para indicar exclusão */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+    white-space: nowrap; /* Evita que o texto do botão quebre */
+}
+
+.btn-remove-service:hover {
+    background-color: #c82333;
+}
+
+/* Estilo para o botão "+ Adicionar Equipamento/Detalhe" dentro do slide */
+.btn-add-equipment {
+    background-color: #007bff; /* Azul primário, pode ajustar se tiver outra cor secundária */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+    margin-top: 15px; /* Espaço acima do botão */
+    width: 100%; /* Ocupa a largura total */
+}
+
+.btn-add-equipment:hover {
+    background-color: #0056b3;
+}
+
+/* Estilo para o botão "Remover" de instâncias adicionais */
+.btn-remove-instance {
+    background-color: #ffc107; /* Amarelo/laranja para indicar remoção de item */
+    color: #333;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.btn-remove-instance:hover {
+    background-color: #e0a800;
+}
+
+/* Espaçamento para o contêiner do botão de adicionar equipamento global */
+.add-equipment-container {
+    padding: 0 20px; /* Adiciona padding para alinhar com o conteúdo principal */
+    margin-bottom: 20px; /* Espaço abaixo do botão */
+    text-align: center; /* Centraliza o botão se ele for menor que 100% */
+}
+
+/* Estilo para o campo de input/select inválido */
+.form-control.invalid {
+    border-color: #dc3545; /* Borda vermelha */
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25); /* Sombra vermelha */
+}
+
+/* Ajustes para os botões do Splide (setas de navegação) */
+.splide__arrow {
+    background-color: rgba(0, 123, 255, 0.7); /* Azul com transparência */
+    border-radius: 50%; /* Torna as setas circulares */
+    width: 3rem; /* Tamanho maior */
+    height: 3rem;
+    display: flex; /* Para centralizar o SVG */
+    align-items: center;
+    justify-content: center;
+}
+
+.splide__arrow svg {
+    fill: white; /* Cor do ícone da seta */
+    width: 1.5rem; /* Tamanho do ícone */
+    height: 1.5rem;
+}
+
+.splide__arrow:hover {
+    background-color: rgba(0, 123, 255, 1); /* Azul sólido ao passar o mouse */
+}
+
+/* Posicionamento das setas, caso seja necessário ajuste fino */
+.splide__arrow--prev {
+    left: 1em; /* Ajuste para o lado esquerdo */
+}
+
+.splide__arrow--next {
+    right: 1em; /* Ajuste para o lado direito */
+    transform: translateX(0%) rotate(180deg); /* Inverte a seta da direita */
+}
+
