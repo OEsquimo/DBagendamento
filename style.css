@@ -8,9 +8,17 @@ body {
 
 .container {
     max-width: 960px;
-    margin: 20px auto;
+    margin: 0 auto; /* Ajustado para permitir que o header fixo funcione corretamente */
     padding: 0 15px;
 }
+
+/* Conteúdo principal que terá a margem para não ser coberto pelo header fixo */
+.main-content {
+    padding-top: 80px; /* Espaço para o header fixo (ajustar conforme altura do header) */
+    padding-bottom: 70px; /* Espaço para a navegação fixa (ajustar conforme altura da navegação) */
+    box-sizing: border-box;
+}
+
 
 h2 {
     text-align: center;
@@ -18,13 +26,16 @@ h2 {
     color: #444;
 }
 
-/* --- Barra de Progresso --- */
+/* --- Barra de Progresso Fixo no Topo --- */
 .header-container {
+    position: sticky; /* Torna o header fixo no topo */
+    top: 0;
+    z-index: 1000; /* Garante que fique sobre outros elementos */
     width: 100%;
     background-color: #ffffff;
     padding: 15px 0;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
+    margin-bottom: 0; /* Remove margem inferior para não criar espaço extra */
 }
 
 .progress-bar {
@@ -77,7 +88,7 @@ h2 {
     transition: background-color 0.2s ease;
     border: none;
     text-align: center;
-    text-decoration: none; /* Remove sublinhado de links */
+    text-decoration: none;
 }
 
 .btn-primary {
@@ -133,7 +144,7 @@ h2 {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Empurra o botão para baixo */
+    justify-content: space-between;
 }
 
 .service-card:hover {
@@ -151,30 +162,28 @@ h2 {
 .service-card p {
     font-size: 0.95em;
     color: #555;
-    flex-grow: 1; /* Permite que o parágrafo ocupe espaço */
-    margin-bottom: 20px; /* Espaço antes do botão */
+    flex-grow: 1;
+    margin-bottom: 20px;
 }
 
 .service-card.selected .btn-select-service {
-    background-color: #dc3545; /* Cor diferente quando selecionado */
+    background-color: #dc3545;
 }
 .service-card.selected .btn-select-service:hover {
     background-color: #c82333;
 }
 
 /* --- Seção de Formulários de Detalhes (com Carrossel) --- */
-
-/* Ajustes para centralizar o carrossel */
 #servicosCarousel {
     width: 100%;
-    max-width: 400px; /* Largura máxima para o carrossel */
-    margin: 20px auto; /* Centraliza horizontalmente e adiciona margem */
+    max-width: 400px;
+    margin: 20px auto;
     padding: 0 10px;
     box-sizing: border-box;
 }
 
 .splide__track {
-    overflow: visible; /* Necessário para que as setas fiquem visíveis */
+    overflow: visible;
 }
 
 .splide__slide {
@@ -184,13 +193,12 @@ h2 {
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Distribui o espaço verticalmente */
-    height: auto; /* Altura automática */
-    max-width: calc(100% - 20px); /* Ajusta max-width para acomodar o padding do carrossel */
-    margin: 0 auto; /* Centraliza o slide se ele for menor que o contêiner */
+    justify-content: space-between;
+    height: auto;
+    max-width: calc(100% - 20px);
+    margin: 0 auto;
 }
 
-/* Estilos para o header do slide */
 .slide-header {
     display: flex;
     justify-content: space-between;
@@ -226,7 +234,6 @@ h2 {
     background-color: #c82333;
 }
 
-/* Botão "+ Adicionar Equipamento/Detalhe" */
 .btn-add-equipment {
     background-color: #007bff;
     color: white;
@@ -245,7 +252,7 @@ h2 {
 }
 
 .add-equipment-container {
-    padding: 0; /* Remove padding para o botão ocupar largura total do slide */
+    padding: 0;
     margin-top: 20px;
     margin-bottom: 10px;
     text-align: center;
@@ -287,16 +294,15 @@ h2 {
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-/* Estilo para o campo de quantidade (select) */
 .additional-field-quantidade {
-    width: auto; /* Permite ajuste ao conteúdo */
+    width: auto;
     display: inline-block;
     margin-left: 10px;
     padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
-    background-color: #fff; /* Fundo branco */
+    background-color: #fff;
 }
 
 /* --- Seção de Resumo do Orçamento --- */
@@ -408,7 +414,6 @@ h2 {
     background-color: rgba(0, 123, 255, 1);
 }
 
-/* Posicionamento das setas garantindo que fiquem visíveis */
 .splide__arrows {
     position: absolute;
     top: 50%;
@@ -418,28 +423,44 @@ h2 {
     right: 0;
     display: flex;
     justify-content: space-between;
-    pointer-events: none; /* Permite clicar nos elementos abaixo das setas */
-    z-index: 10; /* Garante que fiquem acima dos slides */
+    pointer-events: none;
+    z-index: 10;
 }
 
 .splide__arrow--prev {
-    left: 1em; /* Ajuste para o lado esquerdo */
+    left: 1em;
 }
 
 .splide__arrow--next {
-    right: 1em; /* Ajuste para o lado direito */
+    right: 1em;
 }
 
 .splide__arrow {
-    pointer-events: auto; /* Permite clicar nas setas */
+    pointer-events: auto;
 }
 
-/* --- Rodapé de Navegação --- */
+/* --- Rodapé de Navegação Fixo --- */
 .form-navigation-bottom {
+    position: fixed; /* Fixa o rodapé */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #ffffff; /* Fundo branco para o rodapé */
+    padding: 15px 0; /* Ajuste o padding conforme necessário */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Sombra para dar profundidade */
     display: flex;
     justify-content: space-between;
-    margin-top: 30px;
-    padding: 0 20px;
+    z-index: 999; /* Garante que fique acima do conteúdo */
+    margin-top: 0; /* Remove margem superior para não criar espaço extra */
+}
+
+.form-navigation-bottom .btn {
+    margin: 0 15px; /* Adiciona margem lateral aos botões dentro do rodapé */
+}
+
+/* Ajuste para que o conteúdo principal não fique escondido sob o rodapé fixo */
+body:has(.form-navigation-bottom) {
+    padding-bottom: 70px; /* Ajuste o valor para corresponder à altura do rodapé fixo */
 }
 
 /* --- Utilitários --- */
