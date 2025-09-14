@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.8 (Reintrodução de topo/botões fixos, correções finais na lógica de preço com quantidade)
+ * Versão: 11.9 (Foco em estabilidade, topo/botões fixos, carrossel de serviços editáveis e correção na multiplicação de quantidade)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -44,7 +44,7 @@ const timeSlotsContainer = document.getElementById('timeSlotsContainer');
 const telefoneInput = document.getElementById('telefone');
 const selectedServicesCount = document.getElementById('selectedServicesCount');
 const paymentOptionsContainer = document.getElementById('paymentOptionsContainer');
-const addEquipmentBtnContainer = document.querySelector('.add-equipment-container');
+const addEquipmentBtnContainer = document.querySelector('.add-equipment-container'); // Não usado diretamente, mas mantido
 
 let servicosSelecionados = [];
 let servicosGlobais = {};
@@ -132,13 +132,24 @@ function createServiceCard(service, key) {
                 id: currentServiceInstanceId,
                 serviceKey: key,
                 nome: serviceData.nome,
-                precoBase: serviceData.precoBase,
+                precoBase: serviceData.precoBase || 0, // Garantir que precoBase exista
                 camposAdicionais: serviceData.camposAdicionais || [],
                 camposSelecionados: {},
                 quantidade: 1,
-                precoCalculado: serviceData.precoBase || 0,
+                precoCalculado: serviceData.precoBase || 0, // Inicializa com precoBase
                 isBaseInstance: true
             };
+            // Inicializa campos obrigatórios
+            newInstance.camposAdicionais.forEach(field => {
+                if (field.tipo === 'select_quantidade' && field.opcoes && field.opcoes.length > 0) {
+                    newInstance.camposSelecionados[field.nome] = '1'; // Quantidade padrão 1
+                } else if (field.tipo === 'select_com_preco' || field.tipo === 'select_sem_preco') {
+                    newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+                } else if (field.tipo === 'text' || field.tipo === 'number' || field.tipo === 'textarea') {
+                    newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+                }
+            });
+
             servicosSelecionados.push(newInstance);
             card.classList.add('selected');
             card.querySelector('.btn-select-service').textContent = 'Remover';
@@ -222,7 +233,11 @@ function renderServiceForms() {
                             <label>${fieldName}</label>
                             <select class="form-control additional-field-select-price" data-instance-id="${instance.id}" data-field-name="${fieldName}" required>
                                 <option value="">Selecione...</option>
-                                ${fieldOptions.map(option => `<option value="${option}" ${currentFieldValue === option ? 'selected' : ''}>${option}</option>`).join('')}
+                                ${fieldOptions.map(option => {
+                                    // Preserva o valor completo (nome, preço) para o JS processar
+                                    const optionValue = option.includes(', R$ ') ? option : `${option}, R$ 0.00`;
+                                    return `<option value="${optionValue}" ${currentFieldValue === option ? 'selected' : ''}>${option}</option>`;
+                                }).join('')}
                             </select>
                         </div>
                     `;
@@ -266,7 +281,7 @@ function renderServiceForms() {
             }).join('');
         }
 
-        const showAddEquipmentButton = instance.camposAdicionais && instance.camposAdicionais.length > 0;
+        const showAddEquipmentButton = instance.isBaseInstance && instance.camposAdicionais && instance.camposAdicionais.length > 0;
 
         slideElement.innerHTML = `
             <div class="slide-header">
@@ -344,9 +359,9 @@ function updateInstancePrice(instanceId) {
 
     // Calcula o preço dos selects com preço associado
     slideElement.querySelectorAll('.additional-field-select-price').forEach(select => {
-        const selectedOption = select.value;
-        if (selectedOption && selectedOption.includes(', R$ ')) {
-            const parts = selectedOption.split(', R$ ');
+        const selectedOptionText = select.options[select.selectedIndex].text; // Pega o texto da opção
+        if (selectedOptionText && selectedOptionText.includes(', R$ ')) {
+            const parts = selectedOptionText.split(', R$ ');
             const optionPrice = parseFloat(parts[1]);
             if (!isNaN(optionPrice)) {
                 precoAdicionais += optionPrice;
@@ -399,21 +414,22 @@ function addEquipmentInstance(e) {
         id: currentServiceInstanceId,
         serviceKey: serviceKey,
         nome: serviceData.nome,
-        precoBase: serviceData.precoBase,
+        precoBase: serviceData.precoBase || 0,
         camposAdicionais: serviceData.camposAdicionais || [],
         camposSelecionados: {},
         quantidade: 1,
         precoCalculado: serviceData.precoBase || 0,
-        isBaseInstance: false
+        isBaseInstance: false // Indica que não é a instância base do serviço
     };
 
+    // Inicializa campos obrigatórios para a nova instância
     newInstance.camposAdicionais.forEach(field => {
         if (field.tipo === 'select_quantidade' && field.opcoes && field.opcoes.length > 0) {
-            newInstance.camposSelecionados[field.nome] = '1';
+            newInstance.camposSelecionados[field.nome] = '1'; // Quantidade padrão 1
         } else if (field.tipo === 'select_com_preco' || field.tipo === 'select_sem_preco') {
-            newInstance.camposSelecionados[field.nome] = '';
+            newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
         } else if (field.tipo === 'text' || field.tipo === 'number' || field.tipo === 'textarea') {
-            newInstance.camposSelecionados[field.nome] = '';
+            newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
         }
     });
 
@@ -444,7 +460,7 @@ function deleteService(e) {
 
     const serviceKeyToDelete = instanceToDelete.serviceKey;
 
-    servicosSelecionados = servicosSelecionados.filter(inst => inst.id !== instanceIdToDelete);
+    // Remove todas as instâncias relacionadas a este serviço base
     servicosSelecionados = servicosSelecionados.filter(inst => inst.serviceKey !== serviceKeyToDelete);
 
     renderServiceForms();
@@ -498,7 +514,7 @@ function getSelectedOptionsForInstance(instanceId) {
     slideElement.querySelectorAll('.additional-field-select-price, .additional-field-select-no-price').forEach(select => {
         const fieldName = select.dataset.fieldName;
         if (fieldName) {
-            selectedFields[fieldName] = select.value;
+            selectedFields[fieldName] = select.value; // Salva o valor selecionado
         }
     });
 
@@ -527,11 +543,12 @@ function getSelectedOptionsForInstance(instanceId) {
 document.getElementById('nextStep2').addEventListener('click', () => {
     let allFieldsFilled = true;
 
+    // Atualiza campos selecionados e recalcula preços antes de avançar
     servicosSelecionados.forEach(instance => {
         instance.camposSelecionados = getSelectedOptionsForInstance(instance.id);
-        updateInstancePrice(instance.id);
+        updateInstancePrice(instance.id); // Garante que os preços estejam atualizados com os campos preenchidos
     });
-    updateOrcamentoTotal();
+    updateOrcamentoTotal(); // Atualiza o total com os preços recalculados
 
     servicosSelecionados.forEach(instance => {
         const slideElement = document.querySelector(`.splide__slide[data-instance-id="${instance.id}"]`);
@@ -795,7 +812,7 @@ function showConfirmation() {
 
     whatsappLink.addEventListener('click', () => {
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Redireciona para a página inicial após confirmar
         }, 500);
     });
 }
