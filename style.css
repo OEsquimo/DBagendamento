@@ -173,33 +173,65 @@ h2 {
     background-color: #c82333;
 }
 
-/* --- Seção de Formulários de Detalhes (com Carrossel) --- */
-#servicosCarousel {
-    width: 100%;
-    max-width: 400px;
-    margin: 20px auto;
-    padding: 0 10px;
+/* --- Estilos para os blocos de serviço editáveis (contendo carrosséis individuais) --- */
+.service-edit-block {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px; /* Espaço entre os blocos de serviço */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+}
+
+.service-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.service-block-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+    color: #007bff;
+    text-align: left; /* Alinha o título do serviço à esquerda */
+}
+
+.total-service-price {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #28a745;
+}
+
+
+/* --- Estilização para o carrossel INDIVIDUAL dentro de cada bloco --- */
+.service-carousel-individual {
+    width: 100%; /* Garante que o carrossel ocupe a largura do bloco */
+    max-width: none; /* Remove max-width que pode estar vindo de estilos gerais */
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
-.splide__track {
-    overflow: visible;
+.service-carousel-individual .splide__track {
+    overflow: visible; /* Permite que as setas apareçam fora do track */
 }
 
-.splide__slide {
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: auto;
-    max-width: calc(100% - 20px);
-    margin: 0 auto;
+.service-carousel-individual .splide__slide {
+    background-color: #f8f9fa; /* Fundo diferente para os slides internos */
+    border: 1px solid #dee2e6;
+    margin: 0 auto; /* Centraliza o slide se ele não preencher toda a largura */
+    max-width: calc(100% - 20px); /* Ajuste conforme necessário para padding */
+    padding: 20px; /* Adiciona padding interno aos slides do carrossel individual */
 }
 
-.slide-header {
+.service-form-group .slide-header { /* Estilos para o header dentro do slide */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -208,62 +240,45 @@ h2 {
     gap: 10px;
 }
 
-.slide-header h3 {
+.service-form-group .slide-header h3 { /* Título do slide específico (ex: "Configuração Principal") */
     margin: 0;
     color: #333;
-    flex-grow: 1;
     font-size: 1.2em;
+    text-align: left;
 }
 
-.btn-remove-service,
-.btn-remove-instance {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.btn-remove-service:hover,
-.btn-remove-instance:hover {
-    background-color: #c82333;
+.service-item-price {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #007bff; /* Cor diferente para o preço do item específico */
+    font-size: 1.1em;
+    text-align: right;
 }
 
 .btn-add-equipment {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.2s ease;
-    margin-top: 15px;
-    width: 100%;
-}
-
-.btn-add-equipment:hover {
-    background-color: #0056b3;
-}
-
-.add-equipment-container {
-    padding: 0;
     margin-top: 20px;
-    margin-bottom: 10px;
-    text-align: center;
+    width: auto; /* Botão de adicionar não precisa ser 100% */
+    align-self: center; /* Centraliza o botão */
 }
 
-.service-price {
-    margin-top: 10px;
-    font-weight: bold;
-    color: #28a745;
-    font-size: 1.1em;
+/* Ajustes nos botões de remoção para ficarem dentro do slide */
+.service-form-group .slide-header .btn-remove-service,
+.service-form-group .slide-header .btn-remove-instance {
+    background-color: #dc3545;
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
 }
+
+.service-form-group .slide-header .btn-remove-service:hover,
+.service-form-group .slide-header .btn-remove-instance:hover {
+    background-color: #c82333;
+}
+
 
 /* --- Formulários em Geral --- */
 .form-group {
@@ -392,7 +407,7 @@ h2 {
     font-weight: bold;
 }
 
-/* --- Navegação do Carrossel (Splide.js) --- */
+/* --- Navegação do Carrossel (Splide.js) - Estilos gerais para todos os carrosséis --- */
 .splide__arrow {
     background-color: rgba(0, 123, 255, 0.7);
     border-radius: 50%;
@@ -402,9 +417,12 @@ h2 {
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    color: white; /* Para os símbolos de seta */
+    font-size: 1.5rem; /* Para os símbolos de seta */
+    line-height: 1;
 }
 
-.splide__arrow svg {
+.splide__arrow svg { /* Se usar SVGs em vez de texto para setas */
     fill: white;
     width: 1.5rem;
     height: 1.5rem;
@@ -414,7 +432,8 @@ h2 {
     background-color: rgba(0, 123, 255, 1);
 }
 
-.splide__arrows {
+/* Ajuste para que as setas fiquem posicionadas corretamente nos carrosséis individuais */
+.service-carousel-individual .splide__arrows {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -427,17 +446,18 @@ h2 {
     z-index: 10;
 }
 
-.splide__arrow--prev {
+.service-carousel-individual .splide__arrow--prev {
     left: 1em;
 }
 
-.splide__arrow--next {
+.service-carousel-individual .splide__arrow--next {
     right: 1em;
 }
 
-.splide__arrow {
+.service-carousel-individual .splide__arrow {
     pointer-events: auto;
 }
+
 
 /* --- Rodapé de Navegação Fixo --- */
 .form-navigation-bottom {
