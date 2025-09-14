@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.11 (Foco em múltiplos carrosséis corretos, elementos fixos e adicionar slide correto)
+ * Versão: 11.12 (Foco na correção da adição de slide ao carrossel)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -50,7 +50,7 @@ let servicosGlobais = {};
 let configGlobais = {};
 let formaPagamentoSelecionada = '';
 let currentServiceInstanceId = 0;
-let splideInstances = {}; // Objeto para armazenar instâncias do Splide por ID
+let splideInstances = {};
 
 // ==========================================================================
 // 2. FUNÇÕES DE INICIALIZAÇÃO E CARREGAMENTO
@@ -75,11 +75,6 @@ async function loadConfig() {
         const snapshot = await get(configRef);
         if (snapshot.exists()) {
             configGlobais = snapshot.val();
-            if (configGlobais.whatsappNumber) {
-                // O campo telefone no HTML já tem um pattern, então não sobrescrevemos aqui.
-                // Apenas se quiséssemos definir um valor inicial.
-                // document.getElementById('telefone').value = configGlobais.whatsappNumber.replace(/\D/g, '');
-            }
         } else {
             console.error("Configurações não encontradas no banco de dados.");
         }
@@ -133,21 +128,20 @@ function createServiceCard(service, key) {
                 id: currentServiceInstanceId,
                 serviceKey: key,
                 nome: serviceData.nome,
-                precoBase: serviceData.precoBase || 0, // Garantir que precoBase exista
+                precoBase: serviceData.precoBase || 0,
                 camposAdicionais: serviceData.camposAdicionais || [],
                 camposSelecionados: {},
                 quantidade: 1,
-                precoCalculado: serviceData.precoBase || 0, // Inicializa com precoBase
+                precoCalculado: serviceData.precoBase || 0,
                 isBaseInstance: true
             };
-            // Inicializa campos obrigatórios para a instância base
             newInstance.camposAdicionais.forEach(field => {
                 if (field.tipo === 'select_quantidade' && field.opcoes && field.opcoes.length > 0) {
-                    newInstance.camposSelecionados[field.nome] = '1'; // Quantidade padrão 1
+                    newInstance.camposSelecionados[field.nome] = '1';
                 } else if (field.tipo === 'select_com_preco' || field.tipo === 'select_sem_preco') {
-                    newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+                    newInstance.camposSelecionados[field.nome] = '';
                 } else if (field.tipo === 'text' || field.tipo === 'number' || field.tipo === 'textarea') {
-                    newInstance.camposSelecionados[field.nome] = ''; // Campo vazio
+                    newInstance.camposSelecionados[field.nome] = '';
                 }
             });
 
@@ -155,7 +149,6 @@ function createServiceCard(service, key) {
             card.classList.add('selected');
             card.querySelector('.btn-select-service').textContent = 'Remover';
         } else {
-            // Remove a instância base e todas as instâncias adicionais relacionadas a ela
             servicosSelecionados = servicosSelecionados.filter(s => s.serviceKey !== key);
             card.classList.remove('selected');
             card.querySelector('.btn-select-service').textContent = 'Adicionar';
@@ -192,11 +185,9 @@ document.getElementById('nextStep1').addEventListener('click', () => {
 // 4. ETAPA 2: PREENCHIMENTO DOS CAMPOS (COM MÚLTIPLOS CARROSÉIS E NOVAS FUNCIONALIDADES)
 // ==========================================================================
 
-// Função para inicializar todos os carrosséis individuais
 function initializeIndividualSplideCarousels() {
     const splideElements = document.querySelectorAll('.service-carousel-individual');
     splideElements.forEach((element) => {
-        // Verifica se já foi inicializado para evitar múltiplos inicializadores
         if (!element.classList.contains('is-initialized')) {
             const splide = new Splide(element, {
                 type: 'slide',
@@ -209,14 +200,13 @@ function initializeIndividualSplideCarousels() {
                 snap: true,
             });
             splide.mount();
-            element.classList.add('is-initialized'); // Marca como inicializado
+            element.classList.add('is-initialized');
         }
     });
 }
 
-
 function renderServiceForms() {
-    servicosFormContainer.innerHTML = ''; // Limpa o contêiner onde os blocos de serviço serão adicionados
+    servicosFormContainer.innerHTML = '';
 
     if (servicosSelecionados.length === 0) {
         servicosFormContainer.innerHTML = '<p>Nenhum serviço selecionado para detalhar.</p>';
@@ -224,8 +214,10 @@ function renderServiceForms() {
     }
 
     servicosSelecionados.forEach((instance) => {
+        if (!instance.isBaseInstance) return; // Renderiza apenas os blocos base aqui, slides adicionais virão dentro deles
+
         const serviceBlock = document.createElement('div');
-        serviceBlock.className = 'service-edit-block'; // Classe para o bloco do serviço
+        serviceBlock.className = 'service-edit-block';
         serviceBlock.dataset.instanceId = instance.id;
 
         let fieldsHtml = '';
@@ -298,7 +290,7 @@ function renderServiceForms() {
             }).join('');
         }
 
-        // Crie a estrutura do carrossel INDIVIDUAL para este serviço
+        // Renderiza o HTML do carrossel com o slide base
         const carouselHtml = `
             <div class="service-block-header">
                 <h2>${instance.nome}</h2>
@@ -310,12 +302,10 @@ function renderServiceForms() {
                         <li class="splide__slide service-form-group" data-instance-id="${instance.id}">
                             <div class="slide-header">
                                 <h3>Configuração Principal</h3>
-                                ${instance.isBaseInstance ?
-                                    `<button class="btn btn-danger btn-remove-service" data-instance-id="${instance.id}" title="Remover este serviço completamente">Remover Serviço</button>`
-                                    : `<button class="btn btn-danger btn-remove-instance" data-instance-id="${instance.id}" title="Remover este item/equipamento">Remover</button>`
-                                }
+                                <button class="btn btn-danger btn-remove-service" data-instance-id="${instance.id}" title="Remover este serviço completamente">Remover Serviço</button>
                             </div>
-                            ${fieldsHtml} <div class="service-item-price">Valor deste item: R$ <span class="item-price-value">${instance.precoCalculado.toFixed(2).replace('.', ',')}</span></div>
+                            ${fieldsHtml}
+                            <div class="service-item-price">Valor deste item: R$ <span class="item-price-value">${instance.precoCalculado.toFixed(2).replace('.', ',')}</span></div>
                         </li>
                         </ul>
                 </div>
@@ -324,20 +314,119 @@ function renderServiceForms() {
                     <button class="splide__arrow splide__arrow--next">❯</button>
                 </div>
             </div>
-            ${instance.isBaseInstance ?
-                `<button class="btn btn-primary btn-add-equipment" data-service-key="${instance.serviceKey}" data-base-instance-id="${instance.id}" title="Adicionar outro item deste serviço">
-                    + Adicionar Equipamento/Detalhe
-                </button>` : ''}
+            <button class="btn btn-primary btn-add-equipment" data-service-key="${instance.serviceKey}" data-base-instance-id="${instance.id}" title="Adicionar outro item deste serviço">
+                + Adicionar Equipamento/Detalhe
+            </button>
         `;
 
         serviceBlock.innerHTML = carouselHtml;
         servicosFormContainer.appendChild(serviceBlock);
     });
 
-    attachEventListenersToForms(); // Reanexar listeners após renderizar
-    updateOrcamentoTotal(); // Atualiza o total geral
-    initializeIndividualSplideCarousels(); // Inicializa todos os carrosséis individuais
+    // Agora, para cada bloco de serviço renderizado, adiciona os slides adicionais
+    servicosSelecionados.forEach(instance => {
+        if (!instance.isBaseInstance) {
+            const baseServiceBlock = document.querySelector(`.service-edit-block[data-instance-id="${instance.id}"]`);
+            if (baseServiceBlock) {
+                const splideList = baseServiceBlock.querySelector('.splide__list');
+                if (splideList) {
+                    const slideHtml = createAdditionalSlideHtml(instance);
+                    splideList.insertAdjacentHTML('beforeend', slideHtml);
+                }
+            }
+        }
+    });
+
+
+    attachEventListenersToForms();
+    updateOrcamentoTotal();
+    initializeIndividualSplideCarousels();
 }
+
+// Função para criar o HTML de um slide adicional (equipamento/detalhe)
+function createAdditionalSlideHtml(instance) {
+    let fieldsHtml = '';
+    if (instance.camposAdicionais && instance.camposAdicionais.length > 0) {
+        fieldsHtml = instance.camposAdicionais.map(field => {
+            const fieldName = field.nome;
+            const fieldType = field.tipo;
+            const fieldOptions = field.opcoes;
+            const currentFieldValue = instance.camposSelecionados[fieldName] || '';
+
+            if (fieldType === 'select_quantidade' && fieldOptions) {
+                const quantityOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(q =>
+                    `<option value="${q}" ${currentFieldValue === q.toString() ? 'selected' : ''}>${q}</option>`
+                ).join('');
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <select class="form-control additional-field-quantidade" data-instance-id="${instance.id}" data-field-name="${fieldName}" required>
+                            <option value="">Selecione...</option>
+                            ${quantityOptions}
+                        </select>
+                    </div>
+                `;
+            } else if (fieldType === 'select_com_preco' && fieldOptions) {
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <select class="form-control additional-field-select-price" data-instance-id="${instance.id}" data-field-name="${fieldName}" required>
+                            <option value="">Selecione...</option>
+                            ${fieldOptions.map(option => {
+                                const optionValue = option.includes(', R$ ') ? option : `${option}, R$ 0.00`;
+                                return `<option value="${optionValue}" ${currentFieldValue === option ? 'selected' : ''}>${option}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (fieldType === 'select_sem_preco' && fieldOptions) {
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <select class="form-control additional-field-select-no-price" data-instance-id="${instance.id}" data-field-name="${fieldName}" required>
+                            <option value="">Selecione...</option>
+                            ${fieldOptions.map(option => `<option value="${option}" ${currentFieldValue === option ? 'selected' : ''}>${option}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            } else if (fieldType === 'text') {
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <input type="text" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" value="${currentFieldValue}" placeholder="Digite aqui...">
+                    </div>
+                `;
+            } else if (fieldType === 'number') {
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <input type="number" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" step="0.01" value="${currentFieldValue}" placeholder="Ex: 50.00">
+                    </div>
+                `;
+            } else if (fieldType === 'textarea') {
+                return `
+                    <div class="form-group">
+                        <label>${fieldName}</label>
+                        <textarea class="form-control additional-field-textarea" data-instance-id="${instance.id}" data-field-name="${fieldName}" placeholder="Digite aqui...">${currentFieldValue}</textarea>
+                    </div>
+                `;
+            }
+            return '';
+        }).join('');
+    }
+
+    return `
+        <li class="splide__slide service-form-group" data-instance-id="${instance.id}">
+            <div class="slide-header">
+                <h3>Item Adicional</h3>
+                <button class="btn btn-danger btn-remove-instance" data-instance-id="${instance.id}" title="Remover este item/equipamento">Remover</button>
+            </div>
+            ${fieldsHtml}
+            <div class="service-item-price">Valor deste item: R$ <span class="item-price-value">${instance.precoCalculado.toFixed(2).replace('.', ',')}</span></div>
+        </li>
+    `;
+}
+
 
 function attachEventListenersToForms() {
     document.querySelectorAll('.additional-field-select-price, .additional-field-select-no-price, .additional-field-input, .additional-field-quantidade, .additional-field-textarea').forEach(field => {
@@ -380,13 +469,11 @@ function handleFieldChange(e) {
 
     instance.camposSelecionados[fieldName] = value;
 
-    // Atualiza o preço da instância e o total do serviço específico
     updateInstancePrice(instanceId);
-    updateServiceBlockTotal(instanceId); // Atualiza o total visível no bloco do serviço
-    updateOrcamentoTotal(); // Atualiza o orçamento geral
+    updateServiceBlockTotal(instanceId);
+    updateOrcamentoTotal();
 }
 
-// CORREÇÃO: Função para recalcular o preço de uma instância específica, considerando quantidade e campos
 function updateInstancePrice(instanceId) {
     const instance = servicosSelecionados.find(inst => inst.id === instanceId);
     if (!instance) return;
@@ -397,7 +484,6 @@ function updateInstancePrice(instanceId) {
     const precoBase = instance.precoBase || 0;
     let precoAdicionais = 0;
 
-    // Calcula o preço dos selects com preço associado
     slideElement.querySelectorAll('.additional-field-select-price').forEach(select => {
         const selectedOptionText = select.options[select.selectedIndex]?.text;
         if (selectedOptionText && selectedOptionText.includes(', R$ ')) {
@@ -409,7 +495,6 @@ function updateInstancePrice(instanceId) {
         }
     });
 
-    // Adiciona preços de campos numéricos extras
     slideElement.querySelectorAll('.additional-field-input[type="number"]').forEach(input => {
         const inputValue = parseFloat(input.value);
         if (!isNaN(inputValue)) {
@@ -419,7 +504,6 @@ function updateInstancePrice(instanceId) {
 
     let precoUnitarioInstancia = precoBase + precoAdicionais;
 
-    // Obtém a quantidade selecionada
     const quantityField = slideElement.querySelector('.additional-field-quantidade');
     let quantidade = 1;
 
@@ -428,14 +512,13 @@ function updateInstancePrice(instanceId) {
         if (!isNaN(parsedQuantity) && parsedQuantity > 0) {
             quantidade = parsedQuantity;
         } else if (parsedQuantity === 0) {
-            quantidade = 0; // Zero quantidade = zero custo
+            quantidade = 0;
         }
     }
 
     instance.quantidade = quantidade;
     instance.precoCalculado = precoUnitarioInstancia * quantidade;
 
-    // Atualiza o display do preço no slide
     const priceDisplay = slideElement.querySelector('.service-item-price .item-price-value');
     if (priceDisplay) {
         priceDisplay.textContent = formatPrice(instance.precoCalculado);
@@ -452,7 +535,7 @@ function updateServiceBlockTotal(instanceId) {
     }
 }
 
-// **CORREÇÃO AQUI**: Esta função agora adiciona um NOVO SLIDE ao carrossel existente
+// **CORREÇÃO NA LÓGICA DE ADICIONAR ITEM:**
 function addEquipmentInstance(e) {
     const serviceKey = e.target.dataset.serviceKey;
     const baseInstanceId = parseInt(e.target.dataset.baseInstanceId);
@@ -460,24 +543,17 @@ function addEquipmentInstance(e) {
 
     if (!serviceData) return;
 
-    // Encontra o carrossel associado a esta instância base
-    const baseServiceBlock = document.querySelector(`.service-edit-block[data-instance-id="${baseInstanceId}"]`);
-    if (!baseServiceBlock) return;
-
-    const splideContainer = baseServiceBlock.querySelector('.service-carousel-individual .splide__list');
-    if (!splideContainer) return;
-
     currentServiceInstanceId++;
     const newInstance = {
         id: currentServiceInstanceId,
         serviceKey: serviceKey,
-        nome: serviceData.nome,
+        nome: serviceData.nome, // O nome pode ser o mesmo do serviço base, mas será renderizado em um novo slide
         precoBase: serviceData.precoBase || 0,
         camposAdicionais: serviceData.camposAdicionais || [],
         camposSelecionados: {},
         quantidade: 1,
         precoCalculado: serviceData.precoBase || 0,
-        isBaseInstance: false // Indica que é uma instância adicional
+        isBaseInstance: false // Marca como instância adicional
     };
 
     // Inicializa campos para a nova instância
@@ -491,11 +567,8 @@ function addEquipmentInstance(e) {
         }
     });
 
-    servicosSelecionados.push(newInstance);
-    renderServiceForms(); // Re-renderiza tudo para adicionar o novo slide corretamente
-
-    // Opcional: Tentar focar no slide recém-adicionado (pode precisar de ajustes dependendo do Splide)
-    // A lógica de renderizar tudo novamente já garante que o novo slide esteja presente.
+    servicosSelecionados.push(newInstance); // Adiciona a nova instância ao array
+    renderServiceForms(); // Re-renderiza os blocos de serviço, o que incluirá o novo slide
 }
 
 
@@ -507,10 +580,9 @@ function deleteService(e) {
 
     const serviceKeyToDelete = instanceToDelete.serviceKey;
 
-    // Remove todas as instâncias (base e adicionais) relacionadas a este serviço base
     servicosSelecionados = servicosSelecionados.filter(inst => inst.serviceKey !== serviceKeyToDelete);
 
-    renderServiceForms(); // Re-renderiza a lista de blocos de serviço
+    renderServiceForms();
     updateOrcamentoTotal();
     updateSelectedServicesCount();
 
@@ -737,12 +809,12 @@ async function handleFormSubmit(e) {
     const agendamentoData = {
         cliente: clienteData,
         servicos: servicosSelecionados.map(instance => ({
-            id: instance.id, // ID único da instância
-            serviceKey: instance.serviceKey, // Chave do serviço base
-            nome: instance.nome, // Nome do serviço base
-            camposSelecionados: instance.camposSelecionados, // Valores dos campos editados
-            quantidade: instance.quantidade, // Quantidade final multiplicada
-            precoCalculado: instance.precoCalculado // Preço final calculado para essa instância
+            id: instance.id,
+            serviceKey: instance.serviceKey,
+            nome: instance.nome,
+            camposSelecionados: instance.camposSelecionados,
+            quantidade: instance.quantidade,
+            precoCalculado: instance.precoCalculado
         })),
         data: formatDate(datePicker.value),
         hora: selectedTimeSlot.textContent,
@@ -764,7 +836,7 @@ async function handleFormSubmit(e) {
 function showConfirmation() {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5); // Assumindo 5 passos para fins de UI (1-4 + Confirmação)
+    updateProgressBar(5);
 
     const whatsappMsg = createWhatsAppMessage();
     const whatsappNumber = configGlobais.whatsappNumber || '5511999999999';
