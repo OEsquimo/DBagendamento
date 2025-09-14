@@ -1,7 +1,7 @@
 /*
  * Arquivo: script.js
  * Descrição: Lógica principal para a interface do cliente e agendamento.
- * Versão: 11.5 (Adição de exclusão de serviço, múltiplos equipamentos/detalhes e quantidade)
+ * Versão: 11.6 (Limpeza de campos em novas instâncias, botão de adicionar em todas, campo de quantidade e multiplicação de preço)
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -137,7 +137,7 @@ function createServiceCard(service, key) {
                 precoBase: serviceData.precoBase,
                 camposAdicionais: serviceData.camposAdicionais || [], // Copia os campos adicionais
                 camposSelecionados: {}, // Onde os valores dos campos selecionados serão armazenados
-                quantidade: 1, // Quantidade padrão
+                quantidade: 1, // Quantidade padrão inicial
                 precoCalculado: serviceData.precoBase || 0, // Preço inicial
                 isBaseInstance: true // Marca como a primeira instância deste serviço
             };
@@ -197,21 +197,24 @@ function renderServiceForms() {
         slideElement.dataset.instanceId = instance.id; // Adiciona um ID único para a instância
 
         let fieldsHtml = '';
+        const quantityFieldConfig = instance.camposAdicionais?.find(f => f.tipo === 'select_quantidade'); // Busca o campo de quantidade
+
         if (instance.camposAdicionais && instance.camposAdicionais.length > 0) {
             fieldsHtml = instance.camposAdicionais.map(field => {
                 const fieldName = field.nome;
                 const fieldType = field.tipo;
                 const fieldOptions = field.opcoes;
-                const currentFieldValue = instance.camposSelecionados[fieldName] || ''; // Pega o valor já selecionado
+                const currentFieldValue = instance.camposSelecionados[fieldName] || '';
 
-                // Campo de Quantidade
+                // Campo de Quantidade (apenas se for configurado como tal)
                 if (fieldType === 'select_quantidade' && fieldOptions) {
+                    const quantityOptions = Array.from({ length: 10 }, (_, i) => i + 1).map(q => `<option value="${q}" ${currentFieldValue === q.toString() ? 'selected' : ''}>${q}</option>`).join('');
                     return `
                         <div class="form-group">
                             <label>${fieldName}</label>
                             <select class="form-control additional-field-quantidade" data-instance-id="${instance.id}" data-field-name="${fieldName}" required>
                                 <option value="">Selecione...</option>
-                                ${fieldOptions.map(option => `<option value="${option}" ${currentFieldValue === option ? 'selected' : ''}>${option}</option>`).join('')}
+                                ${quantityOptions}
                             </select>
                         </div>
                     `;
@@ -245,7 +248,7 @@ function renderServiceForms() {
                     return `
                         <div class="form-group">
                             <label>${fieldName}</label>
-                            <input type="text" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" value="${currentFieldValue}" required>
+                            <input type="text" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" value="${currentFieldValue}" placeholder="Digite aqui...">
                         </div>
                     `;
                 }
@@ -254,7 +257,7 @@ function renderServiceForms() {
                     return `
                         <div class="form-group">
                             <label>${fieldName}</label>
-                            <input type="number" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" step="0.01" value="${currentFieldValue}" required>
+                            <input type="number" class="form-control additional-field-input" data-instance-id="${instance.id}" data-field-name="${fieldName}" step="0.01" value="${currentFieldValue}" placeholder="Ex: 50.00">
                         </div>
                     `;
                 }
@@ -271,6 +274,9 @@ function renderServiceForms() {
             }).join('');
         }
 
+        // Determina se o botão de adicionar equipamento deve ser mostrado
+        const showAddEquipmentButton = instance.camposAdicionais && instance.camposAdicionais.length > 0;
+
         slideElement.innerHTML = `
             <div class="slide-header">
                 <h3>${instance.nome}</h3>
@@ -280,8 +286,8 @@ function renderServiceForms() {
                 }
             </div>
             ${fieldsHtml}
-            <div class="service-price">Valor: R$ ${instance.precoCalculado.toFixed(2).replace('.', ',')}</div>
-            ${instance.camposAdicionais && instance.camposAdicionais.length > 0 && instance.isBaseInstance ?
+            <div class="service-price">Valor deste item: R$ ${instance.precoCalculado.toFixed(2).replace('.', ',')}</div>
+            ${showAddEquipmentButton ?
                 `<button class="btn btn-primary btn-add-equipment" data-service-key="${instance.serviceKey}" data-base-instance-id="${instance.id}" title="Adicionar outro item deste serviço">
                     + Adicionar Equipamento/Detalhe
                 </button>` : ''}
@@ -322,14 +328,13 @@ function attachEventListenersToForms() {
 function handleFieldChange(e) {
     const instanceId = parseInt(e.target.dataset.instanceId);
     const fieldName = e.target.dataset.fieldName;
-    const fieldType = e.target.tagName.toLowerCase(); // input, select, textarea
     let value = e.target.value;
 
     const instance = servicosSelecionados.find(inst => inst.id === instanceId);
     if (!instance) return;
 
     // Atualiza o valor selecionado/digitado
-    if (e.target.type === 'number') { // Se for um input[type="number"]
+    if (e.target.type === 'number' || (e.target.tagName.toLowerCase() === 'input' && e.target.type !== 'text')) { // Se for um input numérico ou tipo number
         value = parseFloat(value);
         if (isNaN(value)) value = 0;
     } else {
@@ -344,7 +349,7 @@ function handleFieldChange(e) {
     updateOrcamentoTotal();
 }
 
-// Função para recalcular o preço de uma instância específica
+// Função para recalcular o preço de uma instância específica, considerando quantidade e campos
 function updateInstancePrice(instanceId) {
     const instance = servicosSelecionados.find(inst => inst.id === instanceId);
     if (!instance) return;
@@ -375,34 +380,35 @@ function updateInstancePrice(instanceId) {
         }
     });
 
-    // Calcula o preço total da instância, considerando a quantidade
-    let precoTotalInstancia = precoBase + precoAdicionais;
-    const quantidadeField = slideElement.querySelector('.additional-field-quantidade');
+    // Calcula o preço total da instância ANTES de multiplicar pela quantidade
+    let precoUnitarioInstancia = precoBase + precoAdicionais;
 
-    if (quantidadeField && quantidadeField.value) {
-        const quantidade = parseInt(quantidadeField.value);
-        if (!isNaN(quantidade) && quantidade > 0) {
-            precoTotalInstancia *= quantidade;
-        } else {
-            precoTotalInstancia *= 1; // Se quantidade inválida, considera 1
+    // Obtém a quantidade selecionada
+    const quantityField = slideElement.querySelector('.additional-field-quantidade');
+    let quantidade = 1; // Quantidade padrão se não houver campo ou valor
+
+    if (quantityField && quantityField.value) {
+        const parsedQuantity = parseInt(quantityField.value);
+        if (!isNaN(parsedQuantity) && parsedQuantity > 0) {
+            quantidade = parsedQuantity;
         }
-    } else {
-        precoTotalInstancia *= 1; // Se não houver campo de quantidade, considera 1
     }
 
-    instance.precoCalculado = precoTotalInstancia;
+    // Atualiza o preço calculado na instância, multiplicando pela quantidade
+    instance.quantidade = quantidade; // Salva a quantidade na instância
+    instance.precoCalculado = precoUnitarioInstancia * quantidade;
 
     // Atualiza o display do preço no slide
     const priceDisplay = slideElement.querySelector('.service-price');
     if (priceDisplay) {
-        priceDisplay.textContent = `Valor: R$ ${precoTotalInstancia.toFixed(2).replace('.', ',')}`;
+        priceDisplay.textContent = `Valor deste item: R$ ${instance.precoCalculado.toFixed(2).replace('.', ',')}`;
     }
 }
 
 // Função para adicionar uma nova instância do mesmo serviço (ex: outro equipamento)
 function addEquipmentInstance(e) {
     const serviceKey = e.target.dataset.serviceKey;
-    const baseInstanceId = parseInt(e.target.dataset.baseInstanceId);
+    const baseInstanceId = parseInt(e.target.dataset.baseInstanceId); // ID da instância base que originou esta adição
     const serviceData = servicosGlobais[serviceKey]; // Pega os dados do serviço base
 
     if (!serviceData) return;
@@ -414,28 +420,24 @@ function addEquipmentInstance(e) {
         nome: serviceData.nome,
         precoBase: serviceData.precoBase,
         camposAdicionais: serviceData.camposAdicionais || [],
-        camposSelecionados: {}, // Começa com campos vazios
-        quantidade: 1,
-        precoCalculado: serviceData.precoBase || 0,
+        camposSelecionados: {}, // COMEÇA COM CAMPOS VAZIOS
+        quantidade: 1, // Quantidade padrão inicial
+        precoCalculado: serviceData.precoBase || 0, // Preço inicial
         isBaseInstance: false // Marca como instância adicional
     };
 
-    // Copia os valores selecionados da instância base como ponto de partida para a nova instância
-    const baseInstance = servicosSelecionados.find(inst => inst.id === baseInstanceId);
-    if (baseInstance) {
-        // Copia apenas os campos que existem na configuração original
-        newInstance.camposAdicionais.forEach(field => {
-            if (baseInstance.camposSelecionados.hasOwnProperty(field.nome)) {
-                newInstance.camposSelecionados[field.nome] = baseInstance.camposSelecionados[field.nome];
-            }
-        });
-
-        // Se houver campo de quantidade configurado, define como 1 se não estiver setado
-        const quantityFieldConfig = newInstance.camposAdicionais?.find(f => f.tipo === 'select_quantidade');
-        if (quantityFieldConfig && !newInstance.camposSelecionados[quantityFieldConfig.nome]) {
-            newInstance.camposSelecionados[quantityFieldConfig.nome] = '1';
+    // Inicializa campos com valores padrão (ex: quantidade = 1, outros selects vazios)
+    newInstance.camposAdicionais.forEach(field => {
+        if (field.tipo === 'select_quantidade' && field.opcoes && field.opcoes.length > 0) {
+            newInstance.camposSelecionados[field.nome] = '1'; // Quantidade padrão é 1
+        } else if (field.tipo === 'select_com_preco' || field.tipo === 'select_sem_preco') {
+            newInstance.camposSelecionados[field.nome] = ''; // Deixa selects vazios por padrão
+        } else if (field.tipo === 'text' || field.tipo === 'number' || field.tipo === 'textarea') {
+            newInstance.camposSelecionados[field.nome] = ''; // Deixa campos de texto/número vazios
         }
-    }
+    });
+    // Recalcula o preço inicial com base na quantidade padrão de 1
+    newInstance.precoCalculado = (serviceData.precoBase || 0) * 1;
 
     servicosSelecionados.push(newInstance);
 
@@ -463,11 +465,12 @@ function deleteService(e) {
 
     if (!instanceToDelete) return;
 
-    // Filtra todos os serviços que não têm o mesmo ID da instância base a ser removida
-    servicosSelecionados = servicosSelecionados.filter(inst => inst.id !== instanceIdToDelete); // Remove a instância base
-    // Remove todas as instâncias adicionais associadas à chave do serviço base da instância deletada
-    servicosSelecionados = servicosSelecionados.filter(inst => inst.serviceKey !== instanceToDelete.serviceKey);
+    const serviceKeyToDelete = instanceToDelete.serviceKey;
 
+    // Remove a instância base
+    servicosSelecionados = servicosSelecionados.filter(inst => inst.id !== instanceIdToDelete);
+    // Remove todas as instâncias adicionais associadas à chave do serviço base da instância deletada
+    servicosSelecionados = servicosSelecionados.filter(inst => inst.serviceKey !== serviceKeyToDelete);
 
     renderServiceForms(); // Re-renderiza o carrossel
     updateOrcamentoTotal();
@@ -555,7 +558,6 @@ function getSelectedOptionsForInstance(instanceId) {
 
     return selectedFields;
 }
-
 
 document.getElementById('nextStep2').addEventListener('click', () => {
     let allFieldsFilled = true;
@@ -806,7 +808,7 @@ async function handleFormSubmit(e) {
             serviceKey: instance.serviceKey, // Chave do serviço base no Firebase
             nome: instance.nome,
             camposSelecionados: instance.camposSelecionados,
-            quantidade: parseInt(instance.camposSelecionados[instance.camposAdicionais?.find(f => f.tipo === 'select_quantidade')?.nome] || 1), // Pega a quantidade selecionada, default 1
+            quantidade: instance.quantidade, // Usa a quantidade já salva na instância
             precoCalculado: instance.precoCalculado
         })),
         data: formatDate(datePicker.value),
@@ -831,7 +833,7 @@ async function handleFormSubmit(e) {
 function showConfirmation() {
     agendamentoSection.classList.add('hidden');
     confirmationPopup.classList.remove('hidden');
-    updateProgressBar(5);
+    updateProgressBar(5); // Assume que a confirmação é o passo 5 para fins de UI
 
     const whatsappMsg = createWhatsAppMessage();
     const whatsappNumber = configGlobais.whatsappNumber || '5511999999999'; // Usa número da config ou um placeholder
@@ -874,8 +876,9 @@ function createWhatsAppMessage() {
     servicosSelecionados.forEach((instance, index) => {
         mensagemFinal += `${index + 1}. *${instance.nome}*\n`;
 
-        if (!instance.isBaseInstance) {
-            mensagemFinal += `   (Item Adicional)\n`;
+        // Exibe a quantidade se for diferente de 1
+        if (instance.quantidade > 1) {
+            mensagemFinal += `   Quantidade: ${instance.quantidade}\n`;
         }
 
         // Processa os campos selecionados para esta instância
@@ -883,34 +886,20 @@ function createWhatsAppMessage() {
             const fieldName = field.nome;
             const selectedValue = instance.camposSelecionados[fieldName];
 
-            if (selectedValue !== undefined && selectedValue !== "" && selectedValue !== "Não") {
-                let formattedValue = selectedValue;
-                let itemPriceComponent = 0; // Para somar preço de opções/campos individuais
+            // Verifica se o valor selecionado é válido e não é um placeholder ou campo de quantidade
+            if (selectedValue !== undefined && selectedValue !== "" && selectedValue !== "Não" && field.tipo !== 'select_quantidade' && field.tipo !== 'number') {
+                let displayValue = selectedValue;
 
-                // Se for um select com preço associado
+                // Se for um select com preço associado, exibe apenas o nome da opção
                 if (field.tipo === 'select_com_preco' && typeof selectedValue === 'string' && selectedValue.includes(', R$ ')) {
-                    const parts = selectedValue.split(', R$ ');
-                    formattedValue = parts[0]; // Apenas o nome da opção
-                    itemPriceComponent = parseFloat(parts[1]);
+                    displayValue = selectedValue.split(', R$ ')[0];
                 }
-                // Se for um campo numérico
+                // Se for um campo numérico, exibe formatado como moeda
                 else if (field.tipo === 'number') {
-                    formattedValue = `R$ ${formatPrice(parseFloat(selectedValue))}`;
-                }
-                // Se for campo de quantidade, exibe apenas se > 1
-                else if (field.tipo === 'select_quantidade') {
-                    const quantity = parseInt(selectedValue);
-                    if (quantity > 1) {
-                        mensagemFinal += `  Quantidade: ${quantity}\n`;
-                    }
-                    // Não exibe o campo de quantidade como um item detalhado, a menos que seja o único campo
-                    return; // Pula para a próxima iteração do forEach
+                    displayValue = `R$ ${formatPrice(parseFloat(selectedValue))}`;
                 }
 
-                mensagemFinal += `  *${fieldName}*: ${formattedValue}\n`;
-                if (itemPriceComponent > 0) {
-                    mensagemFinal += `    Valor Adicional: R$ ${formatPrice(itemPriceComponent)}\n`;
-                }
+                mensagemFinal += `  *${fieldName}*: ${displayValue}\n`;
             }
         });
 
